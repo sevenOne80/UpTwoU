@@ -79,12 +79,13 @@ Les documents mypension.be suivent toujours ce format :
 - Les montants sont en euros, format belge : 12 345,67 ou 12.345,67
 - Les documents peuvent être en français, néerlandais ou les deux
 
-## Mots-clés à rechercher
+## Mots-clés à rechercher (FR / NL / EN / DE)
 
 Assureurs fréquents : AG Insurance, Allianz, Athora, AXA, Belfius Insurance, Ethias, Federale, Generali, ING Life, KBC Insurance, NN Insurance, P&V, Vivium, Integrale, Argenta, Fidelity, Equitable Life
-Types de contrats B21 : "Branche 21", "Tak 21", "taux garanti", "rendement garanti"
-Types de contrats B23 : "Branche 23", "Tak 23", "fonds d'investissement", "beleggingsfonds"
-Réserves : "réserves acquises", "verworven reserves", "valeur de rachat", "afkoopwaarde"
+Types B21 : "Branche 21", "Tak 21", "Branch 21", "Zweig 21", "taux garanti", "gegarandeerde rente", "guaranteed rate", "Garantiezins"
+Types B23 : "Branche 23", "Tak 23", "Branch 23", "Zweig 23", "fonds d'investissement", "beleggingsfonds", "investment fund", "Investmentfonds"
+Réserves : "réserves acquises", "verworven reserves", "acquired reserves", "erworbene Reserven", "valeur de rachat", "afkoopwaarde", "surrender value", "Rückkaufswert"
+Statut dormant : "non-actif", "niet-actief", "inactive", "inaktiv", "dormant", "slapend", "sleeping", "ruhend", "Sortie le", "Uittreding op", "Left on", "Ausgetreten am"
 
 ## Document à analyser
 
@@ -119,11 +120,36 @@ Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte av
   ]
 }}
 
-## Règles d'éligibilité
+## Règles d'éligibilité — toutes les conditions doivent être réunies
 
-- eligible = true si : réserves en Branche 21 détectées + contrat du 2e pilier (EIP, PLCI, assurance de groupe, pension sectorielle) + assuré encore actif
-- eligible = false si : uniquement Branche 23, déjà à la retraite, document illisible, ou document non reconnu comme extrait mypension.be
-- En cas de mix B21 + B23 : eligible = true, préciser dans details que seule la partie B21 est transférable"""
+**Condition 1 — Statut salarié**
+Seules les réserves constituées en tant que **salarié** sont transférables.
+Les réserves constituées en tant qu'indépendant (EIP, PLCI, pension libre complémentaire) ne sont PAS transférables.
+Mots-clés indiquant le statut salarié : "salarié", "werknemer", "employee", "Arbeitnehmer", "assurance de groupe", "groepsverzekering", "pension sectorielle", "sectoraal pensioen".
+
+**Condition 2 — Type de contrat : plan non-actif / dormant**
+Seuls les plans dans lesquels l'assuré n'est plus en activité chez l'employeur concerné sont transférables.
+Recherche impérativement ces mentions dans le document :
+- "non-actif", "non actif", "niet-actief", "niet actief", "inactif"
+- "dormant", "slapend"
+- "Sortie le", "Uittreding op", "Date de sortie", "Left on", "Ausgetreten am"
+- "ex-employeur", "vorige werkgever", "ancien employeur"
+Si aucune de ces mentions n'est présente, le plan est considéré actif et non transférable.
+
+**Condition 3 — Réserves en Branche 21**
+Le contrat doit être en Branche 21 (taux garanti). Les contrats en Branche 23 uniquement ne sont pas transférables.
+
+**Condition 4 — Montant minimum**
+Le total des réserves transférables doit être **strictement supérieur à 10 000 €**.
+Si le total est ≤ 10 000 €, eligible = false avec mention du montant insuffisant.
+
+**Résumé des cas :**
+- eligible = true : salarié + plan non-actif/dormant + Branche 21 + réserves > 10 000 €
+- eligible = false : indépendant, plan actif (pas de mention sortie/dormant), uniquement B23, réserves ≤ 10 000 €, document illisible ou non reconnu
+- Mix B21 + B23 : eligible = true si la partie B21 seule dépasse 10 000 €, préciser dans details
+- Mix plans actifs + dormants : n'inclure que les plans dormants dans le calcul et les contrats retournés
+
+**Langues supportées : français, néerlandais, anglais, allemand**"""
 
 
 def allowed_file(filename):
