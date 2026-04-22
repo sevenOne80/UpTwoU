@@ -67,6 +67,20 @@
         </div>
       </label>
 
+      <label class="profil-card {% if client.profil_risque == 'conviction' %}selected{% endif %}" id="card-conviction">
+        <input type="radio" name="profil" value="conviction" {% if client.profil_risque == 'conviction' %}checked{% endif %}>
+        <div class="flex items-start gap-4">
+          <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(270 60% 55% / 0.1);">
+            <i data-lucide="target" style="width:1.25rem;height:1.25rem;color:hsl(270 60% 50%);"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-primary">Conviction</p>
+            <p class="text-sm text-muted mt-0.5">Portefeuille concentré · 8–11 % par ligne. Pour les investisseurs expérimentés cherchant la surperformance.</p>
+            <p class="text-xs font-semibold mt-2" style="color:hsl(270 60% 45%);">Rendement cible : 9–12 % / an</p>
+          </div>
+        </div>
+      </label>
+
     </div>
 
     <button type="submit" class="btn btn-primary mt-6" style="height:2.75rem;padding:0 1.75rem;">

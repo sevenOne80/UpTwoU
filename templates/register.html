@@ -150,6 +150,19 @@
               </div>
             </label>
 
+            <label class="profil-card" id="card-conviction">
+              <input type="radio" name="profil" value="conviction" {% if form.profil.data == 'conviction' %}checked{% endif %}>
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(270 60% 55% / 0.1);">
+                  <i data-lucide="target" style="width:1.125rem;height:1.125rem;color:hsl(270 60% 50%);"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-sm text-primary">Conviction</p>
+                  <p class="text-xs text-muted">Concentré actions, 8–11 % par ligne (~9–12 % /an)</p>
+                </div>
+              </div>
+            </label>
+
           </div>
           {% for e in form.profil.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
         </div>

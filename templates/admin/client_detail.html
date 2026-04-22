@@ -76,7 +76,7 @@
       <form method="POST" action="{{ url_for('admin_set_profil', client_id=client.id) }}">
         <p class="text-xs font-semibold text-primary mb-2">Modifier le profil :</p>
         <div class="flex gap-2 flex-wrap">
-          {% for val, label in [('prudent','Prudent'),('equilibre','Équilibré'),('dynamique','Dynamique')] %}
+          {% for val, label in [('prudent','Prudent'),('equilibre','Équilibré'),('dynamique','Dynamique'),('conviction','Conviction')] %}
           <button type="submit" name="profil" value="{{ val }}"
                   class="btn text-xs"
                   style="height:2rem;padding:0 0.875rem;border-radius:9999px;

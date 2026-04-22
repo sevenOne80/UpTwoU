@@ -21,6 +21,7 @@ class RegisterForm(FlaskForm):
         ('prudent', 'Prudent'),
         ('equilibre', 'Équilibré'),
         ('dynamique', 'Dynamique'),
+        ('conviction', 'Conviction'),
     ], validators=[DataRequired()])
     submit = SubmitField('Créer mon compte')
 
@@ -43,6 +44,7 @@ class ProfilForm(FlaskForm):
         ('prudent', 'Prudent'),
         ('equilibre', 'Équilibré'),
         ('dynamique', 'Dynamique'),
+        ('conviction', 'Conviction'),
     ], validators=[DataRequired()])
     submit = SubmitField('Enregistrer')
 
