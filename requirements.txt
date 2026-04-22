@@ -7,3 +7,4 @@ flask-login
 flask-sqlalchemy
 flask-wtf
 email-validator
+fpdf2

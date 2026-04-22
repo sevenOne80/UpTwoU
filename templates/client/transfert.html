@@ -1,0 +1,139 @@
+{% extends "client/_base.html" %}
+{% block title %}Formulaires de transfert{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <h1>Formulaires de transfert</h1>
+  <p>Téléchargez, signez et envoyez un formulaire par assureur cédant.</p>
+</div>
+
+<!-- Process steps -->
+<div class="dashboard-card mb-6">
+  <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-4">Comment ça marche</p>
+  <div class="grid md:grid-cols-4 gap-4">
+    {% for step in [
+      ('1', 'download', 'Télécharger', 'Téléchargez le formulaire pré-rempli pour chaque assureur.'),
+      ('2', 'pen-line', 'Compléter', 'Indiquez le nom de votre ancien employeur et signez le document.'),
+      ('3', 'send', 'Envoyer', 'Envoyez le formulaire signé directement à l\'assureur cédant.'),
+      ('4', 'clock', 'Attendre', 'L\'assureur dispose de 30 jours calendrier pour effectuer le transfert.'),
+    ] %}
+    <div class="flex items-start gap-3">
+      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="{{ step[1] }}" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-muted mb-0.5">Étape {{ step[0] }}</p>
+        <p class="text-sm font-semibold text-primary">{{ step[2] }}</p>
+        <p class="text-xs text-muted mt-0.5 leading-relaxed">{{ step[3] }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if contrats %}
+
+<!-- One card per dormant contract -->
+<div class="flex flex-col gap-4">
+  {% for c in contrats %}
+  <div class="dashboard-card">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+
+      <!-- Left: contract info -->
+      <div class="flex items-start gap-4">
+        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-base">{{ c.assureur or '—' }}</p>
+          {% if c.numero %}
+          <p class="text-xs text-muted mt-0.5">Réf. contrat : <span class="font-mono">{{ c.numero }}</span></p>
+          {% endif %}
+          <div class="flex flex-wrap gap-2 mt-2">
+            <span class="badge badge-blue">{{ c.type_branche or 'Type inconnu' }}</span>
+            <span class="badge badge-green">Dormant</span>
+            {% if c.reserve %}
+            <span class="badge" style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">
+              {{ c.reserve }} €
+            </span>
+            {% endif %}
+            {% if c.date_valeur %}
+            <span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">
+              Valeur au {{ c.date_valeur }}
+            </span>
+            {% endif %}
+          </div>
+
+          <!-- Assureur address if available -->
+          {% set ref = c.assureur_ref %}
+          {% if ref %}
+          <p class="text-xs text-muted mt-3 leading-relaxed">
+            <i data-lucide="map-pin" style="width:0.75rem;height:0.75rem;display:inline-block;vertical-align:middle;margin-right:2px;"></i>
+            Envoyer à : {{ ref.nom_legal }} — {{ ref.adresse }}, {{ ref.code_postal }} {{ ref.ville }}
+            {% if ref.numero_bce %}· BCE {{ ref.numero_bce }}{% endif %}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right: download button -->
+      <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
+         class="btn btn-primary flex items-center gap-2 flex-shrink-0"
+         style="height:2.5rem;padding:0 1.25rem;">
+        <i data-lucide="download" style="width:1rem;height:1rem;"></i>
+        Télécharger l'Annexe 1
+      </a>
+
+    </div>
+
+    <!-- What to fill manually -->
+    <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
+         style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.25);">
+      <i data-lucide="pencil" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
+      <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
+        <strong>À compléter manuellement :</strong>
+        le nom et le numéro BCE de votre ancien employeur (section Organisateur),
+        la date de départ si absente, et votre signature.
+      </p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Legal note -->
+<div class="mt-6 flex items-start gap-3 rounded-2xl p-4"
+     style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
+  <i data-lucide="info" style="width:1rem;height:1rem;flex-shrink:0;margin-top:2px;color:var(--primary);"></i>
+  <p class="text-xs text-muted leading-relaxed">
+    <strong class="text-primary">Base légale :</strong>
+    Convention Assuralia du 22 septembre 2015 (mise à jour 2 décembre 2019).
+    L'assureur cédant dispose de <strong>30 jours calendrier</strong> pour transférer vos réserves
+    après réception d'un formulaire complet et signé. Le transfert est
+    <strong>gratuit et sans perte de droits acquis</strong>.
+  </p>
+</div>
+
+{% else %}
+
+<!-- No dormant contracts -->
+<div class="dashboard-card text-center py-12">
+  <div class="mx-auto h-16 w-16 rounded-2xl grid place-items-center mb-4"
+       style="background:hsl(172 75% 22% / 0.08);">
+    <i data-lucide="file-x" style="width:2rem;height:2rem;color:var(--primary);opacity:0.4;"></i>
+  </div>
+  <p class="font-semibold text-primary">Aucun contrat dormant détecté</p>
+  <p class="text-sm text-muted mt-2 max-w-sm mx-auto">
+    Les formulaires de transfert sont générés uniquement pour les contrats
+    dont le statut est "dormant". Uploadez un extrait mypension.be complet
+    pour que l'IA identifie vos contrats transférables.
+  </p>
+  <a href="{{ url_for('analyser') }}" class="btn btn-primary mt-6 inline-flex items-center gap-2">
+    <i data-lucide="upload-cloud" style="width:1rem;height:1rem;"></i>
+    Analyser un nouvel extrait
+  </a>
+</div>
+
+{% endif %}
+{% endblock %}

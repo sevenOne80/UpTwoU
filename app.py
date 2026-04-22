@@ -5,7 +5,7 @@ import pdfplumber
 import anthropic
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, User, Client, Contrat, Analyse, AssureurRef, seed_assureurs
@@ -469,6 +469,33 @@ def client_donnees():
         return redirect(url_for('client_donnees'))
 
     return render_template("client/donnees.html", client=client, form=form)
+
+
+# ── Transfert routes ──────────────────────────────────────────────────────────
+@app.route("/client/transfert")
+@login_required
+@client_required
+def client_transfert():
+    client = current_user.client_profile
+    return render_template("client/transfert.html", client=client,
+                           contrats=client.contrats_dormants)
+
+
+@app.route("/client/transfert/<int:contrat_id>/pdf")
+@login_required
+@client_required
+def client_transfert_pdf(contrat_id):
+    from io import BytesIO
+    from pdf_utils import generer_annexe1
+    contrat = Contrat.query.get_or_404(contrat_id)
+    if contrat.client_id != current_user.client_profile.id:
+        flash("Accès non autorisé.", "error")
+        return redirect(url_for('client_transfert'))
+    pdf_bytes = generer_annexe1(current_user.client_profile, contrat)
+    slug = re.sub(r'[^a-z0-9]+', '_', (contrat.assureur or 'assureur').lower())[:30]
+    return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
+                     as_attachment=True,
+                     download_name=f"annexe1_transfert_{slug}.pdf")
 
 
 # ── Admin / Courtier routes ────────────────────────────────────────────────────
