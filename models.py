@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import json
 
 db = SQLAlchemy()
 
@@ -28,6 +29,8 @@ class Client(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     nom = db.Column(db.String(100))
     prenom = db.Column(db.String(100))
+    date_naissance = db.Column(db.String(10))   # JJ/MM/AAAA
+    sexe = db.Column(db.String(1))              # 'F' | 'M'
     niss = db.Column(db.String(20))
     adresse = db.Column(db.String(200))
     ville = db.Column(db.String(100))
@@ -36,7 +39,7 @@ class Client(db.Model):
     iban = db.Column(db.String(34))
     beneficiaire_1 = db.Column(db.String(200))
     beneficiaire_2 = db.Column(db.String(200))
-    profil_risque = db.Column(db.String(20))   # prudent | equilibre | dynamique
+    profil_risque = db.Column(db.String(20))    # prudent | equilibre | dynamique | conviction
     profil_choisi_par = db.Column(db.String(20))  # client | courtier
     profil_date = db.Column(db.DateTime)
     contrats = db.relationship('Contrat', backref='client', lazy=True)
@@ -44,9 +47,7 @@ class Client(db.Model):
 
     @property
     def montant_total(self):
-        """Sum label from latest analysis JSON."""
         if self.analyses:
-            import json
             try:
                 data = json.loads(self.analyses[-1].resultat_json)
                 return data.get('montant_total')
@@ -54,17 +55,32 @@ class Client(db.Model):
                 pass
         return None
 
+    @property
+    def contrats_dormants(self):
+        return [c for c in self.contrats if c.statut == 'dormant']
+
 
 class Contrat(db.Model):
     __tablename__ = 'contrat'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
-    assureur = db.Column(db.String(100))
-    numero = db.Column(db.String(50))
-    type_branche = db.Column(db.String(30))
+    assureur = db.Column(db.String(150))
+    numero = db.Column(db.String(100))
+    type_branche = db.Column(db.String(30))     # Branche 21 | Branche 23 | Inconnu
+    statut = db.Column(db.String(20), default='inconnu')  # dormant | actif | inconnu
     reserve = db.Column(db.String(30))
     date_valeur = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def assureur_ref(self):
+        """Lookup the reference entry for this insurer (best-effort name match)."""
+        if not self.assureur:
+            return None
+        nom = self.assureur.lower()
+        return AssureurRef.query.filter(
+            db.func.lower(AssureurRef.nom_court).contains(nom[:10])
+        ).first()
 
 
 class Analyse(db.Model):
@@ -74,3 +90,83 @@ class Analyse(db.Model):
     filename = db.Column(db.String(200))
     resultat_json = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class AssureurRef(db.Model):
+    """
+    Reference table for Belgian pension insurers.
+    Used to pre-fill Annexe 1 transfer request forms.
+    BCE numbers are official identifiers required on the form.
+    """
+    __tablename__ = 'assureur_ref'
+    id = db.Column(db.Integer, primary_key=True)
+    nom_court = db.Column(db.String(100), unique=True, nullable=False)  # name used in matching
+    nom_legal = db.Column(db.String(200))                               # full legal name for the form
+    numero_bce = db.Column(db.String(20))                               # e.g. "0404.494.849"
+    adresse = db.Column(db.String(200))
+    code_postal = db.Column(db.String(10))
+    ville = db.Column(db.String(100))
+    email_transfert = db.Column(db.String(150))   # contact address for sending Annexe 1
+    iban = db.Column(db.String(34))               # receiving account for the reserve transfer
+
+    def __repr__(self):
+        return f'<AssureurRef {self.nom_court}>'
+
+
+# ── Seed data ──────────────────────────────────────────────────────────────────
+ASSUREURS_SEED = [
+    dict(nom_court='AG Insurance',      nom_legal='AG Insurance SA',
+         numero_bce='0404.494.849',     adresse='Boulevard Émile Jacqmain 53',
+         code_postal='1000',            ville='Bruxelles'),
+    dict(nom_court='AXA',               nom_legal='AXA Belgium SA',
+         numero_bce='0404.483.367',     adresse='Place du Trône 1',
+         code_postal='1000',            ville='Bruxelles'),
+    dict(nom_court='Belfius Insurance', nom_legal='Belfius Insurance SA',
+         numero_bce='0405.764.064',     adresse='Galerie de la Toison d\'Or 29',
+         code_postal='1050',            ville='Bruxelles'),
+    dict(nom_court='Ethias',            nom_legal='Ethias SA',
+         numero_bce='0404.484.654',     adresse='Rue des Croisiers 24',
+         code_postal='4000',            ville='Liège'),
+    dict(nom_court='P&V Assurances',    nom_legal='P&V Assurances SCRL',
+         numero_bce='0402.236.531',     adresse='Rue Royale 151',
+         code_postal='1210',            ville='Bruxelles'),
+    dict(nom_court='KBC Insurance',     nom_legal='KBC Assurances SA',
+         numero_bce='0403.552.563',     adresse='Professor Roger Van Overstraetenplein 2',
+         code_postal='3000',            ville='Leuven'),
+    dict(nom_court='NN Insurance',      nom_legal='NN Insurance Belgium SA',
+         numero_bce='0890.270.057',     adresse='Avenue Fonsny 38',
+         code_postal='1060',            ville='Bruxelles'),
+    dict(nom_court='Allianz',           nom_legal='Allianz Benelux SA',
+         numero_bce='0403.258.197',     adresse='Boulevard du Roi Albert II 32',
+         code_postal='1000',            ville='Bruxelles'),
+    dict(nom_court='Federale Assurance', nom_legal='Federale Assurance SC',
+         numero_bce='0407.039.583',     adresse='Rue de l\'Étuve 12',
+         code_postal='1000',            ville='Bruxelles'),
+    dict(nom_court='Vivium',            nom_legal='Vivium SA',
+         numero_bce='0448.020.024',     adresse='Rue Royale 151',
+         code_postal='1210',            ville='Bruxelles'),
+    dict(nom_court='Integrale',         nom_legal='Integrale SA',
+         numero_bce='0400.098.660',     adresse='Avenue du Douaire 40',
+         code_postal='1348',            ville='Louvain-la-Neuve'),
+    dict(nom_court='Argenta',           nom_legal='Argenta Assurances SA',
+         numero_bce='0452.191.422',     adresse='Belgiëlei 49–53',
+         code_postal='2018',            ville='Antwerpen'),
+    dict(nom_court='Athora',            nom_legal='Athora Belgium SA',
+         numero_bce='0405.764.008',     adresse='Avenue Louise 331',
+         code_postal='1050',            ville='Bruxelles'),
+    dict(nom_court='Generali',          nom_legal='Generali Belgium SA',
+         numero_bce='0401.848.680',     adresse='Avenue Louise 149',
+         code_postal='1050',            ville='Bruxelles'),
+    dict(nom_court='OCA',               nom_legal='OCA (Organisme pour le Financement de Pensions)',
+         numero_bce='0421.387.497',     adresse='Rue Montoyer 24',
+         code_postal='1000',            ville='Bruxelles'),
+]
+
+
+def seed_assureurs(app):
+    """Insert reference insurers if the table is empty. Call once after db.create_all()."""
+    with app.app_context():
+        if AssureurRef.query.count() == 0:
+            for data in ASSUREURS_SEED:
+                db.session.add(AssureurRef(**data))
+            db.session.commit()

@@ -8,7 +8,7 @@ from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, User, Client, Contrat, Analyse
+from models import db, User, Client, Contrat, Analyse, AssureurRef, seed_assureurs
 from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm
 
 try:
@@ -371,6 +371,7 @@ def register():
                 assureur=c.get('assureur'),
                 numero=c.get('numero'),
                 type_branche=c.get('type_branche'),
+                statut=c.get('statut', 'inconnu'),
                 reserve=c.get('reserve'),
                 date_valeur=c.get('date_valeur')
             ))
@@ -540,6 +541,7 @@ app.jinja_env.filters['fromjson'] = json.loads
 
 with app.app_context():
     db.create_all()
+    seed_assureurs(app)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
+from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp
 
 
 class LoginForm(FlaskForm):
@@ -29,6 +29,12 @@ class RegisterForm(FlaskForm):
 class DonneesForm(FlaskForm):
     nom = StringField('Nom', validators=[DataRequired()])
     prenom = StringField('Prénom', validators=[DataRequired()])
+    date_naissance = StringField('Date de naissance', validators=[
+        Optional(),
+        Regexp(r'^\d{2}/\d{2}/\d{4}$', message='Format attendu : JJ/MM/AAAA')
+    ])
+    sexe = SelectField('Sexe', choices=[('', '—'), ('F', 'Femme'), ('M', 'Homme')],
+                       validators=[Optional()])
     adresse = StringField('Adresse', validators=[Optional()])
     ville = StringField('Ville', validators=[Optional()])
     code_postal = StringField('Code postal', validators=[Optional()])
