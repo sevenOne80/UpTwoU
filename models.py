@@ -28,6 +28,7 @@ class Client(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     nom = db.Column(db.String(100))
     prenom = db.Column(db.String(100))
+    niss = db.Column(db.String(20))
     adresse = db.Column(db.String(200))
     ville = db.Column(db.String(100))
     code_postal = db.Column(db.String(10))

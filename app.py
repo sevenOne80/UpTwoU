@@ -93,21 +93,46 @@ Statut dormant : "non-actif", "niet-actief", "inactive", "inaktiv", "dormant", "
 {texte_pdf}
 </extrait_pension>
 
+## Structure exacte des extraits mypension.be
+
+**Section 0 — En-tête du dossier**
+Intitulé : "Dossier « ma pension complémentaire »" suivi de l'année (ex. 2024)
+Contient :
+- "Mes données" : prénom, nom, numéro NISS (format XX.XX.XX-XXX.XX), adresse complète
+
+**Section 2 — Ma pension complémentaire comme travailleur salarié**
+Intitulé : "Ma pension complémentaire comme travailleur salarié" / "Mijn aanvullend pensioen als werknemer"
+La présence de cette section CONFIRME que l'assuré a des droits en tant que salarié.
+Contient : Couverture décès au JJ/MM/AAAA : XX XXX,XX €
+
+**Section 2.1 — Plans de pension comme travailleur salarié** ← SECTION CLÉ
+Intitulé : "Plans de pension comme travailleur salarié" / "Pensioenplannen als werknemer"
+Contient le tableau détaillé des contrats avec pour chaque plan :
+- Nom de l'organisme / assureur
+- Numéro de plan ou contrat
+- Statut : actif, non-actif, dormant, "Sortie le JJ/MM/AAAA"
+- Type (Branche 21 / Branche 23 / Tak 21 / Tak 23)
+- Réserves acquises en € à une date de valeur donnée
+
+Si la section 2.1 est présente → statut salarié confirmé, plans identifiables.
+Si seule la section 2 apparaît sans 2.1 → salarié confirmé mais détail des plans manquant → eligible = "a_verifier".
+
 ## Instructions
 
 Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte avant ou après :
 
 {{
-  "eligible": true ou false,
-  "titre": "Oui, un transfert vers la Branche 23 est possible" ou "Non, un transfert vers la Branche 23 n'est pas possible",
+  "eligible": true, false, ou "a_verifier",
+  "titre": une des trois valeurs ci-dessous,
   "resume": "Phrase synthétique en 1-2 phrases sur la situation de l'assuré.",
   "details": [
     "Point clé 1 — réserves trouvées, montants, assureurs",
-    "Point clé 2 — conditions d'éligibilité",
-    "Point clé 3 — avantage potentiel ou raison du refus"
+    "Point clé 2 — conditions confirmées ou à vérifier",
+    "Point clé 3 — prochaine étape recommandée"
   ],
-  "raisons_refus": ["Raison détaillée si non éligible"],
+  "raisons_refus": ["Raison détaillée — uniquement si eligible = false"],
   "montant_total": "XX XXX,XX €" ou null,
+  "couverture_deces": "XX XXX,XX €" ou null,
   "nb_contrats": nombre entier ou null,
   "contrats": [
     {{
@@ -115,10 +140,22 @@ Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte av
       "numero": "numéro de contrat ou police, vide si absent",
       "type_branche": "Branche 21" ou "Branche 23" ou "Inconnu",
       "reserve": "XX XXX,XX" ou null,
-      "date_valeur": "JJ/MM/AAAA" ou null
+      "date_valeur": "JJ/MM/AAAA" ou null,
+      "statut": "dormant" ou "actif" ou "inconnu"
     }}
-  ]
+  ],
+  "personne": {{
+    "prenom": "prénom extrait de la section 0 ou null",
+    "nom": "nom extrait de la section 0 ou null",
+    "niss": "numéro NISS format XX.XX.XX-XXX.XX ou null",
+    "adresse": "adresse complète ou null"
+  }}
 }}
+
+Valeurs possibles pour "titre" selon eligible :
+- eligible = true       → "Oui, un transfert vers la Branche 23 est possible"
+- eligible = "a_verifier" → "Un transfert est probablement possible — une vérification est nécessaire"
+- eligible = false      → "Non, un transfert vers la Branche 23 n'est pas possible"
 
 ## Règles d'éligibilité — toutes les conditions doivent être réunies
 
@@ -143,11 +180,23 @@ Le contrat doit être en Branche 21 (taux garanti). Les contrats en Branche 23 u
 Le total des réserves transférables doit être **strictement supérieur à 10 000 €**.
 Si le total est ≤ 10 000 €, eligible = false avec mention du montant insuffisant.
 
-**Résumé des cas :**
-- eligible = true : salarié + plan non-actif/dormant + Branche 21 + réserves > 10 000 €
-- eligible = false : indépendant, plan actif (pas de mention sortie/dormant), uniquement B23, réserves ≤ 10 000 €, document illisible ou non reconnu
-- Mix B21 + B23 : eligible = true si la partie B21 seule dépasse 10 000 €, préciser dans details
-- Mix plans actifs + dormants : n'inclure que les plans dormants dans le calcul et les contrats retournés
+**Arbre de décision :**
+
+1. Le document est illisible ou clairement hors-sujet (pas un extrait mypension.be) → eligible = false
+
+2. Le document contient uniquement des réserves d'indépendant (EIP/PLCI confirmés, aucune mention salarié/assurance de groupe) → eligible = false
+
+3. Le document contient des réserves de salarié (ou statut ambigu) ET le détail par plan EST présent (section 2.2) :
+   - Plan dormant confirmé + B21 + > 10 000 € → eligible = true
+   - Plan actif confirmé → eligible = false
+   - Plan dormant + B23 uniquement → eligible = false
+   - Plan dormant + mix B21/B23 → eligible = true si part B21 > 10 000 €
+
+4. Le document contient des réserves > 10 000 € MAIS le détail par plan est absent (pas de section 2.2, pas de mention explicite dormant/actif) :
+   → eligible = "a_verifier"
+   → Expliquer dans details que l'extrait ne contient pas la section 2.2 et inviter à télécharger l'extrait complet depuis mypension.be (vue détaillée par plan)
+
+5. Réserves présentes mais ≤ 10 000 € au total → eligible = false avec mention du montant
 
 **Langues supportées : français, néerlandais, anglais, allemand**"""
 
@@ -259,7 +308,13 @@ def register():
         return redirect(url_for('analyser'))
 
     analyse = json.loads(analyse_json)
+    personne = analyse.get('personne') or {}
     form = RegisterForm()
+
+    # Pré-remplir le formulaire avec les données extraites du PDF
+    if request.method == 'GET':
+        form.prenom.data = personne.get('prenom') or ''
+        form.nom.data = personne.get('nom') or ''
 
     if form.validate_on_submit():
         if User.query.filter_by(email=form.email.data).first():
@@ -275,6 +330,8 @@ def register():
             user_id=user.id,
             nom=form.nom.data,
             prenom=form.prenom.data,
+            niss=personne.get('niss') or '',
+            adresse=personne.get('adresse') or '',
             profil_risque=form.profil.data,
             profil_choisi_par='client',
             profil_date=datetime.utcnow()
