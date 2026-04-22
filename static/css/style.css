@@ -1,0 +1,298 @@
+/* =============================================
+   UpTwoU — Custom CSS (converted from Tailwind)
+   ============================================= */
+
+:root {
+  --background: hsl(40, 33%, 97%);
+  --foreground: hsl(175, 60%, 8%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(175, 60%, 8%);
+  --primary: hsl(172, 75%, 22%);
+  --primary-foreground: hsl(40, 33%, 97%);
+  --primary-glow: hsl(165, 70%, 45%);
+  --secondary: hsl(168, 30%, 92%);
+  --secondary-foreground: hsl(172, 75%, 22%);
+  --muted: hsl(40, 20%, 93%);
+  --muted-foreground: hsl(175, 15%, 38%);
+  --accent: hsl(35, 95%, 55%);
+  --accent-foreground: hsl(175, 60%, 8%);
+  --accent-soft: hsl(35, 95%, 92%);
+  --border: hsl(168, 20%, 88%);
+  --radius: 1rem;
+
+  --shadow-glow: 0 20px 60px -15px hsl(172 75% 22% / 0.35);
+  --shadow-accent: 0 15px 50px -10px hsl(35 95% 55% / 0.45);
+  --shadow-soft: 0 8px 30px -8px hsl(172 75% 22% / 0.12);
+  --shadow-card: 0 4px 20px -4px hsl(172 75% 22% / 0.08);
+}
+
+/* Base */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Color utilities ---- */
+.text-primary          { color: var(--primary) !important; }
+.text-primary-fg       { color: var(--primary-foreground) !important; }
+.text-muted            { color: var(--muted-foreground) !important; }
+.text-accent           { color: var(--accent) !important; }
+.text-card-fg          { color: var(--card-foreground); }
+
+.bg-primary            { background-color: var(--primary); }
+.bg-card               { background-color: var(--card); }
+.bg-muted              { background-color: var(--muted); }
+.bg-secondary          { background-color: var(--secondary); }
+.bg-accent-15          { background-color: hsl(35 95% 55% / 0.15); }
+.bg-primary-10         { background-color: hsl(172 75% 22% / 0.10); }
+
+.border-border         { border-color: var(--border); }
+
+/* ---- Gradient utilities ---- */
+.bg-hero {
+  background:
+    radial-gradient(ellipse at top left, hsl(165 70% 45% / 0.25), transparent 60%),
+    radial-gradient(ellipse at bottom right, hsl(35 95% 55% / 0.18), transparent 55%),
+    linear-gradient(135deg, hsl(172 75% 12%) 0%, hsl(172 75% 22%) 50%, hsl(165 60% 28%) 100%);
+}
+.bg-mesh {
+  background:
+    radial-gradient(at 20% 30%, hsl(165 70% 45% / 0.15) 0px, transparent 50%),
+    radial-gradient(at 80% 70%, hsl(35 95% 55% / 0.12) 0px, transparent 50%);
+}
+.bg-accent-gradient {
+  background: linear-gradient(135deg, hsl(35 95% 60%) 0%, hsl(25 90% 55%) 100%);
+}
+.bg-card-gradient {
+  background: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(168 30% 98%) 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--accent) 0%, hsl(35, 100%, 70%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ---- Shadow utilities ---- */
+.shadow-glow  { box-shadow: var(--shadow-glow); }
+.shadow-accent { box-shadow: var(--shadow-accent); }
+.shadow-soft   { box-shadow: var(--shadow-soft); }
+.shadow-card   { box-shadow: var(--shadow-card); }
+
+/* ---- Font utilities ---- */
+.font-display  { font-family: "Fraunces", ui-serif, Georgia, serif; }
+
+/* ---- Brand wordmark ---- */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0rem;
+  text-decoration: none;
+  line-height: 1;
+}
+.brand-logo img {
+  height: 2.5rem;
+  width: 2.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.brand-wordmark {
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+  line-height: 1;
+}
+.brand-wordmark span {
+  color: var(--accent);
+}
+/* Footer brand — slightly larger */
+.brand-logo-lg img  { height: 3rem; width: 3rem; }
+.brand-logo-lg .brand-wordmark { font-size: 1.5rem; }
+
+/* ---- Animations ---- */
+.animate-blob  { animation: blob 18s ease-in-out infinite; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-up   { animation: float-up 4s ease-in-out infinite; }
+.animate-float-down { animation: float-down 4s ease-in-out infinite 1s; }
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(40px, -30px) scale(1.1); }
+  66%       { transform: translate(-30px, 30px) scale(0.95); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+@keyframes float-up {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes float-down {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(10px); }
+}
+
+/* ---- Navbar ---- */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  background-color: hsl(40 33% 97% / 0.7);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  outline: none;
+}
+.btn-primary {
+  background: linear-gradient(135deg, hsl(35 95% 60%) 0%, hsl(25 90% 55%) 100%);
+  color: var(--accent-foreground);
+  border-radius: 9999px;
+  padding: 0 1.75rem;
+  height: 3.5rem;
+  font-size: 1rem;
+  box-shadow: var(--shadow-accent);
+}
+.btn-primary:hover { opacity: 0.95; }
+
+.btn-outline-light {
+  background: transparent;
+  color: var(--primary-foreground);
+  border: 1px solid hsl(40 33% 97% / 0.3);
+  border-radius: 9999px;
+  padding: 0 1.75rem;
+  height: 3.5rem;
+  font-size: 1rem;
+}
+.btn-outline-light:hover { background: hsl(40 33% 97% / 0.1); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--primary);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+.btn-ghost:hover { color: var(--accent); background: transparent; }
+
+.btn-nav-connexion {
+  background: transparent;
+  color: var(--primary);
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+.btn-nav-connexion:hover { background-color: var(--secondary); }
+
+.btn-nav-start {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-soft);
+}
+.btn-nav-start:hover { opacity: 0.9; }
+
+/* ---- Step cards ---- */
+.step-card {
+  position: relative;
+  border-radius: 1.5rem;
+  background: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(168 30% 98%) 100%);
+  border: 1px solid var(--border);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.5s ease;
+}
+.step-card:hover {
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-4px);
+}
+.step-badge {
+  position: absolute;
+  top: -1rem;
+  right: -1rem;
+  height: 3rem;
+  width: 3rem;
+  border-radius: 0.75rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-soft);
+  transform: rotate(6deg);
+  transition: transform 0.3s ease;
+}
+.step-card:hover .step-badge { transform: rotate(0deg); }
+
+/* ---- Why items ---- */
+.why-card {
+  display: flex;
+  gap: 1.25rem;
+  border-radius: 1.5rem;
+  background-color: var(--card);
+  padding: 1.5rem 2rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+}
+.why-card:hover { box-shadow: var(--shadow-soft); }
+.why-icon {
+  flex-shrink: 0;
+  height: 3.5rem;
+  width: 3.5rem;
+  border-radius: 0.75rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  display: grid;
+  place-items: center;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.why-card:hover .why-icon {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* ---- Floating badges in hero ---- */
+.floating-badge {
+  position: absolute;
+  border-radius: 1rem;
+  background-color: var(--card);
+  color: var(--card-foreground);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-card);
+  border: 1px solid hsl(168 20% 88% / 0.6);
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+@media (min-width: 768px) { .floating-badge { display: flex; } }
+
+/* ---- Lucide icon sizing ---- */
+[data-lucide] { display: inline-block; vertical-align: middle; }
+.icon-sm  { width: 1rem;    height: 1rem; }
+.icon-md  { width: 1.5rem;  height: 1.5rem; }
+.icon-lg  { width: 1.75rem; height: 1.75rem; }
+.icon-xs  { width: 0.875rem; height: 0.875rem; }

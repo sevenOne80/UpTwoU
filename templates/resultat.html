@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Résultat de l'analyse — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans:    ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          borderRadius: { '3xl': '1.5rem', '4xl': '2rem' },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .result-card {
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      border: 1px solid var(--border);
+    }
+    .result-eligible {
+      background: linear-gradient(145deg, hsl(142 76% 98%) 0%, hsl(168 30% 96%) 100%);
+      border-color: hsl(142 76% 70%);
+    }
+    .result-not-eligible {
+      background: linear-gradient(145deg, hsl(0 84% 98%) 0%, hsl(0 60% 96%) 100%);
+      border-color: hsl(0 84% 80%);
+    }
+    .detail-pill {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-radius: 0.875rem;
+      background: white;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+    }
+    .badge-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      border-radius: 1rem;
+      background: white;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="min-h-screen" style="background-color: var(--background);">
+
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <a href="{{ url_for('analyser') }}" class="btn btn-ghost flex items-center gap-2 text-sm">
+      <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+      Nouvelle analyse
+    </a>
+  </div>
+</header>
+
+<main class="container py-16 md:py-24 max-w-3xl">
+
+  <!-- Verdict banner -->
+  <div class="result-card {{ 'result-eligible' if r.eligible else 'result-not-eligible' }} mb-10">
+    <div class="flex items-start gap-5">
+      <div class="flex-shrink-0 h-16 w-16 rounded-2xl grid place-items-center"
+           style="background-color: {{ 'hsl(142 76% 36%)' if r.eligible else 'hsl(0 84% 50%)' }};">
+        <i data-lucide="{{ 'check-circle' if r.eligible else 'x-circle' }}"
+           style="width:2rem;height:2rem;color:white;"></i>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest font-semibold mb-1"
+           style="color: {{ 'hsl(142 76% 28%)' if r.eligible else 'hsl(0 84% 38%)' }};">
+          Résultat de l'analyse IA
+        </p>
+        <h1 class="font-display text-2xl md:text-3xl font-semibold leading-tight"
+            style="color: {{ 'hsl(142 76% 20%)' if r.eligible else 'hsl(0 84% 25%)' }};">
+          {{ r.titre }}
+        </h1>
+        <p class="mt-3 text-base leading-relaxed"
+           style="color: {{ 'hsl(142 76% 22%)' if r.eligible else 'hsl(0 84% 30%)' }};">
+          {{ r.resume }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats (montant + contrats) -->
+  {% if r.montant_total or r.nb_contrats %}
+  <div class="grid grid-cols-2 gap-4 mb-10">
+    {% if r.montant_total %}
+    <div class="badge-stat">
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Réserves totales</p>
+      <p class="font-display text-3xl font-bold text-primary">{{ r.montant_total }}</p>
+    </div>
+    {% endif %}
+    {% if r.nb_contrats %}
+    <div class="badge-stat">
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Contrat(s) détecté(s)</p>
+      <p class="font-display text-3xl font-bold text-primary">{{ r.nb_contrats }}</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Detail points -->
+  {% if r.details %}
+  <div class="mb-10">
+    <h2 class="font-display text-xl font-semibold text-primary mb-4">Ce que nous avons trouvé</h2>
+    <div class="flex flex-col gap-3">
+      {% for detail in r.details %}
+      <div class="detail-pill">
+        <div class="flex-shrink-0 h-6 w-6 rounded-full grid place-items-center mt-0.5"
+             style="background-color: var(--primary);">
+          <i data-lucide="check" style="width:0.75rem;height:0.75rem;color:white;"></i>
+        </div>
+        <p class="text-sm text-muted leading-relaxed">{{ detail }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Reasons for refusal -->
+  {% if not r.eligible and r.raisons_refus %}
+  <div class="mb-10">
+    <h2 class="font-display text-xl font-semibold mb-4" style="color: hsl(0 84% 30%);">
+      Pourquoi ce n'est pas possible
+    </h2>
+    <div class="flex flex-col gap-3">
+      {% for raison in r.raisons_refus %}
+      <div class="detail-pill" style="border-color: hsl(0 84% 80%); background: hsl(0 84% 98%);">
+        <div class="flex-shrink-0 h-6 w-6 rounded-full grid place-items-center mt-0.5"
+             style="background-color: hsl(0 84% 50%);">
+          <i data-lucide="x" style="width:0.75rem;height:0.75rem;color:white;"></i>
+        </div>
+        <p class="text-sm leading-relaxed" style="color: hsl(0 84% 30%);">{{ raison }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- CTA -->
+  <div class="rounded-3xl p-8 text-center" style="background: linear-gradient(145deg, hsl(172 75% 12%) 0%, hsl(172 75% 22%) 100%);">
+    <h2 class="font-display text-2xl font-semibold text-white mb-3">
+      {% if r.eligible %}Passez à l'étape suivante{% else %}Besoin d'un conseil personnalisé ?{% endif %}
+    </h2>
+    <p class="text-sm mb-6" style="color: hsl(168 30% 80%);">
+      {% if r.eligible %}
+        Nos experts analysent votre situation et vous proposent une stratégie de transfert optimisée.
+      {% else %}
+        Même si un transfert direct n'est pas possible, d'autres solutions d'optimisation existent.
+      {% endif %}
+    </p>
+    <a href="{{ url_for('index') }}#contact"
+       class="btn btn-primary inline-flex items-center gap-2">
+      Parler à un conseiller UpTwoU
+      <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
+    </a>
+    <p class="mt-4 text-xs" style="color: hsl(168 30% 65%);">
+      Gratuit &amp; sans engagement · Réponse sous 48h
+    </p>
+  </div>
+
+  <!-- File note -->
+  <p class="mt-8 text-center text-xs text-muted">
+    Fichier analysé : <strong>{{ filename }}</strong> · Analyse générée par IA, à titre indicatif uniquement.
+  </p>
+
+</main>
+
+<footer class="border-t mt-16" style="border-color: var(--border);">
+  <div class="container py-6 flex flex-wrap justify-between gap-4 text-xs text-muted">
+    <p>© <span id="year"></span> UpTwoU. Tous droits réservés.</p>
+    <p>Courtier souscripteur mandaté · Agréé BNB · Contrôlé FSMA</p>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
