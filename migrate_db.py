@@ -1,34 +1,50 @@
 """
-One-shot migration script — run once after pulling the new models.
-Safe to run multiple times: skips columns/tables that already exist.
+DB migration script — safe to run multiple times.
+Adds missing columns to existing tables; creates new tables if absent.
+If the schema is too far out of sync, use --reset to drop and recreate everything.
+
+Usage:
+    python migrate_db.py          # incremental migration
+    python migrate_db.py --reset  # DROP ALL + recreate (loses all data)
 """
+import sys
 from app import app, db
 from sqlalchemy import text, inspect
+from models import seed_assureurs
 
-MIGRATIONS = [
+COLUMN_MIGRATIONS = [
+    # (table, column, sql_type)
     ("client",  "date_naissance", "VARCHAR(10)"),
     ("client",  "sexe",           "VARCHAR(1)"),
     ("contrat", "statut",         "VARCHAR(20) DEFAULT 'inconnu'"),
 ]
 
+reset = "--reset" in sys.argv
+
 with app.app_context():
-    insp = inspect(db.engine)
-
-    with db.engine.connect() as conn:
-        for table, column, col_type in MIGRATIONS:
-            existing = [c["name"] for c in insp.get_columns(table)]
-            if column not in existing:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
-                print(f"  + {table}.{column}")
-            else:
-                print(f"  = {table}.{column} (already exists)")
-
-        # Create new tables (assureur_ref) if missing
+    if reset:
+        print("⚠ DROP ALL tables and recreate…")
+        db.drop_all()
         db.create_all()
-        conn.commit()
+        print("  Tables recreated.")
+    else:
+        insp = inspect(db.engine)
+        existing_tables = insp.get_table_names()
 
-    # Seed reference insurers if empty
-    from models import seed_assureurs
+        with db.engine.connect() as conn:
+            for table, column, col_type in COLUMN_MIGRATIONS:
+                if table not in existing_tables:
+                    print(f"  ? table '{table}' does not exist — run with --reset")
+                    continue
+                existing_cols = [c["name"] for c in insp.get_columns(table)]
+                if column not in existing_cols:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+                    print(f"  + {table}.{column}")
+                else:
+                    print(f"  = {table}.{column} (already exists)")
+
+            db.create_all()   # creates any brand-new tables
+            conn.commit()
+
     seed_assureurs(app)
-
     print("\nMigration complete.")
