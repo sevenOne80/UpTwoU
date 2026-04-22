@@ -69,30 +69,49 @@ def client_required(f):
 # ── Claude analysis ────────────────────────────────────────────────────────────
 ANALYSIS_PROMPT = """Tu es un expert en pension complémentaire belge (2e pilier), spécialisé dans l'optimisation des réserves en Branche 21 vers Branche 23.
 
-Voici l'extrait de pension complémentaire d'un assuré belge, téléchargé depuis mypension.be :
+## Structure des extraits mypension.be
+
+Les documents mypension.be suivent toujours ce format :
+- En-tête : nom, prénom et NISS de l'assuré, date de l'extrait
+- Section "Pension complémentaire" ou "Aanvullend pensioen" contenant un ou plusieurs tableaux :
+  Colonnes typiques : Organisme de pension / Assureur | Numéro de contrat / Police | Type de contrat (Branche 21 / Branche 23 / Tak 21 / Tak 23) | Réserves acquises / Verworven reserves | Date de valeur / Waarderingsdatum
+- Le total des réserves peut apparaître comme "Total", "Totaal" ou être la somme des lignes
+- Les montants sont en euros, format belge : 12 345,67 ou 12.345,67
+- Les documents peuvent être en français, néerlandais ou les deux
+
+## Mots-clés à rechercher
+
+Assureurs fréquents : AG Insurance, Allianz, Athora, AXA, Belfius Insurance, Ethias, Federale, Generali, ING Life, KBC Insurance, NN Insurance, P&V, Vivium, Integrale, Argenta, Fidelity, Equitable Life
+Types de contrats B21 : "Branche 21", "Tak 21", "taux garanti", "rendement garanti"
+Types de contrats B23 : "Branche 23", "Tak 23", "fonds d'investissement", "beleggingsfonds"
+Réserves : "réserves acquises", "verworven reserves", "valeur de rachat", "afkoopwaarde"
+
+## Document à analyser
 
 <extrait_pension>
 {texte_pdf}
 </extrait_pension>
 
-Analyse cet extrait et réponds UNIQUEMENT au format JSON suivant, sans aucun texte avant ou après :
+## Instructions
+
+Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte avant ou après :
 
 {{
   "eligible": true ou false,
   "titre": "Oui, un transfert vers la Branche 23 est possible" ou "Non, un transfert vers la Branche 23 n'est pas possible",
-  "resume": "Phrase d'accroche synthétique en 1-2 phrases.",
+  "resume": "Phrase synthétique en 1-2 phrases sur la situation de l'assuré.",
   "details": [
-    "Point clé 1",
-    "Point clé 2",
-    "Point clé 3"
+    "Point clé 1 — réserves trouvées, montants, assureurs",
+    "Point clé 2 — conditions d'éligibilité",
+    "Point clé 3 — avantage potentiel ou raison du refus"
   ],
-  "raisons_refus": ["Raison 1", "Raison 2"],
-  "montant_total": "XX XXX,XX €" ou null si non trouvé,
+  "raisons_refus": ["Raison détaillée si non éligible"],
+  "montant_total": "XX XXX,XX €" ou null,
   "nb_contrats": nombre entier ou null,
   "contrats": [
     {{
-      "assureur": "Nom de l'assureur",
-      "numero": "numéro de contrat ou vide",
+      "assureur": "Nom exact de l'assureur tel qu'il apparaît dans le document",
+      "numero": "numéro de contrat ou police, vide si absent",
       "type_branche": "Branche 21" ou "Branche 23" ou "Inconnu",
       "reserve": "XX XXX,XX" ou null,
       "date_valeur": "JJ/MM/AAAA" ou null
@@ -100,11 +119,11 @@ Analyse cet extrait et réponds UNIQUEMENT au format JSON suivant, sans aucun te
   ]
 }}
 
-Règles d'éligibilité pour un transfert Branche 21 → Branche 23 :
-- L'assuré doit avoir des réserves acquises en Branche 21
-- Les contrats doivent être du 2e pilier (EIP, PLCI, pension sectorielle, assurance de groupe)
-- L'assuré doit être encore actif (pas encore à la retraite)
-- Si l'extrait est illisible ou ne correspond pas à mypension.be, eligible = false"""
+## Règles d'éligibilité
+
+- eligible = true si : réserves en Branche 21 détectées + contrat du 2e pilier (EIP, PLCI, assurance de groupe, pension sectorielle) + assuré encore actif
+- eligible = false si : uniquement Branche 23, déjà à la retraite, document illisible, ou document non reconnu comme extrait mypension.be
+- En cas de mix B21 + B23 : eligible = true, préciser dans details que seule la partie B21 est transférable"""
 
 
 def allowed_file(filename):
@@ -114,10 +133,25 @@ def allowed_file(filename):
 def extract_pdf_text(filepath):
     parts = []
     with pdfplumber.open(filepath) as pdf:
-        for page in pdf.pages:
-            t = page.extract_text()
+        for i, page in enumerate(pdf.pages):
+            # Texte courant
+            t = page.extract_text(x_tolerance=2, y_tolerance=2)
             if t:
                 parts.append(t)
+            # Tableaux (réserves, contrats — souvent en grille sur mypension.be)
+            tables = page.extract_tables({
+                "vertical_strategy": "lines",
+                "horizontal_strategy": "lines",
+                "snap_tolerance": 5,
+            })
+            for table in tables:
+                rows = []
+                for row in table:
+                    cleaned = [str(c or '').strip().replace('\n', ' ') for c in row]
+                    if any(cleaned):
+                        rows.append(' | '.join(cleaned))
+                if rows:
+                    parts.append(f"[Tableau page {i+1}]\n" + '\n'.join(rows))
     return "\n\n".join(parts)
 
 
