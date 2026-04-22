@@ -114,8 +114,14 @@ Contient le tableau détaillé des contrats avec pour chaque plan :
 - Type (Branche 21 / Branche 23 / Tak 21 / Tak 23)
 - Réserves acquises en € à une date de valeur donnée
 
-Si la section 2.1 est présente → statut salarié confirmé, plans identifiables.
-Si seule la section 2 apparaît sans 2.1 → salarié confirmé mais détail des plans manquant → eligible = "a_verifier".
+**IMPORTANT — ordre des sections non garanti :**
+Les sections ne suivent PAS nécessairement l'ordre numérique dans le document PDF.
+La section 2.1 ou 2.2 peut apparaître APRÈS les sections 3, 3.1, 3.2, etc.
+Tu dois parcourir l'intégralité du document avant de conclure qu'une section est absente.
+Ne déclare eligible = "a_verifier" QUE si, après avoir lu tout le document, aucun détail par plan n'est trouvé.
+
+Si la section 2.1 est présente (quel que soit son emplacement dans le PDF) → statut salarié confirmé, plans identifiables.
+Si seule la section 2 apparaît et qu'aucun détail par plan n'est trouvé nulle part dans le document → eligible = "a_verifier".
 
 ## Instructions
 
@@ -237,7 +243,7 @@ def analyse_avec_claude(texte_pdf):
         max_tokens=2048,
         thinking={"type": "adaptive"},
         messages=[{"role": "user",
-                   "content": ANALYSIS_PROMPT.format(texte_pdf=texte_pdf[:12000])}]
+                   "content": ANALYSIS_PROMPT.format(texte_pdf=texte_pdf[:30000])}]
     )
     for block in message.content:
         if block.type == "text":
