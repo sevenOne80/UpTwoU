@@ -1,0 +1,100 @@
+{% extends "client/_base.html" %}
+{% block title %}Mes données{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <h1>Mes données personnelles</h1>
+  <p>Ces informations sont nécessaires pour finaliser votre dossier de transfert.</p>
+</div>
+
+<div class="dashboard-card max-w-2xl">
+  <form method="POST" class="flex flex-col gap-5">
+    {{ form.hidden_tag() }}
+
+    <!-- Identity -->
+    <div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Identité</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="form-group">
+          <label class="form-label">{{ form.prenom.label.text }}</label>
+          {{ form.prenom(class="form-input") }}
+          {% for e in form.prenom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ form.nom.label.text }}</label>
+          {{ form.nom(class="form-input") }}
+          {% for e in form.nom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);"></div>
+
+    <!-- Address -->
+    <div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Adresse</p>
+      <div class="flex flex-col gap-4">
+        <div class="form-group">
+          <label class="form-label">{{ form.adresse.label.text }}</label>
+          {{ form.adresse(class="form-input", placeholder="Rue de la Loi 16") }}
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="form-group">
+            <label class="form-label">{{ form.code_postal.label.text }}</label>
+            {{ form.code_postal(class="form-input", placeholder="1000") }}
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label">{{ form.ville.label.text }}</label>
+            {{ form.ville(class="form-input", placeholder="Bruxelles") }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ form.telephone.label.text }}</label>
+          {{ form.telephone(class="form-input", placeholder="+32 4 xx xx xx xx") }}
+        </div>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);"></div>
+
+    <!-- Banking -->
+    <div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Données bancaires</p>
+      <div class="form-group">
+        <label class="form-label">{{ form.iban.label.text }}</label>
+        {{ form.iban(class="form-input", placeholder="BE68 5390 0754 7034") }}
+        <p class="text-xs text-muted mt-1">Utilisé pour le virement de vos réserves lors du transfert.</p>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);"></div>
+
+    <!-- Beneficiaries -->
+    <div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Bénéficiaires en cas de décès</p>
+      <div class="flex flex-col gap-4">
+        <div class="form-group">
+          <label class="form-label">{{ form.beneficiaire_1.label.text }}</label>
+          {{ form.beneficiaire_1(class="form-input", placeholder="ex. Marie Dupont — épouse") }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ form.beneficiaire_2.label.text }}</label>
+          {{ form.beneficiaire_2(class="form-input", placeholder="ex. Louis Dupont — fils") }}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 pt-2">
+      <button type="submit" class="btn btn-primary" style="height:2.75rem;padding:0 1.75rem;">
+        <i data-lucide="save" style="width:1rem;height:1rem;margin-right:0.5rem;"></i>
+        {{ form.submit.label.text }}
+      </button>
+      <p class="text-xs text-muted">
+        <i data-lucide="lock" style="width:0.875rem;height:0.875rem;display:inline;"></i>
+        Données chiffrées et protégées conformément au RGPD.
+      </p>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

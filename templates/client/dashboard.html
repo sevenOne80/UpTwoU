@@ -1,0 +1,106 @@
+{% extends "client/_base.html" %}
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <h1>Bonjour, {{ client.prenom }} 👋</h1>
+  <p>Voici un aperçu de vos réserves de pension complémentaire.</p>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+
+  <div class="stat-card">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="wallet" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      </div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Réserves totales</p>
+    </div>
+    <p class="font-display text-3xl font-bold text-primary">
+      {{ client.montant_total or '—' }}
+    </p>
+    <p class="text-xs text-muted mt-1">Valeur au dernier extrait</p>
+  </div>
+
+  <div class="stat-card">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(35 95% 55% / 0.12);">
+        <i data-lucide="file-text" style="width:1.125rem;height:1.125rem;color:var(--accent);"></i>
+      </div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Contrats</p>
+    </div>
+    <p class="font-display text-3xl font-bold text-primary">{{ client.contrats | length }}</p>
+    <p class="text-xs text-muted mt-1">Contrat(s) détecté(s)</p>
+  </div>
+
+  <div class="stat-card">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(142 76% 36% / 0.1);">
+        <i data-lucide="sliders-horizontal" style="width:1.125rem;height:1.125rem;color:hsl(142 76% 36%);"></i>
+      </div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Profil</p>
+    </div>
+    {% if client.profil_risque %}
+      <p class="font-display text-3xl font-bold text-primary capitalize">{{ client.profil_risque }}</p>
+      <p class="text-xs text-muted mt-1">Choisi par : {{ client.profil_choisi_par }}</p>
+    {% else %}
+      <p class="font-display text-2xl font-bold text-muted">Non défini</p>
+      <a href="{{ url_for('client_profil') }}" class="text-xs text-accent font-semibold mt-1 block hover:underline">Choisir un profil →</a>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Contracts summary -->
+<div class="dashboard-card mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-display text-lg font-semibold text-primary">Mes contrats</h2>
+    <a href="{{ url_for('client_contrats') }}" class="text-sm text-accent font-semibold hover:underline">Voir tout →</a>
+  </div>
+
+  {% if client.contrats %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Assureur</th>
+        <th>Type</th>
+        <th>Réserve</th>
+        <th>Date de valeur</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in client.contrats[:3] %}
+      <tr>
+        <td class="font-semibold">{{ c.assureur or '—' }}</td>
+        <td>
+          <span class="badge {{ 'badge-blue' if c.type_branche == 'Branche 21' else 'badge-green' }}">
+            {{ c.type_branche or '—' }}
+          </span>
+        </td>
+        <td class="font-semibold">{{ c.reserve or '—' }} €</td>
+        <td class="text-muted">{{ c.date_valeur or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-sm text-muted text-center py-6">Aucun contrat enregistré.</p>
+  {% endif %}
+</div>
+
+<!-- Personal data CTA -->
+{% if not client.adresse or not client.iban %}
+<div class="rounded-2xl p-5 flex items-center gap-4" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.25);">
+  <i data-lucide="info" style="width:1.25rem;height:1.25rem;flex-shrink:0;color:var(--accent);"></i>
+  <div class="flex-1">
+    <p class="text-sm font-semibold text-primary">Complétez votre dossier</p>
+    <p class="text-xs text-muted mt-0.5">Ajoutez votre adresse, IBAN et bénéficiaires pour finaliser votre dossier de transfert.</p>
+  </div>
+  <a href="{{ url_for('client_donnees') }}" class="btn btn-primary" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;white-space:nowrap;">
+    Compléter
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}

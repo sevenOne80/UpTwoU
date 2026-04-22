@@ -3,3 +3,7 @@ werkzeug
 pdfplumber
 anthropic
 python-dotenv
+flask-login
+flask-sqlalchemy
+flask-wtf
+email-validator

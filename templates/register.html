@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Créer mon compte — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { container: { center:true, padding:'2rem' }, extend: { fontFamily: { display:['Fraunces','serif'], sans:['Plus Jakarta Sans','sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background-color:var(--background);" class="min-h-screen">
+
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <a href="{{ url_for('login') }}" class="btn btn-ghost text-sm">Déjà un compte ?</a>
+  </div>
+</header>
+
+<main class="container py-16 max-w-4xl">
+  <div class="grid lg:grid-cols-2 gap-12 items-start">
+
+    <!-- Left: analysis summary -->
+    <div>
+      <p class="text-sm uppercase tracking-widest font-semibold text-accent">Bonne nouvelle</p>
+      <h1 class="mt-2 font-display text-3xl md:text-4xl font-semibold text-primary leading-tight">
+        {{ analyse.titre }}
+      </h1>
+      <p class="mt-4 text-muted leading-relaxed">{{ analyse.resume }}</p>
+
+      {% if analyse.montant_total or analyse.nb_contrats %}
+      <div class="mt-6 grid grid-cols-2 gap-3">
+        {% if analyse.montant_total %}
+        <div class="stat-card text-center">
+          <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Réserves</p>
+          <p class="font-display text-2xl font-bold text-primary">{{ analyse.montant_total }}</p>
+        </div>
+        {% endif %}
+        {% if analyse.nb_contrats %}
+        <div class="stat-card text-center">
+          <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Contrat(s)</p>
+          <p class="font-display text-2xl font-bold text-primary">{{ analyse.nb_contrats }}</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="mt-6 rounded-2xl p-4" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
+        <p class="text-sm text-muted">
+          <strong class="text-primary">En créant votre compte</strong>, vous accédez à un espace sécurisé pour visualiser vos contrats, suivre la valeur de vos réserves et gérer vos données personnelles.
+        </p>
+      </div>
+    </div>
+
+    <!-- Right: form -->
+    <div class="rounded-3xl bg-card p-8 shadow-soft" style="border:1px solid var(--border);">
+      <h2 class="font-display text-xl font-semibold text-primary mb-6">Créer mon compte</h2>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert-{{ category }} mb-4">
+            <i data-lucide="{{ 'check-circle' if category == 'success' else 'alert-circle' }}" style="width:1.25rem;height:1.25rem;flex-shrink:0;"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" class="flex flex-col gap-4">
+        {{ form.hidden_tag() }}
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group">
+            <label class="form-label">{{ form.prenom.label.text }}</label>
+            {{ form.prenom(class="form-input", placeholder="Jean") }}
+            {% for e in form.prenom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">{{ form.nom.label.text }}</label>
+            {{ form.nom(class="form-input", placeholder="Dupont") }}
+            {% for e in form.nom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">{{ form.email.label.text }}</label>
+          {{ form.email(class="form-input", placeholder="votre@email.com") }}
+          {% for e in form.email.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">{{ form.password.label.text }} <span class="font-normal text-muted">(min. 8 caractères)</span></label>
+          {{ form.password(class="form-input", placeholder="••••••••") }}
+          {% for e in form.password.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">{{ form.password2.label.text }}</label>
+          {{ form.password2(class="form-input", placeholder="••••••••") }}
+          {% for e in form.password2.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        </div>
+
+        <!-- Profile selection -->
+        <div>
+          <p class="form-label mb-3">Profil d'investissement</p>
+          <div class="flex flex-col gap-2" id="profil-cards">
+
+            <label class="profil-card" id="card-prudent">
+              <input type="radio" name="profil" value="prudent" {% if form.profil.data == 'prudent' %}checked{% endif %}>
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.1);">
+                  <i data-lucide="shield" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-sm text-primary">Prudent</p>
+                  <p class="text-xs text-muted">Capital préservé, rendement stable (~2–3 % /an)</p>
+                </div>
+              </div>
+            </label>
+
+            <label class="profil-card" id="card-equilibre">
+              <input type="radio" name="profil" value="equilibre" {% if form.profil.data == 'equilibre' %}checked{% endif %}>
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(35 95% 55% / 0.12);">
+                  <i data-lucide="scale" style="width:1.125rem;height:1.125rem;color:var(--accent);"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-sm text-primary">Équilibré</p>
+                  <p class="text-xs text-muted">Mix actions / obligations, rendement modéré (~4–6 % /an)</p>
+                </div>
+              </div>
+            </label>
+
+            <label class="profil-card" id="card-dynamique">
+              <input type="radio" name="profil" value="dynamique" {% if form.profil.data == 'dynamique' %}checked{% endif %}>
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(142 76% 36% / 0.1);">
+                  <i data-lucide="trending-up" style="width:1.125rem;height:1.125rem;color:hsl(142 76% 36%);"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-sm text-primary">Dynamique</p>
+                  <p class="text-xs text-muted">Orienté actions, croissance long terme (~6–9 % /an)</p>
+                </div>
+              </div>
+            </label>
+
+          </div>
+          {% for e in form.profil.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full mt-2" style="justify-content:center;">
+          Créer mon compte
+          <i data-lucide="arrow-right" style="width:1rem;height:1rem;margin-left:0.5rem;"></i>
+        </button>
+      </form>
+
+      <p class="mt-4 text-center text-xs text-muted">
+        En créant un compte, vous acceptez notre
+        <a href="#" class="underline hover:text-primary">politique de confidentialité</a>.
+      </p>
+    </div>
+  </div>
+</main>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+
+  // Profile card visual selection
+  const radios = document.querySelectorAll('#profil-cards input[type="radio"]');
+  function updateCards() {
+    radios.forEach(r => {
+      const card = r.closest('label');
+      card.classList.toggle('selected', r.checked);
+    });
+  }
+  radios.forEach(r => r.addEventListener('change', updateCards));
+  updateCards();
+</script>
+</body>
+</html>

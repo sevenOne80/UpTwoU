@@ -1,0 +1,59 @@
+{% extends "admin/_base.html" %}
+{% block title %}Clients{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <h1>Tableau de bord courtier</h1>
+  <p>{{ clients | length }} client(s) enregistré(s).</p>
+</div>
+
+<div class="dashboard-card">
+  {% if clients %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Client</th>
+        <th>Email</th>
+        <th>Réserves</th>
+        <th>Contrats</th>
+        <th>Profil</th>
+        <th>Inscription</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in clients %}
+      <tr>
+        <td class="font-semibold">{{ c.prenom }} {{ c.nom }}</td>
+        <td class="text-muted">{{ c.user.email }}</td>
+        <td class="font-semibold text-primary">{{ c.montant_total or '—' }}</td>
+        <td>{{ c.contrats | length }}</td>
+        <td>
+          {% if c.profil_risque %}
+            <span class="badge {{ 'badge-blue' if c.profil_risque == 'prudent' else ('badge-amber' if c.profil_risque == 'equilibre' else 'badge-green') }} capitalize">
+              {{ c.profil_risque }}
+            </span>
+          {% else %}
+            <span class="badge badge-gray">Non défini</span>
+          {% endif %}
+        </td>
+        <td class="text-muted">{{ c.user.created_at.strftime('%d/%m/%Y') }}</td>
+        <td>
+          <a href="{{ url_for('admin_client_detail', client_id=c.id) }}"
+             class="text-sm text-accent font-semibold hover:underline">
+            Voir →
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="text-center py-12">
+    <i data-lucide="users" style="width:3rem;height:3rem;color:var(--muted-foreground);margin:0 auto 1rem;display:block;"></i>
+    <p class="font-semibold text-primary">Aucun client encore enregistré.</p>
+    <p class="text-sm text-muted mt-1">Les clients apparaissent ici après avoir créé leur compte.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

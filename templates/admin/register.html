@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Créer un compte courtier — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@0,600;0,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { display:['Fraunces','serif'], sans:['Plus Jakarta Sans','sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background-color:var(--background);" class="min-h-screen flex items-center justify-center p-4">
+
+<div class="w-full max-w-md">
+  <a href="{{ url_for('index') }}" class="flex items-center justify-center gap-0 mb-8">
+    <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="logo" style="height:2.5rem;width:2.5rem;">
+    <span class="brand-wordmark">Up<span>Two</span>U</span>
+  </a>
+
+  <div class="rounded-3xl bg-card p-8 shadow-soft" style="border:1px solid var(--border);">
+    <h1 class="font-display text-2xl font-semibold text-primary mb-1">Compte courtier</h1>
+    <p class="text-sm text-muted mb-6">Accès réservé aux courtiers UpTwoU.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert-{{ category }} mb-4">
+          <i data-lucide="{{ 'check-circle' if category == 'success' else 'alert-circle' }}" style="width:1.25rem;height:1.25rem;flex-shrink:0;"></i>
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" class="flex flex-col gap-4">
+      {{ form.hidden_tag() }}
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group">
+          <label class="form-label">{{ form.prenom.label.text }}</label>
+          {{ form.prenom(class="form-input") }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ form.nom.label.text }}</label>
+          {{ form.nom(class="form-input") }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ form.email.label.text }}</label>
+        {{ form.email(class="form-input") }}
+        {% for e in form.email.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ form.password.label.text }}</label>
+        {{ form.password(class="form-input", placeholder="••••••••") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ form.password2.label.text }}</label>
+        {{ form.password2(class="form-input", placeholder="••••••••") }}
+        {% for e in form.password2.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">{{ form.code_secret.label.text }}</label>
+        {{ form.code_secret(class="form-input", placeholder="Code fourni par UpTwoU") }}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-2" style="justify-content:center;">
+        Créer le compte courtier
+      </button>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

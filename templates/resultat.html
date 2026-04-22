@@ -165,16 +165,26 @@
   <!-- CTA -->
   <div class="rounded-3xl p-8 text-center" style="background: linear-gradient(145deg, hsl(172 75% 12%) 0%, hsl(172 75% 22%) 100%);">
     <h2 class="font-display text-2xl font-semibold text-white mb-3">
-      {% if r.eligible %}Passez à l'étape suivante{% else %}Besoin d'un conseil personnalisé ?{% endif %}
+      {% if r.eligible %}Vous souhaitez transférer vos réserves ?{% else %}Besoin d'un conseil personnalisé ?{% endif %}
     </h2>
     <p class="text-sm mb-6" style="color: hsl(168 30% 80%);">
       {% if r.eligible %}
-        Nos experts analysent votre situation et vous proposent une stratégie de transfert optimisée.
+        Créez votre espace client et bénéficiez d'un suivi personnalisé de votre transfert vers la Branche 23.
       {% else %}
         Même si un transfert direct n'est pas possible, d'autres solutions d'optimisation existent.
       {% endif %}
     </p>
-    <a href="{{ url_for('index') }}#contact"
+    {% if r.eligible %}
+    <a href="{{ url_for('register') }}"
+       class="btn btn-primary inline-flex items-center gap-2">
+      Je souhaite transférer mes réserves
+      <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
+    </a>
+    <p class="mt-4 text-xs" style="color: hsl(168 30% 65%);">
+      Gratuit &amp; sans engagement · Création de compte en 2 minutes
+    </p>
+    {% else %}
+    <a href="{{ url_for('index') }}"
        class="btn btn-primary inline-flex items-center gap-2">
       Parler à un conseiller UpTwoU
       <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
@@ -182,6 +192,7 @@
     <p class="mt-4 text-xs" style="color: hsl(168 30% 65%);">
       Gratuit &amp; sans engagement · Réponse sous 48h
     </p>
+    {% endif %}
   </div>
 
   <!-- File note -->
