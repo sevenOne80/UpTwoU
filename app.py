@@ -79,6 +79,26 @@ Les documents mypension.be suivent toujours ce format :
 - Les montants sont en euros, format belge : 12 345,67 ou 12.345,67
 - Les documents peuvent être en français, néerlandais ou les deux
 
+## Exemple réel de section 2.1 telle qu'elle apparaît dans un PDF mypension.be
+
+Voici comment la section 2.1 est typiquement extraite d'un PDF (format tabulaire aplati) :
+
+```
+2.1 Plans de pension comme travailleur salarié au 01/01/2024
+Organisateur | Organisme de pension | Plan de pension | Statut d'affiliation au 01/01/2024 | Réserve de pension le 01/01/2024 | Evènement après 01/01/2024
+Pas d'application | OCA - CVV 50148 0421.387.497 | Plan de pension de l'employeur EUCL/DB/BA 2012-0000-0000-0006-8090-8460 | Affilié non actif | 39.391,76 € | -
+Pas d'application | P & V Assurances 0402.236.531 | Plan de pension de l'employeur VIC53010125L00 2011-0000-0000-0001-8629-8903 | Affilié actif | 20.463,44 € | Sortie le 01/04/2024
+Pas d'application | AG INSURANCE 0404.494.849 | Plan de pension de l'employeur RG0415622333000000000010992 | Affilié non actif | 14.743,75 € | -
+Total de la réserve de pension comme travailleur salarié: 166.807,83 €
+```
+
+**Interprétation des statuts :**
+- "Affilié non actif" → plan dormant, transférable si réserve > 10 000 €
+- "Affilié actif" AVEC "Sortie le JJ/MM/AAAA" dans la colonne Evènement → l'affilié a quitté l'employeur après la date de référence. Ce plan EST devenu dormant et est transférable si réserve > 10 000 €
+- "Affilié actif" SANS mention de sortie → plan actif, non transférable
+
+**Règle pour les plans "Sortie le" :** un plan avec statut "Affilié actif" au 01/01/2024 mais portant la mention "Sortie le XX/XX/XXXX" est traité comme dormant car l'affilié a quitté l'employeur. Ces plans sont éligibles au transfert.
+
 ## Mots-clés à rechercher (FR / NL / EN / DE)
 
 Assureurs fréquents : AG Insurance, Allianz, Athora, AXA, Belfius Insurance, Ethias, Federale, Generali, ING Life, KBC Insurance, NN Insurance, P&V, Vivium, Integrale, Argenta, Fidelity, Equitable Life
