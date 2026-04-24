@@ -3,7 +3,7 @@ import re
 import json
 import pdfplumber
 import anthropic
-from datetime import datetime
+from datetime import datetime, date
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -64,6 +64,53 @@ def client_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
+
+
+# ── Pension age helpers ────────────────────────────────────────────────────────
+def _add_years(d, years):
+    try:
+        return d.replace(year=d.year + years)
+    except ValueError:          # Feb 29 in non-leap year
+        return d.replace(year=d.year + years, day=28)
+
+
+def birthdate_from_niss(niss):
+    """Extract date of birth from Belgian NISS (YY.MM.DD-XXX.CC).
+    For births from 2000, the month is encoded as MM+20."""
+    digits = re.sub(r'\D', '', niss or '')
+    if len(digits) != 11:
+        return None
+    yy, mm, dd = int(digits[:2]), int(digits[2:4]), int(digits[4:6])
+    if mm > 20:         # 2000+
+        mm -= 20
+        year = 2000 + yy
+    else:
+        year = 1900 + yy
+    try:
+        return date(year, mm, dd)
+    except ValueError:
+        return None
+
+
+def pension_date_for(bd):
+    """Return earliest Belgian statutory pension date.
+    Age 66 if reached before 01/01/2030, else 67."""
+    at_66 = _add_years(bd, 66)
+    return at_66 if at_66 < date(2030, 1, 1) else _add_years(bd, 67)
+
+
+def remaining_to_pension(bd):
+    """Return (years, months) remaining until pension, or None if already past."""
+    today = date.today()
+    pd = pension_date_for(bd)
+    if pd <= today:
+        return None
+    y = pd.year - today.year
+    m = pd.month - today.month
+    if m < 0:
+        y -= 1
+        m += 12
+    return y, m
 
 
 # ── Claude analysis ────────────────────────────────────────────────────────────
@@ -304,6 +351,49 @@ def analyser():
             json_brut = analyse_avec_claude(texte)
             resultat = json.loads(json_brut)
 
+            # ── Post-process: pension age eligibility ──────────────────────
+            niss = (resultat.get('personne') or {}).get('niss')
+            if niss:
+                bd = birthdate_from_niss(niss)
+                if bd:
+                    rem = remaining_to_pension(bd)
+                    age_legale = 66 if _add_years(bd, 66) < date(2030, 1, 1) else 67
+
+                    if rem is None:
+                        # Already at or past pension age
+                        resultat['eligible'] = False
+                        resultat['titre'] = "Non, un transfert vers la Branche 23 n'est pas possible"
+                        resultat.setdefault('raisons_refus', []).append(
+                            f"Vous avez atteint ou dépassé l'âge légal de la pension ({age_legale} ans). "
+                            "Un transfert de réserves vers la Branche 23 n'est plus pertinent."
+                        )
+                    else:
+                        years, months = rem
+                        total_months = years * 12 + months
+                        duree = f"{years} an{'s' if years > 1 else ''} et {months} mois"
+
+                        if total_months < 24:
+                            # Less than 2 years → refuse
+                            resultat['eligible'] = False
+                            resultat['titre'] = "Non, un transfert vers la Branche 23 n'est pas possible"
+                            resultat.setdefault('raisons_refus', []).append(
+                                f"Durée restante avant la pension insuffisante : {duree} "
+                                f"(âge légal : {age_legale} ans). Un minimum de 2 ans est requis "
+                                "pour qu'un transfert en Branche 23 soit pertinent."
+                            )
+                        else:
+                            # Enrich résumé and details with remaining time
+                            resultat['resume'] = (
+                                (resultat.get('resume') or '') +
+                                f" Durée restante avant la pension légale ({age_legale} ans) : {duree}."
+                            )
+                            resultat.setdefault('details', []).append(
+                                f"Horizon de placement : {duree} avant l'âge légal de la pension "
+                                f"({age_legale} ans) — compatible avec un investissement en Branche 23."
+                            )
+
+            # Re-serialize after post-processing so session stays coherent
+            json_brut = json.dumps(resultat, ensure_ascii=False)
             session['analyse_json'] = json_brut
             session['analyse_filename'] = filename
 
