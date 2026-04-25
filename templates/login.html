@@ -9,60 +9,234 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { theme: { extend: { fontFamily: { display: ['Fraunces','serif'], sans: ['Plus Jakarta Sans','sans-serif'] } } } }</script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem' },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans:    ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .login-panel {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 1024px) {
+      .login-panel { grid-template-columns: 1fr 1fr; }
+    }
+    .brand-side {
+      display: none;
+      background: linear-gradient(160deg, hsl(172 75% 12%) 0%, hsl(172 75% 20%) 60%, hsl(165 70% 28%) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    @media (min-width: 1024px) {
+      .brand-side { display: flex; flex-direction: column; justify-content: space-between; padding: 3rem; }
+    }
+    .brand-side::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, hsl(165 70% 45% / 0.25) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, hsl(35 95% 55% / 0.15) 0%, transparent 50%);
+    }
+    .brand-content { position: relative; z-index: 1; }
+    .form-side {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background-color: var(--background);
+    }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      padding: 1rem 0;
+    }
+    .feature-icon {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.5rem;
+      background: hsl(165 70% 45% / 0.15);
+      display: grid;
+      place-items: center;
+      border: 1px solid hsl(165 70% 45% / 0.25);
+    }
+    .pw-toggle {
+      position: absolute;
+      right: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .pw-toggle:hover { color: var(--primary); }
+  </style>
 </head>
-<body style="background-color:var(--background);" class="min-h-screen flex items-center justify-center p-4">
+<body>
 
-<div class="w-full max-w-md">
-  <!-- Brand -->
-  <a href="{{ url_for('index') }}" class="flex items-center justify-center gap-0 mb-8 no-underline">
-    <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="logo" style="height:2.5rem;width:2.5rem;">
-    <span class="brand-wordmark">Up<span>Two</span>U</span>
-  </a>
+<div class="login-panel">
 
-  <!-- Card -->
-  <div class="rounded-3xl bg-card p-8 shadow-soft" style="border:1px solid var(--border);">
-    <h1 class="font-display text-2xl font-semibold text-primary mb-1">Connexion</h1>
-    <p class="text-sm text-muted mb-6">Accédez à votre espace personnel.</p>
+  <!-- Left: brand panel (desktop only) -->
+  <div class="brand-side">
+    <div class="brand-content">
+      <a href="{{ url_for('index') }}" class="inline-flex items-center gap-2 no-underline mb-16">
+        <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU" style="height:2.25rem;width:2.25rem;filter:brightness(0) invert(1);">
+        <span class="font-display text-2xl font-semibold text-white">Up<span style="color:hsl(165 70% 60%)">Two</span>U</span>
+      </a>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <div class="alert-{{ category }} mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-widest font-semibold mb-3" style="color:hsl(165 70% 55%);">Votre espace client</p>
+        <h1 class="font-display text-3xl font-semibold text-white leading-tight mb-4">
+          Optimisez votre pension complémentaire en toute simplicité.
+        </h1>
+        <p class="text-sm leading-relaxed" style="color:hsl(168 30% 75%);">
+          Suivez vos réserves, téléchargez vos formulaires de transfert et gérez votre dossier depuis un espace sécurisé.
+        </p>
+      </div>
+
+      <div class="mt-10 border-t" style="border-color:hsl(168 30% 30%);">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i data-lucide="shield-check" style="width:1rem;height:1rem;color:hsl(165 70% 55%);"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">Données protégées</p>
+            <p class="text-xs mt-0.5" style="color:hsl(168 30% 65%);">Chiffrement de bout en bout, conforme RGPD.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i data-lucide="file-text" style="width:1rem;height:1rem;color:hsl(165 70% 55%);"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">Formulaires Annexe 1</p>
+            <p class="text-xs mt-0.5" style="color:hsl(168 30% 65%);">Téléchargez vos demandes de transfert prêtes à signer.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i data-lucide="trending-up" style="width:1rem;height:1rem;color:hsl(165 70% 55%);"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-white">Suivi en temps réel</p>
+            <p class="text-xs mt-0.5" style="color:hsl(168 30% 65%);">Visualisez l'évolution de vos réserves en Branche 23.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-content">
+      <p class="text-xs" style="color:hsl(168 30% 45%);">© 2025 UpTwoU · Courtier souscripteur mandaté · Agréé BNB · Contrôlé FSMA</p>
+    </div>
+  </div>
+
+  <!-- Right: form -->
+  <div class="form-side">
+    <div class="w-full" style="max-width:26rem;">
+
+      <!-- Mobile logo -->
+      <a href="{{ url_for('index') }}" class="flex items-center gap-2 mb-8 no-underline lg:hidden">
+        <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU" style="height:2rem;width:2rem;">
+        <span class="brand-wordmark">Up<span>Two</span>U</span>
+      </a>
+
+      <div class="mb-8">
+        <h2 class="font-display text-2xl md:text-3xl font-semibold text-primary">Connexion</h2>
+        <p class="mt-1 text-sm text-muted">Bienvenue ! Entrez vos identifiants pour accéder à votre espace.</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="alert-{{ category }} mb-5">
           <i data-lucide="{{ 'check-circle' if category == 'success' else 'alert-circle' }}" style="width:1.25rem;height:1.25rem;flex-shrink:0;"></i>
           {{ message }}
         </div>
-      {% endfor %}
-    {% endwith %}
+        {% endfor %}
+      {% endwith %}
 
-    <form method="POST" class="flex flex-col gap-4">
-      {{ form.hidden_tag() }}
+      <form method="POST" class="flex flex-col gap-5">
+        {{ form.hidden_tag() }}
 
-      <div class="form-group">
-        <label class="form-label">{{ form.email.label.text }}</label>
-        {{ form.email(class="form-input", placeholder="votre@email.com") }}
-        {% for e in form.email.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+        <div class="form-group">
+          <label class="form-label">{{ form.email.label.text }}</label>
+          {{ form.email(class="form-input", placeholder="votre@email.com", autocomplete="email") }}
+          {% for e in form.email.errors %}
+            <p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="form-group">
+          <div class="flex items-center justify-between mb-1">
+            <label class="form-label" style="margin-bottom:0;">{{ form.password.label.text }}</label>
+            <a href="#" class="text-xs hover:text-primary transition-colors" style="color:var(--muted-foreground);">
+              Mot de passe oublié ?
+            </a>
+          </div>
+          <div style="position:relative;">
+            {{ form.password(class="form-input", placeholder="••••••••", id="password-field", autocomplete="current-password", style="padding-right:2.75rem;") }}
+            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Afficher le mot de passe">
+              <i data-lucide="eye" id="pw-icon" style="width:1.125rem;height:1.125rem;"></i>
+            </button>
+          </div>
+          {% for e in form.password.errors %}
+            <p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full mt-1" style="justify-content:center;">
+          Se connecter
+          <i data-lucide="arrow-right" style="width:1rem;height:1rem;margin-left:0.5rem;"></i>
+        </button>
+      </form>
+
+      <div class="mt-8 pt-6 border-t" style="border-color:var(--border);">
+        <p class="text-sm text-center text-muted">
+          Pas encore de compte ?
+          <a href="{{ url_for('analyser') }}" class="font-semibold hover:text-primary transition-colors" style="color:var(--primary);">
+            Analyser mes réserves
+          </a>
+        </p>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">{{ form.password.label.text }}</label>
-        {{ form.password(class="form-input", placeholder="••••••••") }}
-        {% for e in form.password.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
-      </div>
-
-      <button type="submit" class="btn btn-primary w-full mt-2" style="justify-content:center;">
-        Se connecter
-        <i data-lucide="arrow-right" style="width:1rem;height:1rem;margin-left:0.5rem;"></i>
-      </button>
-    </form>
+      <p class="mt-4 text-center text-xs text-muted">
+        <a href="{{ url_for('index') }}" class="hover:text-primary transition-colors">← Retour à l'accueil</a>
+      </p>
+    </div>
   </div>
 
-  <p class="text-center text-sm text-muted mt-6">
-    <a href="{{ url_for('index') }}" class="hover:text-primary transition-colors">← Retour à l'accueil</a>
-  </p>
 </div>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script>lucide.createIcons();</script>
+<script>
+  lucide.createIcons();
+
+  // Password show/hide toggle
+  const field = document.getElementById('password-field');
+  const toggle = document.getElementById('pw-toggle');
+  const icon = document.getElementById('pw-icon');
+  toggle.addEventListener('click', () => {
+    const show = field.type === 'password';
+    field.type = show ? 'text' : 'password';
+    icon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+    lucide.createIcons();
+  });
+</script>
 </body>
 </html>
