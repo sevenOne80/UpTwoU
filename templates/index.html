@@ -50,13 +50,14 @@
     <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
       <a href="#how"     class="hover:text-primary transition-colors">Comment ça marche</a>
       <a href="#about"   class="hover:text-primary transition-colors">À propos</a>
+      <a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a>
       <a href="#faq"     class="hover:text-primary transition-colors">FAQ</a>
       <a href="#contact" class="hover:text-primary transition-colors">Contact</a>
     </nav>
     <!-- Actions -->
     <div class="flex items-center gap-2">
-      <a href="#" class="btn btn-nav-connexion hidden sm:inline-flex">Connexion</a>
-      <a href="#" class="btn btn-nav-start">Commencer</a>
+      <a href="{{ url_for('login') }}" class="btn btn-nav-connexion hidden sm:inline-flex">Connexion</a>
+      <a href="{{ url_for('analyser') }}" class="btn btn-nav-start">Commencer</a>
     </div>
   </div>
 </header>
@@ -454,7 +455,7 @@
             Risque maîtrisé
           </li>
         </ul>
-        <a href="#" class="btn btn-primary mt-8 group">
+        <a href="{{ url_for('gestion_publique') }}" class="btn btn-primary mt-8 group">
           Découvrir les avantages
           <i data-lucide="arrow-right" class="ml-2 icon-sm transition-transform group-hover:translate-x-1"></i>
         </a>
@@ -513,7 +514,7 @@
       <p class="font-semibold text-primary">Produit</p>
       <ul class="mt-3 space-y-2 text-muted">
         <li><a href="#how"    class="hover:text-primary transition-colors">Comment ça marche</a></li>
-        <li><a href="#"      class="hover:text-primary transition-colors">Tarifs</a></li>
+        <li><a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a></li>
         <li><a href="#faq"   class="hover:text-primary transition-colors">FAQ</a></li>
       </ul>
     </div>

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestion & fonds — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="min-h-screen">
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+      <a href="{{ url_for('index') }}#how"     class="hover:text-primary transition-colors">Comment ça marche</a>
+      <a href="{{ url_for('index') }}#about"   class="hover:text-primary transition-colors">À propos</a>
+      <a href="{{ url_for('gestion_publique') }}" class="text-primary font-semibold transition-colors">Notre gestion</a>
+      <a href="{{ url_for('index') }}#faq"     class="hover:text-primary transition-colors">FAQ</a>
+      <a href="{{ url_for('index') }}#contact" class="hover:text-primary transition-colors">Contact</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('login') }}" class="btn btn-nav-connexion hidden sm:inline-flex">Connexion</a>
+      <a href="{{ url_for('analyser') }}" class="btn btn-nav-start">Commencer</a>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE HEADER -->
+<section class="relative overflow-hidden" style="background: var(--primary); padding: 4rem 0 5rem;">
+  <div class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-20 -left-10 h-72 w-72 rounded-full"
+         style="background: hsl(165 70% 45% / 0.25); filter: blur(80px);"></div>
+    <div class="absolute -bottom-10 right-0 h-64 w-64 rounded-full"
+         style="background: hsl(35 95% 55% / 0.20); filter: blur(70px);"></div>
+  </div>
+  <div class="container relative">
+    <a href="{{ url_for('index') }}" class="inline-flex items-center gap-2 text-sm mb-6"
+       style="color: hsl(40 33% 97% / 0.60);">
+      <i data-lucide="arrow-left" style="width:0.875rem;height:0.875rem;"></i>
+      Retour à l'accueil
+    </a>
+    <p class="text-sm uppercase tracking-widest font-semibold" style="color: var(--accent);">Gestion &amp; fonds</p>
+    <h1 class="mt-3 font-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+      Comment vos réserves<br class="hidden md:block"> sont gérées
+    </h1>
+    <p class="mt-5 max-w-2xl text-lg" style="color: hsl(40 33% 97% / 0.75);">
+      Comprendre la gestion dédiée en Branche 23 : le gestionnaire, les profils de risque et la structure de frais.
+    </p>
+  </div>
+  <div class="absolute bottom-0 left-0 right-0">
+    <svg viewBox="0 0 1440 60" class="w-full" style="height:2rem;display:block;" preserveAspectRatio="none">
+      <path d="M0 30 Q 360 0 720 30 T 1440 30 L 1440 60 L 0 60 Z" fill="var(--background)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="container py-16 max-w-5xl mx-auto flex flex-col gap-8">
+
+  <!-- Pourquoi la gestion dédiée -->
+  <div class="dashboard-card">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="lightbulb" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      </div>
+      <h2 class="font-display text-lg font-semibold text-primary">
+        Pourquoi la gestion dédiée est particulièrement adaptée aux réserves extra-légales
+      </h2>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+
+      <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+        <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="calendar-range" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary mb-1">Horizon de placement long</p>
+          <p class="text-xs text-muted leading-relaxed">
+            Vos réserves restent investies jusqu'à la pension. Cet horizon de 10 à 30 ans permet d'accéder à des classes d'actifs plus dynamiques, avec une capacité d'absorption des cycles de marché que l'épargne classique n'offre pas.
+          </p>
+        </div>
+      </div>
+
+      <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+        <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="activity" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary mb-1">Gestion active</p>
+          <p class="text-xs text-muted leading-relaxed">
+            Contrairement à une gestion passive indicielle, nos fonds sont activement pilotés : les gestionnaires adaptent en permanence les allocations en fonction des conditions de marché, des opportunités et du profil de risque de chaque investisseur.
+          </p>
+        </div>
+      </div>
+
+      <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+        <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="key" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary mb-1">Accès normalement réservé aux grandes fortunes</p>
+          <p class="text-xs text-muted leading-relaxed">
+            Ce type de gestion dédiée est habituellement accessible à partir de 250 000 € de capitaux investis. En regroupant les réserves de pension de ses clients, UpTwoU vous donne accès à ces conditions — quelle que soit la taille de votre portefeuille individuel.
+          </p>
+        </div>
+      </div>
+
+      <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+        <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="shield" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary mb-1">Gestion professionnelle &amp; diversifiée</p>
+          <p class="text-xs text-muted leading-relaxed">
+            Vos réserves sont investies dans des fonds diversifiés, sélectionnés et surveillés par des gestionnaires professionnels. La construction de portefeuille, le rééquilibrage et la gestion du risque sont assurés en continu — sans que vous ayez à intervenir.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Wealtheon -->
+  <div class="dashboard-card">
+    <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
+      <div class="flex items-center gap-4">
+        <div class="h-14 w-14 rounded-2xl grid place-items-center flex-shrink-0"
+             style="background:linear-gradient(135deg,hsl(172 75% 18%),hsl(172 75% 28%));">
+          <i data-lucide="building" style="width:1.5rem;height:1.5rem;color:white;"></i>
+        </div>
+        <div>
+          <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-0.5">Gestionnaire de fonds</p>
+          <h2 class="font-display text-xl font-semibold text-primary">Wealtheon</h2>
+        </div>
+      </div>
+      <span class="rounded-full px-3 py-1 text-xs font-semibold"
+            style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+        Gestionnaire actif
+      </span>
+    </div>
+
+    <p class="text-sm text-muted leading-relaxed mb-4">
+      Wealtheon est le gestionnaire de fonds sélectionné par UpTwoU pour la gestion des réserves transférées en Branche 23. Spécialisé dans la gestion de l'épargne-pension à long terme, Wealtheon propose une gamme de fonds alignés sur les quatre profils de risque disponibles.
+    </p>
+
+    <div class="grid sm:grid-cols-3 gap-3">
+      <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+        <p class="text-xs text-muted mb-1">Approche</p>
+        <p class="text-sm font-semibold text-primary">Gestion active</p>
+      </div>
+      <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+        <p class="text-xs text-muted mb-1">Univers</p>
+        <p class="text-sm font-semibold text-primary">Actions &amp; obligations</p>
+      </div>
+      <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+        <p class="text-xs text-muted mb-1">Reporting</p>
+        <p class="text-sm font-semibold text-primary">Mensuel</p>
+      </div>
+    </div>
+
+    <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
+         style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+      <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
+      <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
+        Les performances passées ne préjugent pas des performances futures. Tout investissement en Branche 23 comporte un risque de perte en capital.
+      </p>
+    </div>
+  </div>
+
+  <!-- Les 4 profils -->
+  <div class="dashboard-card">
+    <h2 class="font-display text-lg font-semibold text-primary mb-5">Les 4 profils de gestion</h2>
+
+    <div class="grid md:grid-cols-2 gap-4">
+
+      <!-- Prudent -->
+      <div class="rounded-2xl p-5" style="background:hsl(142 76% 36% / 0.08);border:1px solid hsl(142 76% 36% / 0.2);">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-9 w-9 rounded-xl grid place-items-center" style="background:hsl(142 76% 36%);">
+            <i data-lucide="shield" style="width:1rem;height:1rem;color:white;"></i>
+          </div>
+          <p class="font-semibold text-primary">Prudent</p>
+        </div>
+        <p class="text-xs text-muted leading-relaxed mb-3">Obligations, fonds monétaires et actifs défensifs. Priorité à la préservation du capital avec une croissance modeste.</p>
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Actions</span>
+            <span class="font-semibold" style="color:hsl(142 76% 36%);">0 – 15 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Obligations</span>
+            <span class="font-semibold" style="color:hsl(142 76% 36%);">60 – 80 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Monétaire &amp; divers</span>
+            <span class="font-semibold" style="color:hsl(142 76% 36%);">10 – 30 %</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Équilibré -->
+      <div class="rounded-2xl p-5" style="background:hsl(172 75% 22% / 0.08);border:1px solid hsl(172 75% 22% / 0.2);">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-9 w-9 rounded-xl grid place-items-center" style="background:hsl(172 75% 28%);">
+            <i data-lucide="scale" style="width:1rem;height:1rem;color:white;"></i>
+          </div>
+          <p class="font-semibold text-primary">Équilibré</p>
+        </div>
+        <p class="text-xs text-muted leading-relaxed mb-3">Mix équilibré entre obligations et actions. Rendement régulier avec une volatilité maîtrisée.</p>
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Actions</span>
+            <span class="font-semibold" style="color:hsl(172 75% 28%);">30 – 50 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Obligations</span>
+            <span class="font-semibold" style="color:hsl(172 75% 28%);">40 – 60 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Divers</span>
+            <span class="font-semibold" style="color:hsl(172 75% 28%);">5 – 15 %</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamique -->
+      <div class="rounded-2xl p-5" style="background:hsl(220 70% 45% / 0.08);border:1px solid hsl(220 70% 45% / 0.2);">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-9 w-9 rounded-xl grid place-items-center" style="background:hsl(220 70% 45%);">
+            <i data-lucide="trending-up" style="width:1rem;height:1rem;color:white;"></i>
+          </div>
+          <p class="font-semibold text-primary">Dynamique</p>
+        </div>
+        <p class="text-xs text-muted leading-relaxed mb-3">Exposition majoritaire aux marchés actions mondiaux. Objectif de croissance du capital sur le long terme.</p>
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Actions</span>
+            <span class="font-semibold" style="color:hsl(220 70% 45%);">60 – 80 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Obligations</span>
+            <span class="font-semibold" style="color:hsl(220 70% 45%);">15 – 30 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Divers</span>
+            <span class="font-semibold" style="color:hsl(220 70% 45%);">5 – 15 %</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conviction -->
+      <div class="rounded-2xl p-5" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.3);">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-9 w-9 rounded-xl grid place-items-center" style="background:hsl(35 95% 45%);">
+            <i data-lucide="zap" style="width:1rem;height:1rem;color:white;"></i>
+          </div>
+          <p class="font-semibold text-primary">Conviction</p>
+        </div>
+        <p class="text-xs text-muted leading-relaxed mb-3">Concentrations d'actions à conviction élevée (8 – 11 % par position). Portefeuille concentré, volatilité élevée, potentiel de rendement maximal.</p>
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Actions (concentrées)</span>
+            <span class="font-semibold" style="color:hsl(35 95% 45%);">80 – 100 %</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-muted">Liquidités</span>
+            <span class="font-semibold" style="color:hsl(35 95% 45%);">0 – 20 %</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-5 text-center">
+      <p class="text-sm text-muted mb-4">Votre profil de gestion est déterminé lors de l'onboarding, sur base d'un questionnaire MiFID.</p>
+      <a href="{{ url_for('analyser') }}" class="btn btn-primary inline-flex items-center gap-2">
+        Découvrir mon profil
+        <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Frais -->
+  <div class="dashboard-card">
+    <h2 class="font-display text-lg font-semibold text-primary mb-4">Structure de frais</h2>
+
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="rounded-xl p-4 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+        <i data-lucide="arrow-right-left" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);margin:0 auto 0.5rem;display:block;"></i>
+        <p class="text-xs text-muted mb-1">Frais de transfert (in/out)</p>
+        <p class="font-display text-2xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
+      </div>
+      <div class="rounded-xl p-4 text-center" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
+        <i data-lucide="refresh-cw" style="width:1.25rem;height:1.25rem;color:var(--primary);margin:0 auto 0.5rem;display:block;"></i>
+        <p class="text-xs text-muted mb-1">Frais de gestion annuels</p>
+        <p class="font-display text-2xl font-bold text-primary">1,90 %</p>
+        <p class="text-xs text-muted mt-0.5">sur l'encours</p>
+      </div>
+      <div class="rounded-xl p-4 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+        <i data-lucide="badge-check" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);margin:0 auto 0.5rem;display:block;"></i>
+        <p class="text-xs text-muted mb-1">Frais de performance</p>
+        <p class="font-display text-2xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
+      </div>
+    </div>
+
+    <p class="text-xs text-muted mt-4 text-center">
+      Ces frais s'appliquent quel que soit le profil choisi. Les performances passées ne préjugent pas des performances futures.
+    </p>
+  </div>
+
+</div>
+
+<!-- CTA -->
+<section class="container pb-20 max-w-5xl mx-auto">
+  <div class="relative overflow-hidden rounded-3xl text-white p-8 md:p-12" style="background:var(--primary);">
+    <div class="absolute -top-16 -left-10 h-56 w-56 rounded-full"
+         style="background: hsl(35 95% 55% / 0.25); filter: blur(60px);"></div>
+    <div class="absolute -bottom-16 -right-10 h-64 w-64 rounded-full"
+         style="background: hsl(165 70% 45% / 0.25); filter: blur(60px);"></div>
+    <div class="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div>
+        <h2 class="font-display text-2xl md:text-3xl font-semibold text-white">Prêt à optimiser vos réserves ?</h2>
+        <p class="mt-2 text-sm" style="color: hsl(40 33% 97% / 0.75);">
+          Analysez gratuitement vos contrats pension et découvrez votre potentiel de rendement.
+        </p>
+      </div>
+      <a href="{{ url_for('analyser') }}" class="btn btn-primary flex-shrink-0 inline-flex items-center gap-2">
+        Commencer gratuitement
+        <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="border-top: 1px solid var(--border); background-color: hsl(168 30% 92% / 0.30);">
+  <div class="container py-12 grid md:grid-cols-4 gap-8 text-sm">
+    <div>
+      <a href="{{ url_for('index') }}" class="brand-logo">
+        <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo" loading="lazy" style="height:3rem;width:3rem;object-fit:contain;flex-shrink:0;">
+        <span class="brand-wordmark" style="font-size:1.5rem;">Up<span>Two</span>U</span>
+      </a>
+      <p class="mt-4 text-muted">L'optimisation de pension belge, simple et 100% digitale.</p>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Produit</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('index') }}#how" class="hover:text-primary transition-colors">Comment ça marche</a></li>
+        <li><a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a></li>
+        <li><a href="{{ url_for('index') }}#faq" class="hover:text-primary transition-colors">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Société</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('index') }}#about" class="hover:text-primary transition-colors">À propos</a></li>
+        <li><a href="{{ url_for('index') }}#contact" class="hover:text-primary transition-colors">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Légal</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="#" class="hover:text-primary transition-colors">Conditions</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Confidentialité</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Mentions légales</a></li>
+      </ul>
+    </div>
+  </div>
+  <div style="border-top: 1px solid var(--border);">
+    <div class="container py-6 flex flex-wrap justify-between gap-4 text-xs text-muted">
+      <p>© <span id="year"></span> UpTwoU. Tous droits réservés.</p>
+      <p>Agréé par la Banque Nationale de Belgique.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

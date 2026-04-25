@@ -602,6 +602,14 @@ def client_contrats():
     return render_template("client/contrats.html", client=current_user.client_profile)
 
 
+@app.route("/gestion")
+def gestion_publique():
+    client = None
+    if current_user.is_authenticated and current_user.role == 'client':
+        client = current_user.client_profile
+    return render_template("gestion.html", client=client)
+
+
 @app.route("/client/gestion")
 @login_required
 @client_required

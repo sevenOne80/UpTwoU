@@ -25,7 +25,8 @@
       "Bash(python -c \"from app import app, db, ANALYSIS_PROMPT; print\\('Import OK'\\); print\\('B21' in ANALYSIS_PROMPT, 'Condition 3' in ANALYSIS_PROMPT\\)\")",
       "Bash(pip install *)",
       "Bash(python -c \"from app import app; from pdf_utils import generer_annexe1_groupe; print\\('OK'\\)\")",
-      "Bash(git revert *)"
+      "Bash(git revert *)",
+      "Bash(python -c \"from app import app; print\\([r.rule for r in app.url_map.iter_rules\\(\\) if 'gestion' in r.rule]\\)\")"
     ]
   }
 }
