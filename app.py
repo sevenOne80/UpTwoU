@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import base64
 import pdfplumber
 import anthropic
 from datetime import datetime, date
@@ -9,7 +10,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, User, Client, Contrat, Analyse, AssureurRef, seed_assureurs
-from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm
+from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, QuestionnaireForm
 
 try:
     from dotenv import load_dotenv
@@ -111,6 +112,66 @@ def remaining_to_pension(bd):
         y -= 1
         m += 12
     return y, m
+
+
+# ── Onboarding / KYC helpers ──────────────────────────────────────────────────
+ASSUREURS_EXCLUS = ['vitis', 'onelife', 'one life', 'lombard international']
+
+def is_assureur_exclu(assureur):
+    if not assureur:
+        return False
+    return any(ex in assureur.lower() for ex in ASSUREURS_EXCLUS)
+
+PROFIL_THRESHOLDS = [(0, 4, 'prudent'), (5, 9, 'equilibre'), (10, 14, 'dynamique'), (15, 18, 'conviction')]
+
+def score_to_profil(score):
+    for lo, hi, p in PROFIL_THRESHOLDS:
+        if lo <= score <= hi:
+            return p
+    return 'equilibre'
+
+ALLOWED_KYC_EXT = {'jpg', 'jpeg', 'png', 'pdf'}
+
+KYC_PROMPT = """Analyse cette pièce d'identité et extrais les données au format JSON uniquement, sans texte avant ni après :
+{
+  "nom": "NOM EN MAJUSCULES",
+  "prenom": "Prénom(s)",
+  "date_naissance": "JJ/MM/AAAA",
+  "niss": "XX.XX.XX-XXX.XX ou null",
+  "adresse": "rue et numéro ou null",
+  "code_postal": "code postal ou null",
+  "ville": "localité ou null",
+  "pays": "pays ou Belgique",
+  "sexe": "F ou M ou null"
+}
+Pour le NISS belge (numéro national) : il apparaît au verso de la carte d'identité belge au format XX.XX.XX-XXX.XX. Si absent, utilise null."""
+
+def analyse_piece_identite(filepath):
+    """Analyse an ID card (image or PDF) with Claude vision. Returns dict."""
+    ext = filepath.rsplit('.', 1)[-1].lower()
+    with open(filepath, 'rb') as f:
+        data = base64.b64encode(f.read()).decode()
+    if ext in ('jpg', 'jpeg'):
+        item = {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": data}}
+    elif ext == 'png':
+        item = {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": data}}
+    else:  # pdf
+        item = {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": data}}
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        msg = client.messages.create(
+            model="claude-opus-4-7",
+            max_tokens=512,
+            messages=[{"role": "user", "content": [item, {"type": "text", "text": KYC_PROMPT}]}]
+        )
+        for block in msg.content:
+            if block.type == "text":
+                raw = re.sub(r'^```json\s*', '', block.text.strip())
+                raw = re.sub(r'\s*```$', '', raw)
+                return json.loads(raw)
+    except Exception:
+        pass
+    return {}
 
 
 # ── Claude analysis ────────────────────────────────────────────────────────────
@@ -351,6 +412,15 @@ def analyser():
             json_brut = analyse_avec_claude(texte)
             resultat = json.loads(json_brut)
 
+            # ── Post-process: exclude Vitis / Onelife ──────────────────────
+            if 'contrats' in resultat:
+                exclus = [c for c in resultat['contrats'] if is_assureur_exclu(c.get('assureur'))]
+                resultat['contrats'] = [c for c in resultat['contrats'] if not is_assureur_exclu(c.get('assureur'))]
+                if exclus:
+                    resultat.setdefault('details', []).append(
+                        f"{len(exclus)} contrat(s) Vitis Life / Onelife exclus de l'analyse (déjà en gestion Branche 23)."
+                    )
+
             # ── Post-process: pension age eligibility ──────────────────────
             niss = (resultat.get('personne') or {}).get('niss')
             if niss:
@@ -427,7 +497,6 @@ def register():
     personne = analyse.get('personne') or {}
     form = RegisterForm()
 
-    # Pré-remplir le formulaire avec les données extraites du PDF
     if request.method == 'GET':
         form.prenom.data = personne.get('prenom') or ''
         form.nom.data = personne.get('nom') or ''
@@ -437,20 +506,26 @@ def register():
             flash("Un compte existe déjà avec cette adresse e-mail.", "error")
             return render_template("register.html", form=form, analyse=analyse)
 
+        # Check NISS uniqueness
+        niss = personne.get('niss') or ''
+        if niss:
+            existing = Client.query.filter_by(niss=niss).first()
+            if existing:
+                flash("Un compte existe déjà pour ce numéro national. Connectez-vous.", "error")
+                return redirect(url_for('login'))
+
         user = User(email=form.email.data, role='client')
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.flush()
 
+        adresse_raw = personne.get('adresse') or ''
         client_profile = Client(
             user_id=user.id,
             nom=form.nom.data,
             prenom=form.prenom.data,
-            niss=personne.get('niss') or '',
-            adresse=personne.get('adresse') or '',
-            profil_risque=form.profil.data,
-            profil_choisi_par='client',
-            profil_date=datetime.utcnow()
+            niss=niss,
+            adresse=adresse_raw,
         )
         db.session.add(client_profile)
         db.session.flush()
@@ -473,12 +548,9 @@ def register():
         ))
 
         db.session.commit()
-        session.pop('analyse_json', None)
-        session.pop('analyse_filename', None)
-
         login_user(user)
-        flash("Bienvenue sur votre espace UpTwoU !", "success")
-        return redirect(url_for('client_dashboard'))
+        flash("Compte créé. Complétez votre dossier KYC.", "success")
+        return redirect(url_for('onboarding_kyc'))
 
     return render_template("register.html", form=form, analyse=analyse)
 
@@ -586,6 +658,209 @@ def client_transfert_pdf(contrat_id):
     return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
                      as_attachment=True,
                      download_name=f"annexe1_transfert_{slug}.pdf")
+
+
+# ── Onboarding routes ─────────────────────────────────────────────────────────
+
+def _onboarding_guard(required_step):
+    """Decorator factory: redirect if client hasn't reached required onboarding step."""
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            client = current_user.client_profile
+            step_order = ['kyc', 'profil', 'frais', 'complet']
+            current = client.onboarding_step
+            required_idx = step_order.index(required_step)
+            current_idx = step_order.index(current) if current in step_order else 0
+            if current_idx < required_idx:
+                targets = {'kyc': 'onboarding_kyc', 'profil': 'onboarding_profil',
+                           'frais': 'onboarding_frais'}
+                return redirect(url_for(targets.get(current, 'onboarding_kyc')))
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@app.route("/onboarding/kyc", methods=["GET", "POST"])
+@login_required
+@client_required
+def onboarding_kyc():
+    client = current_user.client_profile
+    form = OnboardingKYCForm()
+    kyc_data = session.get('kyc_data', {})
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        # ── Phase 1 : file upload → Claude analysis ──────────────────────
+        if action == 'upload':
+            file = request.files.get('kyc_file')
+            if file and file.filename:
+                ext = file.filename.rsplit('.', 1)[-1].lower()
+                if ext in ALLOWED_KYC_EXT:
+                    fname = secure_filename(f"kyc_{client.id}_{file.filename}")
+                    fpath = os.path.join(app.config['UPLOAD_FOLDER'], fname)
+                    file.save(fpath)
+                    client.kyc_document = fname
+                    db.session.commit()
+                    extracted = analyse_piece_identite(fpath)
+                    session['kyc_data'] = extracted
+                    kyc_data = extracted
+                    flash("Document analysé. Vérifiez et complétez vos données.", "success")
+                else:
+                    flash("Format non supporté (JPG, PNG ou PDF uniquement).", "error")
+            return redirect(url_for('onboarding_kyc'))
+
+        # ── Phase 2 : form confirmation ───────────────────────────────────
+        if action == 'confirm' and form.validate_on_submit():
+            client.nom = form.nom.data
+            client.prenom = form.prenom.data
+            client.date_naissance = form.date_naissance.data
+            client.sexe = form.sexe.data
+            client.niss = form.niss.data
+            client.adresse = form.adresse.data
+            client.code_postal = form.code_postal.data
+            client.ville = form.ville.data
+            client.pays = form.pays.data
+            client.kyc_verifie = True
+            db.session.commit()
+            session.pop('kyc_data', None)
+            return redirect(url_for('onboarding_profil'))
+
+    # Pre-fill form from AI extraction or existing client data
+    if request.method == 'GET':
+        form.nom.data          = kyc_data.get('nom') or client.nom or ''
+        form.prenom.data       = kyc_data.get('prenom') or client.prenom or ''
+        form.date_naissance.data = kyc_data.get('date_naissance') or client.date_naissance or ''
+        form.sexe.data         = kyc_data.get('sexe') or client.sexe or ''
+        form.niss.data         = kyc_data.get('niss') or client.niss or ''
+        form.adresse.data      = kyc_data.get('adresse') or client.adresse or ''
+        form.code_postal.data  = kyc_data.get('code_postal') or client.code_postal or ''
+        form.ville.data        = kyc_data.get('ville') or client.ville or ''
+        form.pays.data         = kyc_data.get('pays') or client.pays or 'Belgique'
+
+    has_document = bool(client.kyc_document)
+    return render_template("onboarding/kyc.html", form=form,
+                           kyc_data=kyc_data, has_document=has_document,
+                           current_step=1)
+
+
+@app.route("/onboarding/profil", methods=["GET", "POST"])
+@login_required
+@client_required
+def onboarding_profil():
+    client = current_user.client_profile
+    if not client.kyc_verifie:
+        return redirect(url_for('onboarding_kyc'))
+
+    if request.method == 'POST':
+        profil = request.form.get('profil')
+        if profil in ('prudent', 'equilibre', 'dynamique', 'conviction'):
+            client.profil_risque = profil
+            client.profil_choisi_par = 'client'
+            client.profil_date = datetime.utcnow()
+            db.session.commit()
+            return redirect(url_for('onboarding_frais'))
+
+    return render_template("onboarding/profil.html", current_step=2,
+                           profil_actuel=client.profil_risque)
+
+
+@app.route("/onboarding/questionnaire", methods=["GET", "POST"])
+@login_required
+@client_required
+def onboarding_questionnaire():
+    client = current_user.client_profile
+    if not client.kyc_verifie:
+        return redirect(url_for('onboarding_kyc'))
+
+    form = QuestionnaireForm()
+    if form.validate_on_submit():
+        score = sum(int(getattr(form, f'q{i}').data) for i in range(1, 7))
+        profil = score_to_profil(score)
+        client.profil_risque = profil
+        client.profil_choisi_par = 'client'
+        client.profil_date = datetime.utcnow()
+        client.questionnaire_score = score
+        db.session.commit()
+        return redirect(url_for('onboarding_frais'))
+
+    return render_template("onboarding/questionnaire.html", form=form, current_step=2)
+
+
+@app.route("/onboarding/frais", methods=["GET", "POST"])
+@login_required
+@client_required
+def onboarding_frais():
+    client = current_user.client_profile
+    if not client.kyc_verifie:
+        return redirect(url_for('onboarding_kyc'))
+    if not client.profil_risque:
+        return redirect(url_for('onboarding_profil'))
+
+    if request.method == 'POST' and request.form.get('frais_ok') == '1':
+        client.frais_acceptes = True
+        db.session.commit()
+        return redirect(url_for('onboarding_synthese'))
+
+    return render_template("onboarding/frais.html", current_step=3, client=client)
+
+
+@app.route("/onboarding/synthese")
+@login_required
+@client_required
+def onboarding_synthese():
+    client = current_user.client_profile
+    if not client.kyc_verifie:
+        return redirect(url_for('onboarding_kyc'))
+    if not client.profil_risque:
+        return redirect(url_for('onboarding_profil'))
+    if not client.frais_acceptes:
+        return redirect(url_for('onboarding_frais'))
+    dormants = client.contrats_dormants
+    return render_template("onboarding/synthese.html", client=client,
+                           contrats=dormants, current_step=4)
+
+
+@app.route("/client/maj-analyse", methods=["POST"])
+@login_required
+@client_required
+def client_maj_analyse():
+    """Update client contrats from a new mypension analysis (re-analysis flow)."""
+    analyse_json = session.get('analyse_json')
+    if not analyse_json:
+        flash("Aucune analyse en cours.", "error")
+        return redirect(url_for('client_dashboard'))
+
+    analyse = json.loads(analyse_json)
+    client = current_user.client_profile
+
+    # Replace contrats with new analysis
+    for c in client.contrats:
+        db.session.delete(c)
+    db.session.flush()
+
+    for c in analyse.get('contrats', []):
+        db.session.add(Contrat(
+            client_id=client.id,
+            assureur=c.get('assureur'),
+            numero=c.get('numero'),
+            type_branche=c.get('type_branche'),
+            statut=c.get('statut', 'inconnu'),
+            reserve=c.get('reserve'),
+            date_valeur=c.get('date_valeur')
+        ))
+
+    db.session.add(Analyse(
+        client_id=client.id,
+        filename=session.get('analyse_filename', ''),
+        resultat_json=analyse_json
+    ))
+    db.session.commit()
+    session.pop('analyse_json', None)
+    session.pop('analyse_filename', None)
+    flash("Votre dossier a été mis à jour.", "success")
+    return redirect(url_for('onboarding_synthese'))
 
 
 # ── Admin / Courtier routes ────────────────────────────────────────────────────

@@ -42,8 +42,23 @@ class Client(db.Model):
     profil_risque = db.Column(db.String(20))    # prudent | equilibre | dynamique | conviction
     profil_choisi_par = db.Column(db.String(20))  # client | courtier
     profil_date = db.Column(db.DateTime)
+    pays = db.Column(db.String(100), default='Belgique')
+    kyc_verifie = db.Column(db.Boolean, default=False)
+    kyc_document = db.Column(db.String(200))      # filename of uploaded ID
+    frais_acceptes = db.Column(db.Boolean, default=False)
+    questionnaire_score = db.Column(db.Integer)   # raw score 0-18
     contrats = db.relationship('Contrat', backref='client', lazy=True)
     analyses = db.relationship('Analyse', backref='client', lazy=True)
+
+    @property
+    def onboarding_step(self):
+        if not self.kyc_verifie:
+            return 'kyc'
+        if not self.profil_risque:
+            return 'profil'
+        if not self.frais_acceptes:
+            return 'frais'
+        return 'complet'
 
     @property
     def montant_total(self):

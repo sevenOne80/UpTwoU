@@ -1,0 +1,134 @@
+{% extends "onboarding/_base.html" %}
+{% block title %}Questionnaire de profil{% endblock %}
+
+{% block head_extra %}
+<style>
+  .q-block {
+    border-radius: 1rem;
+    background: white;
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .q-title {
+    font-weight: 600;
+    color: hsl(172 75% 18%);
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+  }
+  .q-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .q-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.625rem;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 0.875rem;
+    color: hsl(172 30% 28%);
+    background: transparent;
+    user-select: none;
+  }
+  .q-pill:hover {
+    border-color: hsl(172 75% 35%);
+    background: hsl(172 75% 22% / 0.04);
+  }
+  .q-pill input[type="radio"] { display: none; }
+  .q-pill.selected {
+    border-color: var(--primary);
+    background: hsl(172 75% 22% / 0.07);
+    color: hsl(172 75% 18%);
+    font-weight: 600;
+  }
+  .q-pill .pill-dot {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid hsl(172 30% 65%);
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .q-pill.selected .pill-dot {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .error-msg {
+    font-size: 0.75rem;
+    color: hsl(0 84% 45%);
+    margin-top: 0.25rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 4</p>
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Questionnaire de profil</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Répondez à ces 6 questions pour que nous puissions vous recommander le profil le plus adapté.</p>
+</div>
+
+<form method="POST">
+  {{ form.hidden_tag() }}
+
+  {% set questions = [
+    (form.q1, 'Quel est votre horizon de placement pour ces réserves ?'),
+    (form.q2, 'Si votre portefeuille perd 20 % en 3 mois, que faites-vous ?'),
+    (form.q3, 'Quel est votre objectif principal ?'),
+    (form.q4, 'Ces réserves représentent quelle part de votre patrimoine total ?'),
+    (form.q5, 'Quelle est votre expérience en placements financiers ?'),
+    (form.q6, 'Face à une perte de 30 % sur 6 mois, vous...'),
+  ] %}
+
+  {% for field, label in questions %}
+  <div class="q-block" id="block-{{ field.name }}">
+    <p class="q-title">{{ loop.index }}. {{ label }}</p>
+    <div class="q-options">
+      {% for subfield in field %}
+      <label class="q-pill" id="pill-{{ subfield.id }}">
+        {{ subfield }}
+        <span class="pill-dot"></span>
+        <span>{{ subfield.label.text }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% for e in field.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+  </div>
+  {% endfor %}
+
+  <div class="flex items-center justify-between mt-6">
+    <a href="{{ url_for('onboarding_profil') }}" class="btn btn-ghost text-sm">
+      <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+      Retour
+    </a>
+    {{ form.submit(class="btn btn-primary") }}
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Highlight selected pills
+  document.querySelectorAll('.q-pill').forEach(label => {
+    const radio = label.querySelector('input[type="radio"]');
+    if (!radio) return;
+
+    // Initial state
+    if (radio.checked) label.classList.add('selected');
+
+    label.addEventListener('click', () => {
+      // Unselect siblings
+      const name = radio.name;
+      document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+        r.closest('.q-pill').classList.remove('selected');
+      });
+      label.classList.add('selected');
+    });
+  });
+</script>
+{% endblock %}

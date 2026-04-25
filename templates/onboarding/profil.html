@@ -1,0 +1,115 @@
+{% extends "onboarding/_base.html" %}
+{% block title %}Profil d'investissement{% endblock %}
+
+{% block head_extra %}
+<style>
+  .profil-ob-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    border: 2px solid var(--border);
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    width: 100%;
+    text-align: left;
+  }
+  .profil-ob-card:hover {
+    border-color: hsl(172 75% 35%);
+    box-shadow: 0 4px 16px hsl(172 75% 22% / 0.12);
+  }
+  .profil-ob-card.selected {
+    border-color: var(--primary);
+    background: hsl(172 75% 22% / 0.04);
+    box-shadow: 0 4px 20px hsl(172 75% 22% / 0.18);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 4</p>
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Votre profil d'investissement</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Choisissez le profil qui correspond le mieux à vos objectifs et à votre tolérance au risque.</p>
+</div>
+
+<div class="rounded-2xl p-6" style="background:white;border:1px solid var(--border);">
+  <div class="flex flex-col gap-3 mb-6">
+
+    <!-- Prudent -->
+    <form method="POST">
+      <input type="hidden" name="profil" value="prudent">
+      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'prudent' }}">
+        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="shield" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-primary">Prudent</p>
+          <p class="text-xs text-muted mt-0.5">Capital préservé en priorité · rendement stable · risque faible</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(172 75% 28%);">~2–3 % /an · Frais 0,75 % /an</p>
+        </div>
+        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
+      </button>
+    </form>
+
+    <!-- Équilibré -->
+    <form method="POST">
+      <input type="hidden" name="profil" value="equilibre">
+      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'equilibre' }}">
+        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(35 95% 55% / 0.12);">
+          <i data-lucide="scale" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-primary">Équilibré</p>
+          <p class="text-xs text-muted mt-0.5">Mix actions / obligations · volatilité modérée · rendement régulier</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(35 90% 32%);">~4–6 % /an · Frais 0,90 % /an</p>
+        </div>
+        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
+      </button>
+    </form>
+
+    <!-- Dynamique -->
+    <form method="POST">
+      <input type="hidden" name="profil" value="dynamique">
+      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'dynamique' }}">
+        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(142 76% 36% / 0.1);">
+          <i data-lucide="trending-up" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-primary">Dynamique</p>
+          <p class="text-xs text-muted mt-0.5">Orienté actions · croissance long terme · volatilité acceptée</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(142 60% 28%);">~6–9 % /an · Frais 1,00 % /an</p>
+        </div>
+        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
+      </button>
+    </form>
+
+    <!-- Conviction -->
+    <form method="POST">
+      <input type="hidden" name="profil" value="conviction">
+      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'conviction' }}">
+        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(270 60% 55% / 0.1);">
+          <i data-lucide="target" style="width:1.25rem;height:1.25rem;color:hsl(270 60% 50%);"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-primary">Conviction</p>
+          <p class="text-xs text-muted mt-0.5">Portefeuille concentré · forte volatilité · rendement maximal</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(270 50% 35%);">~9–12 % /an · Frais 1,10 % /an</p>
+        </div>
+        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
+      </button>
+    </form>
+
+  </div>
+
+  <div class="border-t pt-5" style="border-color:var(--border);">
+    <p class="text-sm text-muted mb-3">Vous hésitez ? Répondez à 6 questions pour découvrir votre profil optimal.</p>
+    <a href="{{ url_for('onboarding_questionnaire') }}" class="btn btn-ghost text-sm">
+      <i data-lucide="help-circle" style="width:1rem;height:1rem;"></i>
+      Faire le questionnaire de profil
+    </a>
+  </div>
+</div>
+{% endblock %}

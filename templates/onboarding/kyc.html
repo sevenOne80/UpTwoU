@@ -1,0 +1,121 @@
+{% extends "onboarding/_base.html" %}
+{% block title %}Vérification d'identité{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 1 sur 4</p>
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Vérification d'identité</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Uploadez votre carte d'identité. Nos IA extrairont automatiquement vos données, que vous pourrez ensuite vérifier et compléter.</p>
+</div>
+
+<!-- Zone upload -->
+<div class="rounded-2xl p-6 mb-6" style="background:var(--card-bg, white);border:1px solid var(--border);">
+  <h2 class="font-semibold text-primary mb-4 flex items-center gap-2">
+    <i data-lucide="upload-cloud" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+    Document d'identité
+  </h2>
+
+  {% if has_document %}
+  <div class="flex items-center gap-3 mb-4 rounded-xl p-3" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
+    <i data-lucide="check-circle" style="width:1.125rem;height:1.125rem;color:hsl(172 75% 28%);flex-shrink:0;"></i>
+    <p class="text-sm text-primary">Document déjà uploadé. Vous pouvez en uploader un nouveau ci-dessous.</p>
+  </div>
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">
+    {{ form.hidden_tag() }}
+    <input type="hidden" name="action" value="upload">
+    <div class="form-group">
+      <label class="form-label">Carte d'identité (recto + verso) ou passeport</label>
+      <input type="file" name="kyc_file" accept=".jpg,.jpeg,.png,.pdf"
+             class="form-input" style="padding-top:0.5rem;padding-bottom:0.5rem;">
+      <p class="text-xs text-muted mt-1">Formats acceptés : JPG, PNG, PDF — max 10 Mo</p>
+    </div>
+    <button type="submit" class="btn btn-primary" style="align-self:flex-start;">
+      <i data-lucide="scan" style="width:1rem;height:1rem;"></i>
+      Analyser le document
+    </button>
+  </form>
+</div>
+
+<!-- Zone formulaire confirmation -->
+<div class="rounded-2xl p-6" style="background:var(--card-bg, white);border:1px solid var(--border);">
+  <h2 class="font-semibold text-primary mb-1 flex items-center gap-2">
+    <i data-lucide="user-check" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+    Vérifiez et complétez vos données
+  </h2>
+  <p class="text-xs text-muted mb-5">
+    {% if kyc_data %}
+      Données pré-remplies depuis votre document. Corrigez si nécessaire.
+    {% else %}
+      Remplissez vos données personnelles manuellement.
+    {% endif %}
+  </p>
+
+  <form method="POST" class="flex flex-col gap-4">
+    {{ form.hidden_tag() }}
+    <input type="hidden" name="action" value="confirm">
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="form-group">
+        <label class="form-label">{{ form.prenom.label.text }}</label>
+        {{ form.prenom(class="form-input") }}
+        {% for e in form.prenom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ form.nom.label.text }}</label>
+        {{ form.nom(class="form-input") }}
+        {% for e in form.nom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="form-group">
+        <label class="form-label">{{ form.date_naissance.label.text }}</label>
+        {{ form.date_naissance(class="form-input", placeholder="01/01/1970") }}
+        {% for e in form.date_naissance.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ form.sexe.label.text }}</label>
+        {{ form.sexe(class="form-input") }}
+        {% for e in form.sexe.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">{{ form.niss.label.text }}</label>
+      {{ form.niss(class="form-input", placeholder="XX.XX.XX-XXX.XX") }}
+      {% for e in form.niss.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">{{ form.adresse.label.text }}</label>
+      {{ form.adresse(class="form-input", placeholder="Rue de la Loi 16") }}
+      {% for e in form.adresse.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="form-group">
+        <label class="form-label">{{ form.code_postal.label.text }}</label>
+        {{ form.code_postal(class="form-input", placeholder="1000") }}
+        {% for e in form.code_postal.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ form.ville.label.text }}</label>
+        {{ form.ville(class="form-input", placeholder="Bruxelles") }}
+        {% for e in form.ville.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">{{ form.pays.label.text }}</label>
+      {{ form.pays(class="form-input") }}
+      {% for e in form.pays.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+    </div>
+
+    <div class="flex justify-end mt-2">
+      {{ form.submit(class="btn btn-primary") }}
+    </div>
+  </form>
+</div>
+{% endblock %}

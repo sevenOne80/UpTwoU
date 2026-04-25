@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Onboarding{% endblock %} — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .ob-step {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .ob-step-circle {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .ob-step-circle.done {
+      background: hsl(172 75% 22%);
+      color: white;
+    }
+    .ob-step-circle.active {
+      background: hsl(35 95% 55%);
+      color: white;
+    }
+    .ob-step-circle.pending {
+      background: hsl(172 75% 22% / 0.1);
+      color: hsl(172 75% 35%);
+    }
+    .ob-step-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .ob-step-label.active { color: hsl(35 90% 35%); }
+    .ob-step-label.done   { color: hsl(172 75% 25%); }
+    .ob-step-label.pending { color: hsl(172 30% 55%); }
+    .ob-connector {
+      flex: 1;
+      height: 2px;
+      background: hsl(172 75% 22% / 0.15);
+      margin: 0 0.25rem;
+    }
+    .ob-connector.done { background: hsl(172 75% 22% / 0.5); }
+  </style>
+  {% block head_extra %}{% endblock %}
+</head>
+<body style="background-color:var(--background);" class="min-h-screen font-sans">
+
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <a href="{{ url_for('logout') }}" class="btn btn-ghost text-sm">Déconnexion</a>
+  </div>
+</header>
+
+<main class="container py-12 max-w-2xl">
+
+  <!-- Stepper -->
+  {% set steps = [
+    (1, 'Identité', 'onboarding_kyc'),
+    (2, 'Profil', 'onboarding_profil'),
+    (3, 'Frais', 'onboarding_frais'),
+    (4, 'Synthèse', 'onboarding_synthese'),
+  ] %}
+  <div class="flex items-center mb-10 px-2">
+    {% for num, label, _ in steps %}
+      {% if loop.index > 1 %}
+        <div class="ob-connector {{ 'done' if current_step > num else '' }}"></div>
+      {% endif %}
+      <div class="ob-step" style="flex:0 0 auto;">
+        <div class="ob-step-circle {{ 'done' if current_step > num else ('active' if current_step == num else 'pending') }}">
+          {% if current_step > num %}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          {% else %}
+            {{ num }}
+          {% endif %}
+        </div>
+        <span class="ob-step-label {{ 'done' if current_step > num else ('active' if current_step == num else 'pending') }} hidden sm:block">{{ label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert-{{ category }} mb-6">
+        <i data-lucide="{{ 'check-circle' if category == 'success' else 'alert-circle' }}" style="width:1.25rem;height:1.25rem;flex-shrink:0;"></i>
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+
+</main>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

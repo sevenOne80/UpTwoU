@@ -216,14 +216,21 @@
       {% endif %}
     </p>
     {% if r.eligible %}
-    <a href="{{ url_for('register') }}"
-       class="btn btn-primary inline-flex items-center gap-2">
-      Je souhaite transférer mes réserves
-      <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
-    </a>
-    <p class="mt-4 text-xs" style="color: hsl(168 30% 65%);">
-      Gratuit &amp; sans engagement · Création de compte en 2 minutes
-    </p>
+      {% if current_user.is_authenticated %}
+      <form method="POST" action="{{ url_for('client_maj_analyse') }}">
+        <button type="submit" class="btn btn-primary inline-flex items-center gap-2">
+          Mettre à jour mon dossier
+          <i data-lucide="refresh-cw" style="width:1rem;height:1rem;"></i>
+        </button>
+      </form>
+      <p class="mt-4 text-xs" style="color: hsl(168 30% 65%);">Vos contrats seront mis à jour avec cette nouvelle analyse.</p>
+      {% else %}
+      <a href="{{ url_for('register') }}" class="btn btn-primary inline-flex items-center gap-2">
+        Je souhaite transférer mes réserves
+        <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
+      </a>
+      <p class="mt-4 text-xs" style="color: hsl(168 30% 65%);">Gratuit &amp; sans engagement · Création de compte en 2 minutes</p>
+      {% endif %}
     {% else %}
     <a href="{{ url_for('index') }}"
        class="btn btn-primary inline-flex items-center gap-2">

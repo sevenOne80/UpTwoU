@@ -14,9 +14,14 @@ from models import seed_assureurs
 
 COLUMN_MIGRATIONS = [
     # (table, column, sql_type)
-    ("client",  "date_naissance", "VARCHAR(10)"),
-    ("client",  "sexe",           "VARCHAR(1)"),
-    ("contrat", "statut",         "VARCHAR(20) DEFAULT 'inconnu'"),
+    ("client",  "date_naissance",       "VARCHAR(10)"),
+    ("client",  "sexe",                 "VARCHAR(1)"),
+    ("contrat", "statut",               "VARCHAR(20) DEFAULT 'inconnu'"),
+    ("client",  "pays",                 "VARCHAR(100) DEFAULT 'Belgique'"),
+    ("client",  "kyc_verifie",          "BOOLEAN DEFAULT 0"),
+    ("client",  "kyc_document",         "VARCHAR(200)"),
+    ("client",  "frais_acceptes",       "BOOLEAN DEFAULT 0"),
+    ("client",  "questionnaire_score",  "INTEGER"),
 ]
 
 reset = "--reset" in sys.argv

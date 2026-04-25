@@ -3,9 +3,34 @@
 
 {% block content %}
 <div class="dashboard-header">
-  <h1>Bonjour, {{ client.prenom }} 👋</h1>
-  <p>Voici un aperçu de vos réserves de pension complémentaire.</p>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1>Bonjour, {{ client.prenom }}</h1>
+      <p>Voici un aperçu de vos réserves de pension complémentaire.</p>
+    </div>
+    <a href="{{ url_for('analyser') }}" class="btn btn-ghost text-sm">
+      <i data-lucide="refresh-cw" style="width:1rem;height:1rem;"></i>
+      Mettre à jour mes réserves
+    </a>
+  </div>
 </div>
+
+<!-- Onboarding banner -->
+{% if client.onboarding_step != 'complet' %}
+{% set step_labels = {'kyc': ('Vérification d\'identité', 'onboarding_kyc', 1), 'profil': ('Profil d\'investissement', 'onboarding_profil', 2), 'frais': ('Acceptation des frais', 'onboarding_frais', 3)} %}
+{% set step_info = step_labels.get(client.onboarding_step, ('Continuer', 'onboarding_kyc', 1)) %}
+<div class="rounded-2xl p-5 flex items-center gap-4 mb-6" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.30);">
+  <i data-lucide="alert-circle" style="width:1.5rem;height:1.5rem;flex-shrink:0;color:var(--accent);"></i>
+  <div class="flex-1">
+    <p class="text-sm font-semibold text-primary">Finalisez votre inscription</p>
+    <p class="text-xs text-muted mt-0.5">Étape suivante : <strong>{{ step_info[0] }}</strong> ({{ step_info[2] }}/4)</p>
+  </div>
+  <a href="{{ url_for(step_info[1]) }}" class="btn btn-primary" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;white-space:nowrap;">
+    Continuer
+    <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+  </a>
+</div>
+{% endif %}
 
 <!-- Stats -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
