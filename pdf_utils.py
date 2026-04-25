@@ -1,13 +1,13 @@
 """
 PDF generation for Annexe 1 — Convention du 22 septembre 2015
 Demande de transfert individuel de réserves de pensions complémentaires.
-One form per ceding insurer (contrat dormant); one page per contract.
+One form per ceding insurer (contrat dormant).
 """
 import os
 from fpdf import FPDF
 
 # UpTwoU's receiving B23 insurer — configure via .env
-NOUVEL_NOM  = os.environ.get('NOUVEL_ASSUREUR_NOM',  'A completer par UpTwoU')
+NOUVEL_NOM  = os.environ.get('NOUVEL_ASSUREUR_NOM',  'À compléter par UpTwoU')
 NOUVEL_BCE  = os.environ.get('NOUVEL_ASSUREUR_BCE',  '')
 NOUVEL_IBAN = os.environ.get('NOUVEL_ASSUREUR_IBAN', '')
 NOUVEL_REF  = os.environ.get('NOUVEL_ASSUREUR_REF',  '')
@@ -24,15 +24,26 @@ def _v(val, default=''):
     return str(val).strip() if val else default
 
 
-def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
-    """Append one Annexe 1 page for a single contract to the FPDF object."""
+def generer_annexe1(client, contrat):
+    """Return PDF bytes for one Annexe 1 transfer request form."""
 
+    # Resolve ceding insurer reference
     ref     = contrat.assureur_ref
     bce_ced = ref.numero_bce if ref else ''
 
+    adresse_client = _v(client.adresse)
+    if client.code_postal or client.ville:
+        adresse_client += f", {_v(client.code_postal)} {_v(client.ville)}"
+
+    sexe_f = '(X) Femme' if client.sexe == 'F' else '( ) Femme'
+    sexe_m = '(X) Homme' if client.sexe == 'M' else '( ) Homme'
+
+    pdf = FPDF('P', 'mm', 'A4')
+    pdf.set_margins(LM, 15, LM)
+    pdf.set_auto_page_break(True, 22)
     pdf.add_page()
 
-    # ── Helpers (closures over pdf) ────────────────────────────────────────
+    # ── Helpers ────────────────────────────────────────────────────────────
 
     def sec_header(text):
         pdf.set_fill_color(*TEAL)
@@ -45,6 +56,7 @@ def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
         pdf.set_draw_color(0, 0, 0)
 
     def labeled_cell(x, y, w, h, label, value):
+        """A cell with a small grey label on top and bold value below."""
         lh, vh = 4, h - 4
         pdf.set_xy(x, y)
         pdf.set_font('Helvetica', '', 7)
@@ -56,12 +68,14 @@ def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
         pdf.cell(w, vh, f'   {_v(value)}', border='LBR')
 
     def row2(ll, lv, rl, rv, h=11):
+        """Two labeled cells side by side."""
         y, hw = pdf.get_y(), W / 2
         labeled_cell(LM,      y, hw, h, ll, lv)
         labeled_cell(LM + hw, y, hw, h, rl, rv)
         pdf.set_xy(LM, y + h)
 
     def subheader3(h1, h2):
+        """Column headers for 3-column sections."""
         y = pdf.get_y()
         pdf.set_xy(LM, y)
         pdf.set_fill_color(*GREY)
@@ -73,6 +87,7 @@ def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
         pdf.ln(7)
 
     def row3(label, pv, nv, h=10):
+        """3-column row: label | previous value | new value."""
         y = pdf.get_y()
         pdf.set_xy(LM, y)
         pdf.set_font('Helvetica', 'I', 8)
@@ -85,6 +100,7 @@ def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
         pdf.ln(h)
 
     def row3_check(label, checked_prev, h=10):
+        """3-column row with checkboxes (statut professionnel)."""
         y = pdf.get_y()
         pdf.set_xy(LM, y)
         pdf.set_font('Helvetica', 'I', 8)
@@ -120,8 +136,8 @@ def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
 
     # ── AFFILIÉ ────────────────────────────────────────────────────────────
     sec_header('AFFILIE')
-    row2('Nom',     client.nom,     'N de registre national', client.niss)
-    row2('Prenom',  client.prenom,  'Date de naissance',      client.date_naissance)
+    row2('Nom',     client.nom,     'N° de registre national', client.niss)
+    row2('Prenom',  client.prenom,  'Date de naissance',       client.date_naissance)
     row2('Adresse', adresse_client, 'Sexe', f'{sexe_f}      {sexe_m}')
     pdf.ln(6)
 
@@ -185,25 +201,4 @@ def _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m):
         " - Transfert individuel de reserves de pensions complementaires - Annexe 1",
         align='C')
 
-
-def generer_annexe1_groupe(client, contrats):
-    """Return PDF bytes with one Annexe 1 page per contract (all same insurer)."""
-    adresse_client = _v(client.adresse)
-    if client.code_postal or client.ville:
-        adresse_client += f", {_v(client.code_postal)} {_v(client.ville)}"
-    sexe_f = '(X) Femme' if client.sexe == 'F' else '( ) Femme'
-    sexe_m = '(X) Homme' if client.sexe == 'M' else '( ) Homme'
-
-    pdf = FPDF('P', 'mm', 'A4')
-    pdf.set_margins(LM, 15, LM)
-    pdf.set_auto_page_break(True, 22)
-
-    for contrat in contrats:
-        _add_page(pdf, client, contrat, adresse_client, sexe_f, sexe_m)
-
     return bytes(pdf.output())
-
-
-def generer_annexe1(client, contrat):
-    """Backward-compatible wrapper for a single contract."""
-    return generer_annexe1_groupe(client, [contrat])

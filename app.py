@@ -644,38 +644,25 @@ def client_donnees():
 @client_required
 def client_transfert():
     client = current_user.client_profile
-    dormants = client.contrats_dormants
-    # Group by insurer name (preserve insertion order)
-    groupes = {}
-    for c in dormants:
-        key = (c.assureur or 'Inconnu').strip()
-        groupes.setdefault(key, []).append(c)
-    return render_template("client/transfert.html", client=client, groupes=groupes)
+    return render_template("client/transfert.html", client=client,
+                           contrats=client.contrats_dormants)
 
 
-@app.route("/client/transfert/groupe/pdf")
+@app.route("/client/transfert/<int:contrat_id>/pdf")
 @login_required
 @client_required
-def client_transfert_groupe_pdf():
-    """Download one PDF (multi-page) for all dormant contracts of a given insurer."""
+def client_transfert_pdf(contrat_id):
     from io import BytesIO
-    from pdf_utils import generer_annexe1_groupe
-    assureur = request.args.get('assureur', '').strip()
-    if not assureur:
-        flash("Assureur manquant.", "error")
+    from pdf_utils import generer_annexe1
+    contrat = Contrat.query.get_or_404(contrat_id)
+    if contrat.client_id != current_user.client_profile.id:
+        flash("Accès non autorisé.", "error")
         return redirect(url_for('client_transfert'))
-    client = current_user.client_profile
-    contrats = [c for c in client.contrats_dormants
-                if (c.assureur or '').strip() == assureur]
-    if not contrats:
-        flash("Aucun contrat dormant trouvé pour cet assureur.", "error")
-        return redirect(url_for('client_transfert'))
-    pdf_bytes = generer_annexe1_groupe(client, contrats)
-    slug = re.sub(r'[^a-z0-9]+', '_', assureur.lower())[:30]
-    nb = len(contrats)
+    pdf_bytes = generer_annexe1(current_user.client_profile, contrat)
+    slug = re.sub(r'[^a-z0-9]+', '_', (contrat.assureur or 'assureur').lower())[:30]
     return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
                      as_attachment=True,
-                     download_name=f"annexe1_{slug}_{nb}contrat{'s' if nb > 1 else ''}.pdf")
+                     download_name=f"annexe1_transfert_{slug}.pdf")
 
 
 # ── Onboarding routes ─────────────────────────────────────────────────────────
