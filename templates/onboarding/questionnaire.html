@@ -76,8 +76,41 @@
 <form method="POST">
   {{ form.hidden_tag() }}
 
-  {% set questions = [
-    (form.q1, 'Quel est votre horizon de placement pour ces réserves ?'),
+  {# ── Question 1 : horizon de placement (pré-rempli si NISS connu) ── #}
+  <div class="q-block" id="block-q1" {% if q1_prefill %}style="opacity:0.75;"{% endif %}>
+    <p class="q-title">1. Quel est votre horizon de placement pour ces réserves ?</p>
+    {% if q1_prefill %}
+    {# Hidden field so the value is submitted even though the pills are locked #}
+    <input type="hidden" name="q1" value="{{ q1_prefill }}">
+    <div class="q-options">
+      {% for subfield in form.q1 %}
+      <label class="q-pill {% if subfield.checked %}selected{% endif %}"
+             style="pointer-events:none; {% if subfield.checked %}border-color:var(--primary);background:hsl(172 75% 22% / 0.07);{% endif %}">
+        <span class="pill-dot" {% if subfield.checked %}style="background:var(--primary);border-color:var(--primary);"{% endif %}></span>
+        <span>{{ subfield.label.text }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="text-xs mt-2" style="color:hsl(172 75% 35%);">
+      <i data-lucide="info" style="width:0.75rem;height:0.75rem;display:inline;vertical-align:middle;"></i>
+      Calculé automatiquement sur base de votre numéro national — réponse : <strong>{{ q1_label }}</strong>.
+    </p>
+    {% else %}
+    <div class="q-options">
+      {% for subfield in form.q1 %}
+      <label class="q-pill {% if subfield.checked %}selected{% endif %}" id="pill-{{ subfield.id }}">
+        {{ subfield }}
+        <span class="pill-dot"></span>
+        <span>{{ subfield.label.text }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% for e in form.q1.errors %}<p class="error-msg">{{ e }}</p>{% endfor %}
+  </div>
+
+  {# ── Questions 2–6 ── #}
+  {% set other_questions = [
     (form.q2, 'Si votre portefeuille perd 20 % en 3 mois, que faites-vous ?'),
     (form.q3, 'Quel est votre objectif principal ?'),
     (form.q4, 'Ces réserves représentent quelle part de votre patrimoine total ?'),
@@ -85,9 +118,9 @@
     (form.q6, 'Face à une perte de 30 % sur 6 mois, vous...'),
   ] %}
 
-  {% for field, label in questions %}
+  {% for field, label in other_questions %}
   <div class="q-block" id="block-{{ field.name }}">
-    <p class="q-title">{{ loop.index }}. {{ label }}</p>
+    <p class="q-title">{{ loop.index + 1 }}. {{ label }}</p>
     <div class="q-options">
       {% for subfield in field %}
       <label class="q-pill" id="pill-{{ subfield.id }}">
@@ -113,16 +146,14 @@
 
 {% block scripts %}
 <script>
-  // Highlight selected pills
+  // Highlight selected pills (skip locked Q1 pills which have no radio input)
   document.querySelectorAll('.q-pill').forEach(label => {
     const radio = label.querySelector('input[type="radio"]');
     if (!radio) return;
 
-    // Initial state
     if (radio.checked) label.classList.add('selected');
 
     label.addEventListener('click', () => {
-      // Unselect siblings
       const name = radio.name;
       document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
         r.closest('.q-pill').classList.remove('selected');

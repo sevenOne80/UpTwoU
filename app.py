@@ -210,8 +210,6 @@ Total de la réserve de pension comme travailleur salarié: 166.807,83 €
 ## Mots-clés à rechercher (FR / NL / EN / DE)
 
 Assureurs fréquents : AG Insurance, Allianz, Athora, AXA, Belfius Insurance, Ethias, Federale, Generali, ING Life, KBC Insurance, NN Insurance, P&V, Vivium, Integrale, Argenta, Fidelity, Equitable Life
-Types B21 : "Branche 21", "Tak 21", "Branch 21", "Zweig 21", "taux garanti", "gegarandeerde rente", "guaranteed rate", "Garantiezins"
-Types B23 : "Branche 23", "Tak 23", "Branch 23", "Zweig 23", "fonds d'investissement", "beleggingsfonds", "investment fund", "Investmentfonds"
 Réserves : "réserves acquises", "verworven reserves", "acquired reserves", "erworbene Reserven", "valeur de rachat", "afkoopwaarde", "surrender value", "Rückkaufswert"
 Statut dormant : "non-actif", "niet-actief", "inactive", "inaktiv", "dormant", "slapend", "sleeping", "ruhend", "Sortie le", "Uittreding op", "Left on", "Ausgetreten am"
 
@@ -244,12 +242,12 @@ Contient le tableau détaillé des contrats avec pour chaque plan :
 
 **IMPORTANT — ordre des sections non garanti :**
 Les sections ne suivent PAS nécessairement l'ordre numérique dans le document PDF.
-La section 2.1 ou 2.2 peut apparaître APRÈS les sections 3, 3.1, 3.2, etc.
+La section 2.1 peut apparaître APRÈS les sections 3, 3.1, 3.2, etc.
 Tu dois parcourir l'intégralité du document avant de conclure qu'une section est absente.
-Ne déclare eligible = "a_verifier" QUE si, après avoir lu tout le document, aucun détail par plan n'est trouvé.
+Ne déclare eligible = "a_verifier" QUE si, après avoir lu tout le document, aucun tableau de plans avec statuts n'est trouvé nulle part.
 
-Si la section 2.1 est présente (quel que soit son emplacement dans le PDF) → statut salarié confirmé, plans identifiables.
-Si seule la section 2 apparaît et qu'aucun détail par plan n'est trouvé nulle part dans le document → eligible = "a_verifier".
+La section 2.1 est la source principale des données de plan. La section 2.2 (fiches individuelles) est optionnelle et son absence n'affecte pas l'éligibilité.
+Si la section 2.1 est présente (quel que soit son emplacement dans le PDF) → les plans sont identifiables, c'est suffisant pour conclure.
 
 ## Instructions
 
@@ -307,12 +305,11 @@ Recherche impérativement ces mentions dans le document :
 - "ex-employeur", "vorige werkgever", "ancien employeur"
 Si aucune de ces mentions n'est présente, le plan est considéré actif et non transférable.
 
-**Condition 3 — Réserves en Branche 21**
-Le contrat doit être en Branche 21 (taux garanti). Les contrats en Branche 23 uniquement ne sont pas transférables.
-
-**Condition 4 — Montant minimum**
+**Condition 3 — Montant minimum**
 Le total des réserves transférables doit être **strictement supérieur à 10 000 €**.
 Si le total est ≤ 10 000 €, eligible = false avec mention du montant insuffisant.
+
+Note : le type de branche (Branche 21 ou Branche 23) n'est PAS un critère d'éligibilité. Renseigne le champ "type_branche" à titre informatif uniquement, mais ne l'utilise pas pour déterminer eligible.
 
 **Arbre de décision :**
 
@@ -320,15 +317,14 @@ Si le total est ≤ 10 000 €, eligible = false avec mention du montant insuffi
 
 2. Le document contient uniquement des réserves d'indépendant (EIP/PLCI confirmés, aucune mention salarié/assurance de groupe) → eligible = false
 
-3. Le document contient des réserves de salarié (ou statut ambigu) ET le détail par plan EST présent (section 2.2) :
-   - Plan dormant confirmé + B21 + > 10 000 € → eligible = true
-   - Plan actif confirmé → eligible = false
-   - Plan dormant + B23 uniquement → eligible = false
-   - Plan dormant + mix B21/B23 → eligible = true si part B21 > 10 000 €
+3. Le document contient des réserves de salarié (ou statut ambigu) ET le tableau des plans (section 2.1 ou équivalent) EST présent :
+   - Plan dormant confirmé + > 10 000 € → eligible = true
+   - Plan actif uniquement (aucun dormant) → eligible = false
+   - Mix actif/dormant → eligible = true si total des plans dormants > 10 000 €
 
-4. Le document contient des réserves > 10 000 € MAIS le détail par plan est absent (pas de section 2.2, pas de mention explicite dormant/actif) :
+4. Le document contient des réserves > 10 000 € MAIS aucun tableau de plans avec statuts n'est trouvé (impossible de distinguer actif/dormant) :
    → eligible = "a_verifier"
-   → Expliquer dans details que l'extrait ne contient pas la section 2.2 et inviter à télécharger l'extrait complet depuis mypension.be (vue détaillée par plan)
+   → Expliquer dans details qu'il n'est pas possible de déterminer le statut des plans et inviter à télécharger l'extrait complet depuis mypension.be
 
 5. Réserves présentes mais ≤ 10 000 € au total → eligible = false avec mention du montant
 
@@ -774,9 +770,31 @@ def onboarding_questionnaire():
     if not client.kyc_verifie:
         return redirect(url_for('onboarding_kyc'))
 
+    # Pre-fill Q1 from NISS pension horizon
+    q1_prefill = None
+    q1_label = None
+    if client.niss:
+        bd = birthdate_from_niss(client.niss)
+        if bd:
+            rem = remaining_to_pension(bd)
+            if rem is None:
+                q1_prefill, q1_label = '0', 'Moins de 5 ans'
+            else:
+                total_months = rem[0] * 12 + rem[1]
+                if total_months < 60:
+                    q1_prefill, q1_label = '0', 'Moins de 5 ans'
+                elif total_months < 120:
+                    q1_prefill, q1_label = '1', '5 à 10 ans'
+                elif total_months < 240:
+                    q1_prefill, q1_label = '2', '10 à 20 ans'
+                else:
+                    q1_prefill, q1_label = '3', 'Plus de 20 ans'
+
     form = QuestionnaireForm()
     if form.validate_on_submit():
-        score = sum(int(getattr(form, f'q{i}').data) for i in range(1, 7))
+        # If Q1 was locked (pre-filled), use the server-side value to prevent tampering
+        q1_val = q1_prefill if q1_prefill is not None else form.q1.data
+        score = int(q1_val) + sum(int(getattr(form, f'q{i}').data) for i in range(2, 7))
         profil = score_to_profil(score)
         client.profil_risque = profil
         client.profil_choisi_par = 'client'
@@ -785,7 +803,11 @@ def onboarding_questionnaire():
         db.session.commit()
         return redirect(url_for('onboarding_frais'))
 
-    return render_template("onboarding/questionnaire.html", form=form, current_step=2)
+    if q1_prefill is not None:
+        form.q1.data = q1_prefill
+
+    return render_template("onboarding/questionnaire.html", form=form, current_step=2,
+                           q1_prefill=q1_prefill, q1_label=q1_label)
 
 
 @app.route("/onboarding/frais", methods=["GET", "POST"])
