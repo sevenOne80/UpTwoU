@@ -51,6 +51,39 @@ with app.app_context():
                     print(f"  = {table}.{column} (already exists)")
 
             db.create_all()   # creates any brand-new tables
+
+            # Link orphaned contracts (analyse_id IS NULL) to the client's
+            # most recent analyse. These exist for accounts created before the
+            # analyse_id column was introduced.
+            result = conn.execute(text("""
+                UPDATE contrat
+                SET analyse_id = (
+                    SELECT id FROM analyse
+                    WHERE analyse.client_id = contrat.client_id
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                )
+                WHERE analyse_id IS NULL
+                  AND client_id IN (SELECT DISTINCT client_id FROM analyse)
+            """))
+            if result.rowcount:
+                print(f"  ~ linked {result.rowcount} orphaned contrat(s) to their latest analyse")
+
+            # Backfill date_extrait on analyses that have linked contracts
+            rows = conn.execute(text("""
+                SELECT a.id, c.date_valeur
+                FROM analyse a
+                JOIN contrat c ON c.analyse_id = a.id
+                WHERE a.date_extrait IS NULL AND c.date_valeur IS NOT NULL
+                GROUP BY a.id
+            """)).fetchall()
+            for row in rows:
+                conn.execute(text(
+                    "UPDATE analyse SET date_extrait = :dv WHERE id = :id"
+                ), {"dv": row[1], "id": row[0]})
+            if rows:
+                print(f"  ~ backfilled date_extrait on {len(rows)} analyse(s)")
+
             conn.commit()
 
     seed_assureurs(app)

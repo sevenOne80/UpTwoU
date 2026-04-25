@@ -60,9 +60,10 @@
       <p class="text-xs uppercase tracking-widest font-semibold text-muted">Contrats (dernière fiche)</p>
     </div>
     {% if analyses %}
-    <p class="font-display text-3xl font-bold text-primary">{{ analyses[0].contrats | length }}</p>
+    {% set nb = analyses[0].contrats | length or client.contrats | length %}
+    <p class="font-display text-3xl font-bold text-primary">{{ nb }}</p>
     {% else %}
-    <p class="font-display text-3xl font-bold text-primary">—</p>
+    <p class="font-display text-3xl font-bold text-primary">{{ client.contrats | length or '—' }}</p>
     {% endif %}
     <p class="text-xs text-muted mt-1">Contrat(s) détecté(s)</p>
   </div>
@@ -110,7 +111,8 @@
       {% endif %}
     </div>
 
-    {% if a.contrats %}
+    {% set contrats_a = a.contrats if a.contrats else client.contrats %}
+    {% if contrats_a %}
     <table class="data-table">
       <thead>
         <tr>
@@ -121,7 +123,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for c in a.contrats %}
+        {% for c in contrats_a %}
         <tr>
           <td class="font-semibold">{{ c.assureur or '—' }}</td>
           <td>
