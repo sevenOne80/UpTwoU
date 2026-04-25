@@ -22,6 +22,8 @@ COLUMN_MIGRATIONS = [
     ("client",  "kyc_document",         "VARCHAR(200)"),
     ("client",  "frais_acceptes",       "BOOLEAN DEFAULT 0"),
     ("client",  "questionnaire_score",  "INTEGER"),
+    ("analyse", "date_extrait",         "VARCHAR(10)"),
+    ("contrat", "analyse_id",           "INTEGER"),
 ]
 
 reset = "--reset" in sys.argv

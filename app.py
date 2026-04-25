@@ -24,6 +24,13 @@ ALLOWED_EXTENSIONS = {'pdf'}
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'uptowu-dev-secret')
+
+@app.template_filter('from_json')
+def from_json_filter(s):
+    try:
+        return json.loads(s) if s else {}
+    except Exception:
+        return {}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 app.config['SQLALCHEMY_DATABASE_URI'] = (
@@ -583,7 +590,9 @@ def logout():
 @login_required
 @client_required
 def client_dashboard():
-    return render_template("client/dashboard.html", client=current_user.client_profile)
+    client = current_user.client_profile
+    analyses = sorted(client.analyses, key=lambda a: a.created_at, reverse=True)
+    return render_template("client/dashboard.html", client=client, analyses=analyses)
 
 
 @app.route("/client/contrats")
@@ -857,14 +866,28 @@ def client_maj_analyse():
     analyse = json.loads(analyse_json)
     client = current_user.client_profile
 
-    # Replace contrats with new analysis
-    for c in client.contrats:
-        db.session.delete(c)
-    db.session.flush()
+    # Extract mypension.be reference date from first contract's date_valeur
+    date_extrait = None
+    for c in analyse.get('contrats', []):
+        if c.get('date_valeur'):
+            date_extrait = c['date_valeur']
+            break
 
+    # Create the Analyse record first to get its id
+    new_analyse = Analyse(
+        client_id=client.id,
+        filename=session.get('analyse_filename', ''),
+        resultat_json=analyse_json,
+        date_extrait=date_extrait
+    )
+    db.session.add(new_analyse)
+    db.session.flush()  # populate new_analyse.id
+
+    # Add new contracts linked to this analysis (historical ones are preserved)
     for c in analyse.get('contrats', []):
         db.session.add(Contrat(
             client_id=client.id,
+            analyse_id=new_analyse.id,
             assureur=c.get('assureur'),
             numero=c.get('numero'),
             type_branche=c.get('type_branche'),
@@ -873,11 +896,6 @@ def client_maj_analyse():
             date_valeur=c.get('date_valeur')
         ))
 
-    db.session.add(Analyse(
-        client_id=client.id,
-        filename=session.get('analyse_filename', ''),
-        resultat_json=analyse_json
-    ))
     db.session.commit()
     session.pop('analyse_json', None)
     session.pop('analyse_filename', None)

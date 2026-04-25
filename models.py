@@ -61,10 +61,17 @@ class Client(db.Model):
         return 'complet'
 
     @property
+    def latest_analyse(self):
+        if not self.analyses:
+            return None
+        return max(self.analyses, key=lambda a: a.created_at)
+
+    @property
     def montant_total(self):
-        if self.analyses:
+        latest = self.latest_analyse
+        if latest:
             try:
-                data = json.loads(self.analyses[-1].resultat_json)
+                data = json.loads(latest.resultat_json)
                 return data.get('montant_total')
             except Exception:
                 pass
@@ -72,13 +79,19 @@ class Client(db.Model):
 
     @property
     def contrats_dormants(self):
-        return [c for c in self.contrats if c.statut == 'dormant']
+        """Dormant contracts from the most recent analysis only."""
+        latest = self.latest_analyse
+        if latest:
+            return [c for c in latest.contrats if c.statut == 'dormant']
+        # Fallback for legacy records without analyse_id
+        return [c for c in self.contrats if c.statut == 'dormant' and c.analyse_id is None]
 
 
 class Contrat(db.Model):
     __tablename__ = 'contrat'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    analyse_id = db.Column(db.Integer, db.ForeignKey('analyse.id'), nullable=True)
     assureur = db.Column(db.String(150))
     numero = db.Column(db.String(100))
     type_branche = db.Column(db.String(30))     # Branche 21 | Branche 23 | Inconnu
@@ -104,7 +117,9 @@ class Analyse(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True)
     filename = db.Column(db.String(200))
     resultat_json = db.Column(db.Text)
+    date_extrait = db.Column(db.String(10))   # "01/01/YYYY" — reference date on mypension.be statement
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    contrats = db.relationship('Contrat', backref='analyse', lazy=True)
 
 
 class AssureurRef(db.Model):
