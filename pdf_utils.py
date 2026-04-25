@@ -197,8 +197,8 @@ def generer_annexe1(client, contrat):
     pdf.set_font('Helvetica', 'I', 7)
     pdf.set_text_color(160, 160, 160)
     pdf.cell(0, 5,
-        "Convention du 22 septembre 2015 entre entreprises d'assurances "
-        "— Transfert individuel de reserves de pensions complementaires — Annexe 1",
+        "Convention du 22 septembre 2015 entre entreprises d'assurances"
+        " - Transfert individuel de reserves de pensions complementaires - Annexe 1",
         align='C')
 
     return bytes(pdf.output())
