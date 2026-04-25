@@ -17,7 +17,15 @@
       "Bash(git commit -m ' *)",
       "Bash(git remote *)",
       "Bash(git branch *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(python migrate_db.py)",
+      "Bash(python -c \"import forms; print\\('forms.py OK'\\)\")",
+      "Bash(python -c \"import models; print\\('models.py OK'\\)\")",
+      "Bash(python -c \"from app import app, db; print\\('OK'\\)\")",
+      "Bash(python -c \"from app import app, db, ANALYSIS_PROMPT; print\\('Import OK'\\); print\\('B21' in ANALYSIS_PROMPT, 'Condition 3' in ANALYSIS_PROMPT\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"from app import app; from pdf_utils import generer_annexe1_groupe; print\\('OK'\\)\")",
+      "Bash(git revert *)"
     ]
   }
 }
