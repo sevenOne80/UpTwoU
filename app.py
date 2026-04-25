@@ -602,6 +602,13 @@ def client_contrats():
     return render_template("client/contrats.html", client=current_user.client_profile)
 
 
+@app.route("/client/gestion")
+@login_required
+@client_required
+def client_gestion():
+    return render_template("client/gestion.html", client=current_user.client_profile)
+
+
 @app.route("/client/profil", methods=["GET", "POST"])
 @login_required
 @client_required

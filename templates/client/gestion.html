@@ -1,0 +1,242 @@
+{% extends "client/_base.html" %}
+{% block title %}Gestion & fonds{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+  <div>
+    <h1>Gestion &amp; fonds</h1>
+    <p>Comprendre comment vos réserves sont gérées en Branche 23.</p>
+  </div>
+</div>
+
+<!-- ── Pourquoi la gestion dédiée ───────────────────────────────────────── -->
+<div class="dashboard-card mb-6">
+  <div class="flex items-center gap-3 mb-5">
+    <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+         style="background:hsl(172 75% 22% / 0.1);">
+      <i data-lucide="lightbulb" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+    </div>
+    <h2 class="font-display text-lg font-semibold text-primary">
+      Pourquoi la gestion dédiée est particulièrement adaptée aux réserves extra-légales
+    </h2>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+
+    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="calendar-range" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-primary mb-1">Horizon de placement long</p>
+        <p class="text-xs text-muted leading-relaxed">
+          Vos réserves restent investies jusqu'à la pension. Cet horizon de 10 à 30 ans permet d'accéder à des classes d'actifs plus dynamiques, avec une capacité d'absorption des cycles de marché que l'épargne classique n'offre pas.
+        </p>
+      </div>
+    </div>
+
+    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="percent" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-primary mb-1">Fiscalité avantageuse de la Branche 23</p>
+        <p class="text-xs text-muted leading-relaxed">
+          Contrairement à la Branche 21, les rendements en Branche 23 ne sont pas soumis à la taxe sur la prime de 4,4 %. Les plus-values générées dans le fonds ne sont pas non plus imposées annuellement, ce qui favorise l'effet de capitalisation.
+        </p>
+      </div>
+    </div>
+
+    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="trending-up" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-primary mb-1">Croissance du capital vs taux garanti</p>
+        <p class="text-xs text-muted leading-relaxed">
+          La Branche 21 protège le capital mais plafonne la croissance à un taux garanti faible. La gestion en Branche 23 vise un rendement supérieur à l'inflation sur le long terme, sans contrainte de taux garanti, ce qui est cohérent avec un horizon de pension.
+        </p>
+      </div>
+    </div>
+
+    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="shield" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-primary mb-1">Gestion professionnelle &amp; diversifiée</p>
+        <p class="text-xs text-muted leading-relaxed">
+          Vos réserves sont investies dans des fonds diversifiés, sélectionnés et surveillés par des gestionnaires professionnels. La construction de portefeuille, le rééquilibrage et la gestion du risque sont assurés en continu — sans que vous ayez à intervenir.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Gestionnaire : Wrealtheon ─────────────────────────────────────────── -->
+<div class="dashboard-card mb-6">
+  <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
+    <div class="flex items-center gap-4">
+      <div class="h-14 w-14 rounded-2xl grid place-items-center flex-shrink-0"
+           style="background:linear-gradient(135deg,hsl(172 75% 18%),hsl(172 75% 28%));">
+        <i data-lucide="building" style="width:1.5rem;height:1.5rem;color:white;"></i>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-0.5">Gestionnaire de fonds</p>
+        <h2 class="font-display text-xl font-semibold text-primary">Wrealtheon</h2>
+      </div>
+    </div>
+    <span class="rounded-full px-3 py-1 text-xs font-semibold"
+          style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+      Gestionnaire actif
+    </span>
+  </div>
+
+  <p class="text-sm text-muted leading-relaxed mb-4">
+    Wrealtheon est le gestionnaire de fonds sélectionné par UpTwoU pour la gestion des réserves transférées en Branche 23. Spécialisé dans la gestion de l'épargne-pension à long terme, Wrealtheon propose une gamme de fonds alignés sur les quatre profils de risque disponibles.
+  </p>
+
+  <div class="grid sm:grid-cols-3 gap-3">
+    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+      <p class="text-xs text-muted mb-1">Approche</p>
+      <p class="text-sm font-semibold text-primary">Gestion active</p>
+    </div>
+    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+      <p class="text-xs text-muted mb-1">Univers</p>
+      <p class="text-sm font-semibold text-primary">Actions &amp; obligations</p>
+    </div>
+    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+      <p class="text-xs text-muted mb-1">Reporting</p>
+      <p class="text-sm font-semibold text-primary">Trimestriel</p>
+    </div>
+  </div>
+
+  <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
+       style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+    <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
+    <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
+      Les performances passées ne préjugent pas des performances futures. Tout investissement en Branche 23 comporte un risque de perte en capital.
+    </p>
+  </div>
+</div>
+
+<!-- ── Les 4 profils ─────────────────────────────────────────────────────── -->
+<div class="dashboard-card mb-6">
+  <h2 class="font-display text-lg font-semibold text-primary mb-5">Les 4 profils de gestion</h2>
+
+  <div class="grid md:grid-cols-2 gap-4">
+
+    {% set profils = [
+      ('prudent',   'Prudent',   'shield',         'hsl(142 76% 36%)', 'hsl(142 76% 36% / 0.1)', 'hsl(142 76% 36% / 0.2)',
+       'Obligations, fonds monétaires et actifs défensifs. Priorité à la préservation du capital avec une croissance modeste.',
+       [('Actions', '0 – 15 %'), ('Obligations', '60 – 80 %'), ('Monétaire & divers', '10 – 30 %')]),
+
+      ('equilibre', 'Équilibré', 'scale',           'hsl(172 75% 28%)', 'hsl(172 75% 22% / 0.08)', 'hsl(172 75% 22% / 0.2)',
+       'Mix équilibré entre obligations et actions. Rendement régulier avec une volatilité maîtrisée.',
+       [('Actions', '30 – 50 %'), ('Obligations', '40 – 60 %'), ('Divers', '5 – 15 %')]),
+
+      ('dynamique', 'Dynamique', 'trending-up',     'hsl(220 70% 45%)', 'hsl(220 70% 45% / 0.08)', 'hsl(220 70% 45% / 0.2)',
+       'Exposition majoritaire aux marchés actions mondiaux. Objectif de croissance du capital sur le long terme.',
+       [('Actions', '60 – 80 %'), ('Obligations', '15 – 30 %'), ('Divers', '5 – 15 %')]),
+
+      ('conviction','Conviction', 'zap',            'hsl(35 95% 45%)', 'hsl(35 95% 55% / 0.08)', 'hsl(35 95% 55% / 0.3)',
+       'Concentrations d'actions à conviction élevée (8 – 11 % par position). Portefeuille concentré, volatilité élevée, potentiel de rendement maximal.',
+       [('Actions (concentrées)', '80 – 100 %'), ('Liquidités', '0 – 20 %')]),
+    ] %}
+
+    {% for slug, nom, icon, color, bg, border, desc, alloc in profils %}
+    <div class="rounded-2xl p-5 {% if client.profil_risque == slug %}ring-2{% endif %}"
+         style="background:{{ bg }};border:1px solid {{ border }};{% if client.profil_risque == slug %}outline:2px solid {{ color }};outline-offset:2px;{% endif %}">
+
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl grid place-items-center"
+               style="background:{{ color }};opacity:{{ '1' if client.profil_risque == slug else '0.8' }};">
+            <i data-lucide="{{ icon }}" style="width:1rem;height:1rem;color:white;"></i>
+          </div>
+          <p class="font-semibold text-primary">{{ nom }}</p>
+        </div>
+        {% if client.profil_risque == slug %}
+        <span class="rounded-full px-2 py-0.5 text-xs font-semibold"
+              style="background:{{ color }};color:white;">
+          Mon profil
+        </span>
+        {% endif %}
+      </div>
+
+      <p class="text-xs text-muted leading-relaxed mb-3">{{ desc }}</p>
+
+      <div class="flex flex-col gap-1">
+        {% for asset, pct in alloc %}
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-muted">{{ asset }}</span>
+          <span class="font-semibold" style="color:{{ color }};">{{ pct }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+  {% if not client.profil_risque %}
+  <div class="mt-4 flex items-center justify-between rounded-xl p-4"
+       style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+    <p class="text-sm text-muted">Vous n'avez pas encore défini votre profil de gestion.</p>
+    <a href="{{ url_for('client_profil') }}" class="btn btn-primary text-sm"
+       style="height:2.25rem;padding:0 1rem;">
+      Choisir mon profil
+      <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+    </a>
+  </div>
+  {% else %}
+  <div class="mt-4 flex items-center justify-between rounded-xl p-4"
+       style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
+    <p class="text-sm text-muted">
+      Votre profil actuel : <strong class="text-primary capitalize">{{ client.profil_risque }}</strong>.
+      Vous pouvez le modifier à tout moment.
+    </p>
+    <a href="{{ url_for('client_profil') }}" class="btn btn-ghost text-sm"
+       style="height:2.25rem;padding:0 1rem;">
+      Modifier
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Frais ─────────────────────────────────────────────────────────────── -->
+<div class="dashboard-card">
+  <h2 class="font-display text-lg font-semibold text-primary mb-4">Structure de frais</h2>
+
+  <div class="grid sm:grid-cols-3 gap-4">
+    <div class="rounded-xl p-4 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+      <i data-lucide="arrow-right-left" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);margin:0 auto 0.5rem;display:block;"></i>
+      <p class="text-xs text-muted mb-1">Frais de transfert (in/out)</p>
+      <p class="font-display text-2xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
+    </div>
+    <div class="rounded-xl p-4 text-center" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
+      <i data-lucide="refresh-cw" style="width:1.25rem;height:1.25rem;color:var(--primary);margin:0 auto 0.5rem;display:block;"></i>
+      <p class="text-xs text-muted mb-1">Frais de gestion annuels</p>
+      <p class="font-display text-2xl font-bold text-primary">1,90 %</p>
+      <p class="text-xs text-muted mt-0.5">sur l'encours</p>
+    </div>
+    <div class="rounded-xl p-4 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+      <i data-lucide="badge-check" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);margin:0 auto 0.5rem;display:block;"></i>
+      <p class="text-xs text-muted mb-1">Frais de performance</p>
+      <p class="font-display text-2xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
+    </div>
+  </div>
+
+  <p class="text-xs text-muted mt-4 text-center">
+    Ces frais s'appliquent quel que soit le profil choisi. Les performances passées ne préjugent pas des performances futures.
+  </p>
+</div>
+
+{% endblock %}
