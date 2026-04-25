@@ -602,6 +602,11 @@ def client_contrats():
     return render_template("client/contrats.html", client=current_user.client_profile)
 
 
+@app.route("/faq")
+def faq():
+    return render_template("faq.html")
+
+
 @app.route("/gestion")
 def gestion_publique():
     client = None

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .faq-item summary {
+      list-style: none;
+      cursor: pointer;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+    .faq-chevron { transition: transform 0.2s ease; }
+    .faq-item[open] summary { color: var(--primary); }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+      <a href="{{ url_for('index') }}#how"        class="hover:text-primary transition-colors">Comment ça marche</a>
+      <a href="{{ url_for('index') }}#about"      class="hover:text-primary transition-colors">À propos</a>
+      <a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a>
+      <a href="{{ url_for('faq') }}"              class="text-primary font-semibold transition-colors">FAQ</a>
+      <a href="{{ url_for('index') }}#contact"    class="hover:text-primary transition-colors">Contact</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('login') }}" class="btn btn-nav-connexion hidden sm:inline-flex">Connexion</a>
+      <a href="{{ url_for('analyser') }}" class="btn btn-nav-start">Commencer</a>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE HEADER -->
+<section class="relative overflow-hidden" style="background: var(--primary); padding: 4rem 0 5rem;">
+  <div class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-20 -left-10 h-72 w-72 rounded-full"
+         style="background: hsl(165 70% 45% / 0.25); filter: blur(80px);"></div>
+    <div class="absolute -bottom-10 right-0 h-64 w-64 rounded-full"
+         style="background: hsl(35 95% 55% / 0.20); filter: blur(70px);"></div>
+  </div>
+  <div class="container relative">
+    <a href="{{ url_for('index') }}" class="inline-flex items-center gap-2 text-sm mb-6"
+       style="color: hsl(40 33% 97% / 0.60);">
+      <i data-lucide="arrow-left" style="width:0.875rem;height:0.875rem;"></i>
+      Retour à l'accueil
+    </a>
+    <p class="text-sm uppercase tracking-widest font-semibold" style="color: var(--accent);">Questions fréquentes</p>
+    <h1 class="mt-3 font-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+      Tout ce que vous<br class="hidden md:block"> devez savoir
+    </h1>
+    <p class="mt-5 max-w-2xl text-lg" style="color: hsl(40 33% 97% / 0.75);">
+      Vous ne trouvez pas de réponse ? Contactez-nous à <a href="mailto:contact@uptwou.be" class="underline hover:opacity-80">contact@uptwou.be</a>.
+    </p>
+  </div>
+  <div class="absolute bottom-0 left-0 right-0">
+    <svg viewBox="0 0 1440 60" class="w-full" style="height:2rem;display:block;" preserveAspectRatio="none">
+      <path d="M0 30 Q 360 0 720 30 T 1440 30 L 1440 60 L 0 60 Z" fill="var(--background)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- FAQ CONTENT -->
+<div class="container py-16 max-w-3xl mx-auto">
+
+  <!-- Section : Le service -->
+  <div class="mb-10">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="info" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <h2 class="font-display text-xl font-semibold text-primary">Le service UpTwoU</h2>
+    </div>
+
+    <div class="flex flex-col gap-3">
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Qu'est-ce qu'UpTwoU ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">UpTwoU est un courtier souscripteur mandaté, spécialisé dans la gestion des réserves de pension extra-légales du 2<sup>e</sup> pilier. Notre mission : vous permettre de transférer vos réserves dormantes en Branche 23, pour les faire travailler dans un cadre de gestion professionnelle, adapté à votre profil d'investisseur.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          UpTwoU est-il réglementé ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Oui. UpTwoU opère en tant que courtier souscripteur mandaté par des compagnies d'assurance agréées par la Banque Nationale de Belgique (BNB), sous le contrôle de la FSMA. Vos réserves sont à tout moment logées dans un contrat d'assurance-vie réglementé.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Le service est-il payant ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">L'analyse de vos contrats et la création de votre compte sont entièrement gratuites. Une fois vos réserves transférées, des frais de gestion annuels de <strong>1,90 %</strong> sont prélevés sur l'encours. Aucun frais de transfert (entrée ou sortie), aucun frais de performance.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- Section : Branche 23 -->
+  <div class="mb-10">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="trending-up" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <h2 class="font-display text-xl font-semibold text-primary">Branche 23 & placement</h2>
+    </div>
+
+    <div class="flex flex-col gap-3">
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Qu'est-ce que la Branche 23 ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">La Branche 23 est un produit d'assurance-vie dont le rendement est lié à la performance de fonds d'investissement. Contrairement à la Branche 21 (taux garanti fixe), la Branche 23 n'offre pas de garantie de capital, mais permet de viser un rendement supérieur à l'inflation sur le long terme, en accord avec un horizon de placement jusqu'à la pension.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Mon capital est-il garanti ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Non. En Branche 23, votre capital n'est pas garanti : la valeur de vos réserves évolue en fonction des marchés financiers. Vous pouvez donc perdre une partie du capital investi. C'est pourquoi nous proposons quatre profils de risque — du plus défensif (Prudent) au plus concentré (Conviction) — afin d'adapter l'exposition à votre situation personnelle.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Qui gère mes fonds ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Vos réserves sont gérées par <strong>Wealtheon</strong>, gestionnaire de fonds spécialisé dans l'épargne-pension à long terme. Wealtheon assure la construction de portefeuille, le rééquilibrage et la surveillance continue des allocations selon votre profil de risque.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Puis-je changer de profil de risque après souscription ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Oui. Votre profil de gestion peut être modifié à tout moment depuis votre espace client. Le changement entraîne un réinvestissement de votre encours dans le fonds correspondant au nouveau profil.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- Section : Transfert -->
+  <div class="mb-10">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="send" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <h2 class="font-display text-xl font-semibold text-primary">Transfert de réserves</h2>
+    </div>
+
+    <div class="flex flex-col gap-3">
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Quels contrats peuvent être transférés ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Seuls les contrats <strong>dormants</strong> peuvent être transférés : il s'agit de contrats de pension extra-légaux liés à un ancien employeur, pour lesquels vous n'effectuez plus de versements. Ces contrats apparaissent sur votre extrait mypension.be et peuvent stagner pendant des années sans rendement réel.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Comment se déroule le transfert ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Après analyse de votre extrait mypension.be, UpTwoU génère automatiquement les formulaires de transfert (Annexe 1) pré-remplis pour chaque assureur cédant. Il vous suffit de les compléter avec le nom de votre ancien employeur, de les signer et de les envoyer directement à l'assureur. Celui-ci dispose alors de <strong>30 jours calendrier</strong> pour effectuer le virement de vos réserves.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Le transfert entraîne-t-il une perte de droits acquis ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Non. Conformément à la Convention Assuralia du 22 septembre 2015 (mise à jour le 2 décembre 2019), le transfert de réserves est <strong>gratuit et sans perte de droits acquis</strong>. L'assureur cédant est tenu de transférer l'intégralité de la réserve acquise.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Y a-t-il un montant minimum pour transférer ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Un montant minimum de réserve est requis pour que le transfert soit économiquement pertinent. Notre outil vous signale automatiquement si un contrat est en dessous de ce seuil lors de l'analyse.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- Section : Données & sécurité -->
+  <div class="mb-10">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="shield-check" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <h2 class="font-display text-xl font-semibold text-primary">Données & sécurité</h2>
+    </div>
+
+    <div class="flex flex-col gap-3">
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Mes données personnelles sont-elles protégées ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Oui. UpTwoU traite vos données personnelles conformément au RGPD (Règlement Général sur la Protection des Données). Vos données sont chiffrées, hébergées en Europe et ne sont jamais revendues à des tiers. Vous disposez à tout moment d'un droit d'accès, de rectification et de suppression de vos données.</p>
+        </div>
+      </details>
+
+      <details class="faq-item dashboard-card !py-0 overflow-hidden">
+        <summary class="flex items-center justify-between gap-4 p-5 font-semibold text-sm text-primary">
+          Que faites-vous de mon extrait mypension.be ?
+          <i data-lucide="chevron-down" class="faq-chevron flex-shrink-0" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </summary>
+        <div class="px-5 pb-5 text-sm text-muted leading-relaxed border-t" style="border-color:hsl(172 75% 22% / 0.1);">
+          <p class="pt-4">Votre extrait est analysé automatiquement par notre système afin d'identifier vos contrats dormants et d'évaluer leur éligibilité au transfert. Le document n'est pas conservé au-delà de cette analyse et les données extraites sont liées uniquement à votre compte.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- CTA contact -->
+  <div class="rounded-2xl p-6 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
+    <i data-lucide="mail" style="width:1.5rem;height:1.5rem;color:var(--primary);margin:0 auto 0.75rem;display:block;"></i>
+    <p class="font-semibold text-primary mb-1">Vous ne trouvez pas de réponse ?</p>
+    <p class="text-sm text-muted mb-4">Notre équipe est disponible pour répondre à toutes vos questions.</p>
+    <a href="mailto:contact@uptwou.be" class="btn btn-primary inline-flex items-center gap-2">
+      <i data-lucide="send" style="width:0.875rem;height:0.875rem;"></i>
+      Contacter l'équipe
+    </a>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer style="border-top: 1px solid var(--border); background-color: hsl(168 30% 92% / 0.30);">
+  <div class="container py-12 grid md:grid-cols-4 gap-8 text-sm">
+    <div>
+      <a href="{{ url_for('index') }}" class="brand-logo">
+        <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo" loading="lazy" style="height:3rem;width:3rem;object-fit:contain;flex-shrink:0;">
+        <span class="brand-wordmark" style="font-size:1.5rem;">Up<span>Two</span>U</span>
+      </a>
+      <p class="mt-4 text-muted">L'optimisation de pension belge, simple et 100% digitale.</p>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Produit</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('index') }}#how"        class="hover:text-primary transition-colors">Comment ça marche</a></li>
+        <li><a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a></li>
+        <li><a href="{{ url_for('faq') }}"              class="hover:text-primary transition-colors">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Société</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('index') }}#about"   class="hover:text-primary transition-colors">À propos</a></li>
+        <li><a href="{{ url_for('index') }}#contact" class="hover:text-primary transition-colors">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Légal</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="#" class="hover:text-primary transition-colors">Conditions</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Confidentialité</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Mentions légales</a></li>
+      </ul>
+    </div>
+  </div>
+  <div style="border-top: 1px solid var(--border);">
+    <div class="container py-6 flex flex-wrap justify-between gap-4 text-xs text-muted">
+      <p>© <span id="year"></span> UpTwoU. Tous droits réservés.</p>
+      <p>Agréé par la Banque Nationale de Belgique.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
