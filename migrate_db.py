@@ -24,6 +24,11 @@ COLUMN_MIGRATIONS = [
     ("client",  "questionnaire_score",  "INTEGER"),
     ("analyse", "date_extrait",         "VARCHAR(10)"),
     ("contrat", "analyse_id",           "INTEGER"),
+    ("contrat", "organisateur",         "VARCHAR(200)"),
+    ("contrat", "organisateur_bce",     "VARCHAR(30)"),
+    ("contrat", "date_terme",           "VARCHAR(10)"),
+    ("client",  "beneficiaire_vie",     "VARCHAR(200)"),
+    ("contrat", "date_transfert",       "VARCHAR(10)"),
 ]
 
 reset = "--reset" in sys.argv

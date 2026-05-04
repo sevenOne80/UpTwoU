@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comment ça marche — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="min-h-screen">
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+      <a href="{{ url_for('comment_ca_marche') }}" class="text-primary font-semibold transition-colors">Comment ça marche</a>
+      <a href="{{ url_for('index') }}#about"       class="hover:text-primary transition-colors">À propos</a>
+      <a href="{{ url_for('gestion_publique') }}"  class="hover:text-primary transition-colors">Notre gestion</a>
+      <a href="{{ url_for('faq') }}"               class="hover:text-primary transition-colors">FAQ</a>
+      <a href="{{ url_for('contact') }}"     class="hover:text-primary transition-colors">Contact</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('login') }}" class="btn btn-nav-connexion hidden sm:inline-flex">Connexion</a>
+      <a href="{{ url_for('analyser') }}" class="btn btn-nav-start">Commencer</a>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE HEADER -->
+<section class="relative overflow-hidden" style="background: var(--primary); padding: 4rem 0 5rem;">
+  <div class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-20 -left-10 h-72 w-72 rounded-full"
+         style="background: hsl(165 70% 45% / 0.25); filter: blur(80px);"></div>
+    <div class="absolute -bottom-10 right-0 h-64 w-64 rounded-full"
+         style="background: hsl(35 95% 55% / 0.20); filter: blur(70px);"></div>
+  </div>
+  <div class="container relative">
+    <a href="{{ url_for('index') }}" class="inline-flex items-center gap-2 text-sm mb-6"
+       style="color: hsl(40 33% 97% / 0.60);">
+      <i data-lucide="arrow-left" style="width:0.875rem;height:0.875rem;"></i>
+      Retour à l'accueil
+    </a>
+    <p class="text-sm uppercase tracking-widest font-semibold" style="color: var(--accent);">Simple et rapide</p>
+    <h1 class="mt-3 font-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+      Comment ça marche ?
+    </h1>
+    <p class="mt-5 max-w-2xl text-lg" style="color: hsl(40 33% 97% / 0.75);">
+      De l'analyse de votre extrait mypension.be à la souscription, tout se fait en ligne — sans rendez-vous, sans paperasse.
+    </p>
+  </div>
+  <div class="absolute bottom-0 left-0 right-0">
+    <svg viewBox="0 0 1440 60" class="w-full" style="height:2rem;display:block;" preserveAspectRatio="none">
+      <path d="M0 30 Q 360 0 720 30 T 1440 30 L 1440 60 L 0 60 Z" fill="var(--background)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- STEPS -->
+<div class="container py-16 max-w-4xl mx-auto">
+
+  <!-- Timeline connector -->
+  <div class="relative">
+
+    <!-- Vertical line (desktop) -->
+    <div class="hidden md:block absolute left-[2.25rem] top-8 bottom-8 w-px"
+         style="background: linear-gradient(to bottom, hsl(172 75% 22% / 0.2), hsl(172 75% 22% / 0.05));"></div>
+
+    <div class="flex flex-col gap-10">
+
+      <!-- ÉTAPE 1 -->
+      <div class="flex gap-6 md:gap-8 items-start">
+        <div class="flex-shrink-0 h-18 flex flex-col items-center">
+          <div class="h-[4.5rem] w-[4.5rem] rounded-2xl grid place-items-center relative z-10"
+               style="background: var(--accent); box-shadow: 0 4px 20px hsl(35 95% 55% / 0.35);">
+            <i data-lucide="file-up" style="width:1.5rem;height:1.5rem;color:white;"></i>
+          </div>
+        </div>
+        <div class="flex-1 dashboard-card mt-1">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-xs uppercase tracking-widest font-semibold" style="color:var(--accent);">Étape 1</span>
+            <span class="h-px flex-1" style="background:hsl(172 75% 22% / 0.1);"></span>
+            <span class="text-xs text-muted">~2 minutes</span>
+          </div>
+          <h2 class="font-display text-xl font-semibold text-primary mb-2">Importez votre extrait mypension.be</h2>
+          <p class="text-sm text-muted leading-relaxed mb-4">
+            Connectez-vous sur <strong>mypension.be</strong> avec votre carte d'identité électronique ou itsme®, puis téléchargez votre extrait de pension complet au format PDF. Ce document récapitule l'ensemble de vos droits de pension constitués en Belgique.
+          </p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-xl p-3 flex items-start gap-2" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <i data-lucide="check-circle" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(142 76% 36%);"></i>
+              <p class="text-xs text-muted">Analyse automatique par IA — résultat en quelques secondes</p>
+            </div>
+            <div class="rounded-xl p-3 flex items-start gap-2" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <i data-lucide="check-circle" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(142 76% 36%);"></i>
+              <p class="text-xs text-muted">Aucune saisie manuelle — tout est extrait automatiquement</p>
+            </div>
+          </div>
+          <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
+               style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+            <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
+            <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
+              Pour un résultat optimal, téléchargez l'extrait <strong>complet</strong> (toutes sections) et non une version partielle.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉTAPE 2 -->
+      <div class="flex gap-6 md:gap-8 items-start">
+        <div class="flex-shrink-0 flex flex-col items-center">
+          <div class="h-[4.5rem] w-[4.5rem] rounded-2xl grid place-items-center relative z-10"
+               style="background: var(--primary); box-shadow: 0 4px 20px hsl(172 75% 22% / 0.25);">
+            <i data-lucide="search" style="width:1.5rem;height:1.5rem;color:white;"></i>
+          </div>
+        </div>
+        <div class="flex-1 dashboard-card mt-1">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-xs uppercase tracking-widest font-semibold" style="color:var(--accent);">Étape 2</span>
+            <span class="h-px flex-1" style="background:hsl(172 75% 22% / 0.1);"></span>
+            <span class="text-xs text-muted">Instantané</span>
+          </div>
+          <h2 class="font-display text-xl font-semibold text-primary mb-2">Analyse d'éligibilité</h2>
+          <p class="text-sm text-muted leading-relaxed mb-4">
+            Notre système identifie automatiquement vos <strong>contrats dormants</strong> — des contrats liés à d'anciens employeurs pour lesquels vous n'effectuez plus de versements. Pour chacun, nous vérifions l'éligibilité au transfert selon les critères réglementaires en vigueur.
+          </p>
+          <div class="grid sm:grid-cols-3 gap-3 mb-4">
+            <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <p class="text-xs text-muted mb-1">Statut du contrat</p>
+              <p class="text-sm font-semibold text-primary">Dormant / Actif</p>
+            </div>
+            <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <p class="text-xs text-muted mb-1">Assureur cédant</p>
+              <p class="text-sm font-semibold text-primary">Identifié</p>
+            </div>
+            <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <p class="text-xs text-muted mb-1">Réserve estimée</p>
+              <p class="text-sm font-semibold text-primary">Extraite</p>
+            </div>
+          </div>
+          <p class="text-xs text-muted leading-relaxed">
+            Un résumé clair vous indique quels contrats sont transférables, pour quel montant, et auprès de quel assureur la démarche doit être effectuée.
+          </p>
+        </div>
+      </div>
+
+      <!-- ÉTAPE 3 -->
+      <div class="flex gap-6 md:gap-8 items-start">
+        <div class="flex-shrink-0 flex flex-col items-center">
+          <div class="h-[4.5rem] w-[4.5rem] rounded-2xl grid place-items-center relative z-10"
+               style="background: var(--primary); box-shadow: 0 4px 20px hsl(172 75% 22% / 0.25);">
+            <i data-lucide="user-check" style="width:1.5rem;height:1.5rem;color:white;"></i>
+          </div>
+        </div>
+        <div class="flex-1 dashboard-card mt-1">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-xs uppercase tracking-widest font-semibold" style="color:var(--accent);">Étape 3</span>
+            <span class="h-px flex-1" style="background:hsl(172 75% 22% / 0.1);"></span>
+            <span class="text-xs text-muted">~5 minutes</span>
+          </div>
+          <h2 class="font-display text-xl font-semibold text-primary mb-2">Votre profil investisseur</h2>
+          <p class="text-sm text-muted leading-relaxed mb-4">
+            Un questionnaire MiFID court — 6 questions — évalue votre tolérance au risque, votre horizon de placement et vos objectifs financiers. Votre profil détermine dans quel fonds <a href="https://www.wealtheon.eu/fr" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:var(--primary);">Wealtheon</a> vos réserves seront investies.
+          </p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0"
+                   style="background:hsl(142 76% 36%);">
+                <i data-lucide="shield" style="width:0.75rem;height:0.75rem;color:white;"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-primary">Prudent</p>
+                <p class="text-xs text-muted mt-0.5">0 – 15 % actions</p>
+              </div>
+            </div>
+            <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0"
+                   style="background:hsl(172 75% 28%);">
+                <i data-lucide="scale" style="width:0.75rem;height:0.75rem;color:white;"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-primary">Équilibré</p>
+                <p class="text-xs text-muted mt-0.5">30 – 50 % actions</p>
+              </div>
+            </div>
+            <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(220 70% 45% / 0.06);border:1px solid hsl(220 70% 45% / 0.2);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0"
+                   style="background:hsl(220 70% 45%);">
+                <i data-lucide="trending-up" style="width:0.75rem;height:0.75rem;color:white;"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-primary">Dynamique</p>
+                <p class="text-xs text-muted mt-0.5">60 – 80 % actions</p>
+              </div>
+            </div>
+            <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0"
+                   style="background:hsl(35 95% 45%);">
+                <i data-lucide="zap" style="width:0.75rem;height:0.75rem;color:white;"></i>
+              </div>
+              <div>
+                <p class="text-xs font-semibold text-primary">Conviction</p>
+                <p class="text-xs text-muted mt-0.5">80 – 100 % actions</p>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-muted mt-3 leading-relaxed">
+            Votre profil peut être modifié à tout moment depuis votre espace client.
+            <a href="{{ url_for('gestion_publique') }}" class="font-semibold hover:underline" style="color:var(--primary);">En savoir plus sur les profils →</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- ÉTAPE 4 -->
+      <div class="flex gap-6 md:gap-8 items-start">
+        <div class="flex-shrink-0 flex flex-col items-center">
+          <div class="h-[4.5rem] w-[4.5rem] rounded-2xl grid place-items-center relative z-10"
+               style="background: var(--primary); box-shadow: 0 4px 20px hsl(172 75% 22% / 0.25);">
+            <i data-lucide="file-signature" style="width:1.5rem;height:1.5rem;color:white;"></i>
+          </div>
+        </div>
+        <div class="flex-1 dashboard-card mt-1">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-xs uppercase tracking-widest font-semibold" style="color:var(--accent);">Étape 4</span>
+            <span class="h-px flex-1" style="background:hsl(172 75% 22% / 0.1);"></span>
+            <span class="text-xs text-muted">~10 minutes</span>
+          </div>
+          <h2 class="font-display text-xl font-semibold text-primary mb-2">Souscription &amp; formulaires de transfert</h2>
+          <p class="text-sm text-muted leading-relaxed mb-4">
+            UpTwoU génère automatiquement les formulaires de transfert pré-remplis (Annexe 1) pour chaque assureur cédant. Il vous suffit de compléter le nom de votre ancien employeur, de signer, et d'envoyer le formulaire directement à l'assureur concerné.
+          </p>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-3 rounded-xl p-3" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.12);">
+                <i data-lucide="download" style="width:0.875rem;height:0.875rem;color:var(--primary);"></i>
+              </div>
+              <p class="text-xs text-muted">Téléchargez votre formulaire pré-rempli depuis l'espace client</p>
+            </div>
+            <div class="flex items-center gap-3 rounded-xl p-3" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.12);">
+                <i data-lucide="pen-line" style="width:0.875rem;height:0.875rem;color:var(--primary);"></i>
+              </div>
+              <p class="text-xs text-muted">Complétez le nom de l'ancien employeur &amp; signez</p>
+            </div>
+            <div class="flex items-center gap-3 rounded-xl p-3" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.12);">
+                <i data-lucide="send" style="width:0.875rem;height:0.875rem;color:var(--primary);"></i>
+              </div>
+              <p class="text-xs text-muted">Envoyez le formulaire à l'assureur cédant</p>
+            </div>
+            <div class="flex items-center gap-3 rounded-xl p-3" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+              <div class="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(142 76% 36% / 0.15);">
+                <i data-lucide="clock" style="width:0.875rem;height:0.875rem;color:hsl(142 76% 36%);"></i>
+              </div>
+              <p class="text-xs text-muted">L'assureur dispose de <strong class="text-primary">30 jours calendrier</strong> pour effectuer le transfert</p>
+            </div>
+          </div>
+          <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
+               style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+            <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
+            <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
+              Le transfert est <strong>gratuit et sans perte de droits acquis</strong>, conformément à la Convention Assuralia du 22 septembre 2015.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Récapitulatif timeline -->
+  <div class="mt-16 dashboard-card">
+    <h2 class="font-display text-lg font-semibold text-primary mb-5">Récapitulatif des délais</h2>
+    <div class="grid sm:grid-cols-4 gap-4 text-center">
+      <div>
+        <div class="h-10 w-10 rounded-xl grid place-items-center mx-auto mb-2"
+             style="background:hsl(35 95% 55% / 0.12);">
+          <i data-lucide="file-up" style="width:1rem;height:1rem;color:var(--accent);"></i>
+        </div>
+        <p class="text-xs font-semibold text-primary">Import PDF</p>
+        <p class="text-xs text-muted mt-0.5">~2 min</p>
+      </div>
+      <div>
+        <div class="h-10 w-10 rounded-xl grid place-items-center mx-auto mb-2"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="search" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <p class="text-xs font-semibold text-primary">Analyse &amp; profil</p>
+        <p class="text-xs text-muted mt-0.5">~7 min</p>
+      </div>
+      <div>
+        <div class="h-10 w-10 rounded-xl grid place-items-center mx-auto mb-2"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="send" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <p class="text-xs font-semibold text-primary">Envoi formulaires</p>
+        <p class="text-xs text-muted mt-0.5">~10 min</p>
+      </div>
+      <div>
+        <div class="h-10 w-10 rounded-xl grid place-items-center mx-auto mb-2"
+             style="background:hsl(142 76% 36% / 0.1);">
+          <i data-lucide="check-circle" style="width:1rem;height:1rem;color:hsl(142 76% 36%);"></i>
+        </div>
+        <p class="text-xs font-semibold text-primary">Transfert effectif</p>
+        <p class="text-xs text-muted mt-0.5">≤ 30 jours</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CTA -->
+<section class="container pb-20 max-w-4xl mx-auto">
+  <div class="relative overflow-hidden rounded-3xl text-white p-8 md:p-12" style="background:var(--primary);">
+    <div class="absolute -top-16 -left-10 h-56 w-56 rounded-full"
+         style="background: hsl(35 95% 55% / 0.25); filter: blur(60px);"></div>
+    <div class="absolute -bottom-16 -right-10 h-64 w-64 rounded-full"
+         style="background: hsl(165 70% 45% / 0.25); filter: blur(60px);"></div>
+    <div class="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div>
+        <h2 class="font-display text-2xl md:text-3xl font-semibold text-white">Prêt à commencer ?</h2>
+        <p class="mt-2 text-sm" style="color: hsl(40 33% 97% / 0.75);">
+          Créez votre compte et importez votre extrait mypension.be en moins de 5 minutes.
+        </p>
+      </div>
+      <a href="{{ url_for('analyser') }}" class="btn btn-primary flex-shrink-0 inline-flex items-center gap-2">
+        Analyser ma pension
+        <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="border-top: 1px solid var(--border); background-color: hsl(168 30% 92% / 0.30);">
+  <div class="container py-12 grid md:grid-cols-4 gap-8 text-sm">
+    <div>
+      <a href="{{ url_for('index') }}" class="brand-logo">
+        <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo" loading="lazy" style="height:3rem;width:3rem;object-fit:contain;flex-shrink:0;">
+        <span class="brand-wordmark" style="font-size:1.5rem;">Up<span>Two</span>U</span>
+      </a>
+      <p class="mt-4 text-muted">L'optimisation de pension belge, simple et 100% digitale.</p>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Produit</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('comment_ca_marche') }}" class="hover:text-primary transition-colors">Comment ça marche</a></li>
+        <li><a href="{{ url_for('gestion_publique') }}"  class="hover:text-primary transition-colors">Notre gestion</a></li>
+        <li><a href="{{ url_for('faq') }}"               class="hover:text-primary transition-colors">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Société</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('index') }}#about"   class="hover:text-primary transition-colors">À propos</a></li>
+        <li><a href="{{ url_for('contact') }}" class="hover:text-primary transition-colors">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Légal</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="#" class="hover:text-primary transition-colors">Conditions</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Confidentialité</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Mentions légales</a></li>
+      </ul>
+    </div>
+  </div>
+  <div style="border-top: 1px solid var(--border);">
+    <div class="container py-6 flex flex-wrap justify-between gap-4 text-xs text-muted">
+      <p>© <span id="year"></span> UpTwoU. Tous droits réservés.</p>
+      <p>Agréé par la Banque Nationale de Belgique.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

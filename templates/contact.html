@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        container: { center: true, padding: '2rem', screens: { '2xl': '1400px' } },
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .field-group { display: flex; flex-direction: column; gap: 0.375rem; }
+    .field-label { font-size: 0.8125rem; font-weight: 600; color: var(--primary); }
+    .field-input {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: 0.625rem;
+      font-size: 0.9375rem;
+      font-family: inherit;
+      background: white;
+      color: var(--foreground);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px hsl(172 75% 22% / 0.12);
+    }
+    textarea.field-input { resize: vertical; min-height: 8rem; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+      <a href="{{ url_for('comment_ca_marche') }}" class="hover:text-primary transition-colors">Comment ça marche</a>
+      <a href="{{ url_for('index') }}#about"       class="hover:text-primary transition-colors">À propos</a>
+      <a href="{{ url_for('gestion_publique') }}"  class="hover:text-primary transition-colors">Notre gestion</a>
+      <a href="{{ url_for('faq') }}"               class="hover:text-primary transition-colors">FAQ</a>
+      <a href="{{ url_for('contact') }}"           class="text-primary font-semibold transition-colors">Contact</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('login') }}"   class="btn btn-nav-connexion hidden sm:inline-flex">Connexion</a>
+      <a href="{{ url_for('analyser') }}" class="btn btn-nav-start">Commencer</a>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE HEADER -->
+<section class="relative overflow-hidden" style="background: var(--primary); padding: 4rem 0 5rem;">
+  <div class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-20 -left-10 h-72 w-72 rounded-full"
+         style="background: hsl(165 70% 45% / 0.25); filter: blur(80px);"></div>
+    <div class="absolute -bottom-10 right-0 h-64 w-64 rounded-full"
+         style="background: hsl(35 95% 55% / 0.20); filter: blur(70px);"></div>
+  </div>
+  <div class="container relative">
+    <a href="{{ url_for('index') }}" class="inline-flex items-center gap-2 text-sm mb-6"
+       style="color: hsl(40 33% 97% / 0.60);">
+      <i data-lucide="arrow-left" style="width:0.875rem;height:0.875rem;"></i>
+      Retour à l'accueil
+    </a>
+    <p class="text-sm uppercase tracking-widest font-semibold" style="color: var(--accent);">Nous contacter</p>
+    <h1 class="mt-3 font-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+      Une question ?<br class="hidden md:block"> On vous répond.
+    </h1>
+    <p class="mt-5 max-w-2xl text-lg" style="color: hsl(40 33% 97% / 0.75);">
+      Envoyez-nous un message et nous vous répondrons dans les 48 heures ouvrables.
+    </p>
+  </div>
+  <div class="absolute bottom-0 left-0 right-0">
+    <svg viewBox="0 0 1440 60" class="w-full" style="height:2rem;display:block;" preserveAspectRatio="none">
+      <path d="M0 30 Q 360 0 720 30 T 1440 30 L 1440 60 L 0 60 Z" fill="var(--background)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- CONTENT -->
+<div class="container py-16 max-w-5xl mx-auto">
+  <div class="grid md:grid-cols-3 gap-10">
+
+    <!-- Contact info -->
+    <div class="flex flex-col gap-5">
+
+      <div class="dashboard-card flex items-start gap-4">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="mail" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-sm">E-mail</p>
+          <a href="mailto:contact@uptwou.be" class="text-sm text-muted hover:text-primary transition-colors mt-0.5 block">
+            contact@uptwou.be
+          </a>
+        </div>
+      </div>
+
+      <div class="dashboard-card flex items-start gap-4">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="clock" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-sm">Délai de réponse</p>
+          <p class="text-sm text-muted mt-0.5">48 heures ouvrables</p>
+        </div>
+      </div>
+
+      <div class="dashboard-card flex items-start gap-4">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="book-open" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-sm">Avant d'écrire…</p>
+          <p class="text-sm text-muted mt-0.5">
+            Consultez notre
+            <a href="{{ url_for('faq') }}" class="text-primary hover:underline">FAQ</a> —
+            votre question a peut-être déjà une réponse.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Form -->
+    <div class="md:col-span-2">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert-{{ category }} mb-6">
+            <i data-lucide="{{ 'check-circle' if category == 'success' else 'alert-circle' }}"
+               style="width:1.25rem;height:1.25rem;flex-shrink:0;"></i>
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      <div class="dashboard-card">
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-6">Formulaire de contact</p>
+
+        <form method="post" action="{{ url_for('contact') }}" class="flex flex-col gap-5">
+
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div class="field-group">
+              <label for="nom" class="field-label">Nom complet <span style="color:var(--destructive);">*</span></label>
+              <input id="nom" name="nom" type="text" class="field-input"
+                     placeholder="Jean Dupont" required>
+            </div>
+            <div class="field-group">
+              <label for="email" class="field-label">Adresse e-mail <span style="color:var(--destructive);">*</span></label>
+              <input id="email" name="email" type="email" class="field-input"
+                     placeholder="jean.dupont@email.com" required>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="sujet" class="field-label">Sujet</label>
+            <select id="sujet" name="sujet" class="field-input">
+              <option value="">Sélectionnez un sujet…</option>
+              <option value="Renseignement général">Renseignement général</option>
+              <option value="Transfert de réserves">Transfert de réserves</option>
+              <option value="Gestion & fonds">Gestion &amp; fonds</option>
+              <option value="Mon compte">Mon compte</option>
+              <option value="Problème technique">Problème technique</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="message" class="field-label">Message <span style="color:var(--destructive);">*</span></label>
+            <textarea id="message" name="message" class="field-input"
+                      placeholder="Décrivez votre question ou demande…" required></textarea>
+          </div>
+
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <p class="text-xs text-muted">
+              <span style="color:var(--destructive);">*</span> Champs obligatoires
+            </p>
+            <button type="submit" class="btn btn-primary flex items-center gap-2"
+                    style="height:2.75rem;padding:0 1.5rem;">
+              <i data-lucide="send" style="width:1rem;height:1rem;"></i>
+              Envoyer le message
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer style="border-top: 1px solid var(--border); background-color: hsl(168 30% 92% / 0.30);">
+  <div class="container py-12 grid md:grid-cols-4 gap-8 text-sm">
+    <div>
+      <a href="{{ url_for('index') }}" class="brand-logo">
+        <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo" loading="lazy" style="height:3rem;width:3rem;object-fit:contain;flex-shrink:0;">
+        <span class="brand-wordmark" style="font-size:1.5rem;">Up<span>Two</span>U</span>
+      </a>
+      <p class="mt-4 text-muted">L'optimisation de pension belge, simple et 100% digitale.</p>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Produit</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('comment_ca_marche') }}" class="hover:text-primary transition-colors">Comment ça marche</a></li>
+        <li><a href="{{ url_for('gestion_publique') }}"  class="hover:text-primary transition-colors">Notre gestion</a></li>
+        <li><a href="{{ url_for('faq') }}"               class="hover:text-primary transition-colors">FAQ</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Société</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="{{ url_for('index') }}#about"    class="hover:text-primary transition-colors">À propos</a></li>
+        <li><a href="{{ url_for('contact') }}"        class="hover:text-primary transition-colors">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-semibold text-primary">Légal</p>
+      <ul class="mt-3 space-y-2 text-muted">
+        <li><a href="#" class="hover:text-primary transition-colors">Conditions</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Confidentialité</a></li>
+        <li><a href="#" class="hover:text-primary transition-colors">Mentions légales</a></li>
+      </ul>
+    </div>
+  </div>
+  <div style="border-top: 1px solid var(--border);">
+    <div class="container py-6 flex flex-wrap justify-between gap-4 text-xs text-muted">
+      <p>© <span id="year"></span> UpTwoU. Tous droits réservés.</p>
+      <p>Agréé par la Banque Nationale de Belgique.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>
+  lucide.createIcons();
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

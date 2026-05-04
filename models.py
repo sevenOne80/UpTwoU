@@ -37,8 +37,9 @@ class Client(db.Model):
     code_postal = db.Column(db.String(10))
     telephone = db.Column(db.String(20))
     iban = db.Column(db.String(34))
-    beneficiaire_1 = db.Column(db.String(200))
-    beneficiaire_2 = db.Column(db.String(200))
+    beneficiaire_vie = db.Column(db.String(200))    # en cas de vie
+    beneficiaire_1 = db.Column(db.String(200))      # en cas de décès — 1er
+    beneficiaire_2 = db.Column(db.String(200))      # en cas de décès — 2ème
     profil_risque = db.Column(db.String(20))    # prudent | equilibre | dynamique | conviction
     profil_choisi_par = db.Column(db.String(20))  # client | courtier
     profil_date = db.Column(db.DateTime)
@@ -86,6 +87,14 @@ class Client(db.Model):
         # Fallback for legacy records without analyse_id
         return [c for c in self.contrats if c.statut == 'dormant' and c.analyse_id is None]
 
+    @property
+    def contrats_actifs(self):
+        """Active (non-dormant) contracts from the most recent analysis only."""
+        latest = self.latest_analyse
+        if latest:
+            return [c for c in latest.contrats if c.statut == 'actif']
+        return [c for c in self.contrats if c.statut == 'actif' and c.analyse_id is None]
+
 
 class Contrat(db.Model):
     __tablename__ = 'contrat'
@@ -98,6 +107,10 @@ class Contrat(db.Model):
     statut = db.Column(db.String(20), default='inconnu')  # dormant | actif | inconnu
     reserve = db.Column(db.String(30))
     date_valeur = db.Column(db.String(20))
+    organisateur = db.Column(db.String(200))    # "Organisé par" in section 2.2
+    organisateur_bce = db.Column(db.String(30)) # BCE number of the organiser
+    date_terme = db.Column(db.String(10))        # JJ/MM/AAAA — contract maturity date
+    date_transfert = db.Column(db.String(10))    # JJ/MM/AAAA — date de réception des fonds cédants
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -191,6 +204,17 @@ ASSUREURS_SEED = [
          numero_bce='0421.387.497',     adresse='Rue Montoyer 24',
          code_postal='1000',            ville='Bruxelles'),
 ]
+
+
+class ContactMessage(db.Model):
+    __tablename__ = 'contact_message'
+    id         = db.Column(db.Integer, primary_key=True)
+    nom        = db.Column(db.String(100), nullable=False)
+    email      = db.Column(db.String(150), nullable=False)
+    sujet      = db.Column(db.String(100))
+    message    = db.Column(db.Text, nullable=False)
+    lu         = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 def seed_assureurs(app):

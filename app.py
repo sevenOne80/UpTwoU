@@ -9,7 +9,7 @@ from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, User, Client, Contrat, Analyse, AssureurRef, seed_assureurs
+from models import db, User, Client, Contrat, Analyse, AssureurRef, ContactMessage, seed_assureurs
 from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, QuestionnaireForm
 
 try:
@@ -50,7 +50,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 # ── Role decorators ────────────────────────────────────────────────────────────
@@ -247,6 +247,13 @@ Contient le tableau détaillé des contrats avec pour chaque plan :
 - Type (Branche 21 / Branche 23 / Tak 21 / Tak 23)
 - Réserves acquises en € à une date de valeur donnée
 
+**Section 2.2 — Fiches de détail individuelles** ← SOURCE DE L'ORGANISATEUR
+Chaque fiche de détail (une par plan) contient :
+- "Référence : XXXXXXX" → numéro de contrat (confirme ou complète le numéro de la section 2.1)
+- "Organisé par NOM_ORGANISME (numéro d'entreprise 0XXX.XXX.XXX)" → **organisateur** du plan
+- "Géré par NOM_ORGANISME (numéro d'entreprise 0XXX.XXX.XXX)" → **organisme de pension** (assureur gérant)
+Pour chaque contrat, croise la référence de la section 2.1 avec la fiche 2.2 correspondante pour extraire organisateur et organisme_gestion.
+
 **IMPORTANT — ordre des sections non garanti :**
 Les sections ne suivent PAS nécessairement l'ordre numérique dans le document PDF.
 La section 2.1 peut apparaître APRÈS les sections 3, 3.1, 3.2, etc.
@@ -275,12 +282,14 @@ Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte av
   "nb_contrats": nombre entier ou null,
   "contrats": [
     {{
-      "assureur": "Nom exact de l'assureur tel qu'il apparaît dans le document",
+      "assureur": "Nom exact de l'organisme gérant tel qu'il apparaît dans 'Géré par' (section 2.2) ou dans le tableau 2.1",
       "numero": "numéro de contrat ou police, vide si absent",
       "type_branche": "Branche 21" ou "Branche 23" ou "Inconnu",
       "reserve": "XX XXX,XX" ou null,
       "date_valeur": "JJ/MM/AAAA" ou null,
-      "statut": "dormant" ou "actif" ou "inconnu"
+      "statut": "dormant" ou "actif" ou "inconnu",
+      "organisateur": "Nom exact extrait de 'Organisé par' dans la fiche 2.2 correspondante, sans le numéro BCE. Null si absent ou 'Pas d'application'.",
+      "organisateur_bce": "Numéro BCE de l'organisateur au format 0XXX.XXX.XXX, extrait de la même ligne 'Organisé par'. Null si absent."
     }}
   ],
   "personne": {{
@@ -541,7 +550,9 @@ def register():
                 type_branche=c.get('type_branche'),
                 statut=c.get('statut', 'inconnu'),
                 reserve=c.get('reserve'),
-                date_valeur=c.get('date_valeur')
+                date_valeur=c.get('date_valeur'),
+                organisateur=c.get('organisateur'),
+                organisateur_bce=c.get('organisateur_bce'),
             ))
 
         db.session.add(Analyse(
@@ -600,6 +611,57 @@ def client_dashboard():
 @client_required
 def client_contrats():
     return render_template("client/contrats.html", client=current_user.client_profile)
+
+
+@app.route("/client/modifier-profil", methods=["POST"])
+@login_required
+@client_required
+def client_modifier_profil():
+    client = current_user.client_profile
+    profil = request.form.get("profil_risque", "").strip()
+    if profil in ("prudent", "equilibre", "dynamique", "conviction"):
+        client.profil_risque = profil
+        client.profil_choisi_par = "client"
+        client.profil_date = datetime.utcnow()
+        db.session.commit()
+        flash("Profil de risque mis à jour.", "success")
+    else:
+        flash("Profil invalide.", "error")
+    return redirect(url_for("client_contrats"))
+
+
+@app.route("/client/modifier-beneficiaires", methods=["POST"])
+@login_required
+@client_required
+def client_modifier_beneficiaires():
+    client = current_user.client_profile
+    client.beneficiaire_1 = request.form.get("beneficiaire_1", "").strip() or None
+    client.beneficiaire_2 = request.form.get("beneficiaire_2", "").strip() or None
+    db.session.commit()
+    flash("Bénéficiaires mis à jour.", "success")
+    return redirect(url_for("client_contrats"))
+
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    if request.method == "POST":
+        nom     = request.form.get("nom", "").strip()
+        email   = request.form.get("email", "").strip()
+        sujet   = request.form.get("sujet", "").strip()
+        message = request.form.get("message", "").strip()
+        if nom and email and message:
+            msg = ContactMessage(nom=nom, email=email, sujet=sujet, message=message)
+            db.session.add(msg)
+            db.session.commit()
+            flash("Votre message a bien été envoyé. Nous vous répondrons dans les meilleurs délais.", "success")
+            return redirect(url_for("contact"))
+        flash("Merci de remplir tous les champs obligatoires.", "error")
+    return render_template("contact.html")
+
+
+@app.route("/comment-ca-marche")
+def comment_ca_marche():
+    return render_template("comment-ca-marche.html")
 
 
 @app.route("/faq")
@@ -913,7 +975,9 @@ def client_maj_analyse():
             type_branche=c.get('type_branche'),
             statut=c.get('statut', 'inconnu'),
             reserve=c.get('reserve'),
-            date_valeur=c.get('date_valeur')
+            date_valeur=c.get('date_valeur'),
+            organisateur=c.get('organisateur'),
+            organisateur_bce=c.get('organisateur_bce'),
         ))
 
     db.session.commit()

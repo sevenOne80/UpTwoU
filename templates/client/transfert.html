@@ -1,9 +1,9 @@
 {% extends "client/_base.html" %}
-{% block title %}Formulaires de transfert{% endblock %}
+{% block title %}Historique de transfert de réserves{% endblock %}
 
 {% block content %}
 <div class="dashboard-header">
-  <h1>Formulaires de transfert</h1>
+  <h1>Historique de transfert de réserves</h1>
   <p>Téléchargez, signez et envoyez un formulaire par assureur cédant.</p>
 </div>
 
@@ -94,8 +94,12 @@
       <i data-lucide="pencil" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
       <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
         <strong>À compléter manuellement :</strong>
-        le nom et le numéro BCE de votre ancien employeur (section Organisateur),
-        la date de départ si absente, et votre signature.
+        {% if c.organisateur %}
+          vérifiez le nom de l'organisateur pré-rempli (section Organisateur),
+        {% else %}
+          le nom et le numéro BCE de votre ancien employeur (section Organisateur),
+        {% endif %}
+        la date de départ et votre signature.
       </p>
     </div>
   </div>

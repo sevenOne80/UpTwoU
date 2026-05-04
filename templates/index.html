@@ -48,11 +48,11 @@
     </a>
     <!-- Nav links -->
     <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
-      <a href="#how"     class="hover:text-primary transition-colors">Comment ça marche</a>
+      <a href="{{ url_for('comment_ca_marche') }}" class="hover:text-primary transition-colors">Comment ça marche</a>
       <a href="#about"   class="hover:text-primary transition-colors">À propos</a>
       <a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a>
       <a href="{{ url_for('faq') }}" class="hover:text-primary transition-colors">FAQ</a>
-      <a href="#contact" class="hover:text-primary transition-colors">Contact</a>
+      <a href="{{ url_for('contact') }}" class="hover:text-primary transition-colors">Contact</a>
     </nav>
     <!-- Actions -->
     <div class="flex items-center gap-2">
@@ -178,7 +178,7 @@
         </div>
 
         <!-- Floating badge — security -->
-        <div class="floating-badge animate-float-up" style="left:-2rem; top:2.5rem;">
+        <!-- <div class="floating-badge animate-float-up" style="left:-2rem; top:2.5rem;">
           <div class="h-8 w-8 rounded-full bg-primary-10 grid place-items-center">
             <i data-lucide="shield-check" class="icon-sm text-primary"></i>
           </div>
@@ -186,7 +186,7 @@
             <p class="text-muted" style="font-size:0.625rem;">Sécurisé</p>
             <p class="text-xs font-semibold">GDPR + BNB</p>
           </div>
-        </div>
+        </div> -->
 
         <!-- Floating badge — rendement -->
         <div class="floating-badge animate-float-down" style="right:-1.5rem; bottom:4rem;">
@@ -296,7 +296,7 @@
   </div>
 
   <div class="mt-12 flex justify-center">
-    <a href="#" class="btn btn-ghost group">
+    <a href="{{ url_for('comment_ca_marche') }}" class="btn btn-ghost group">
       En savoir plus <i data-lucide="arrow-right" class="ml-2 icon-sm transition-transform group-hover:translate-x-1"></i>
     </a>
   </div>
@@ -479,7 +479,7 @@
         Prêt à analyser <span class="italic text-gradient">votre pension</span> ?
       </h2>
       <p class="mt-5 text-lg" style="color: hsl(40 33% 97% / 0.75);">
-        Créez votre compte gratuitement et téléchargez votre extrait mypension.be en moins de 5 minutes.
+        Téléchargez votre extrait mypension.be et créez votre compte gratuitement en moins de 5 minutes.
       </p>
       <div class="mt-8 flex flex-wrap gap-4">
         <a href="{{ url_for('analyser') }}" class="btn btn-primary group">
@@ -513,7 +513,7 @@
     <div>
       <p class="font-semibold text-primary">Produit</p>
       <ul class="mt-3 space-y-2 text-muted">
-        <li><a href="#how"    class="hover:text-primary transition-colors">Comment ça marche</a></li>
+        <li><a href="{{ url_for('comment_ca_marche') }}" class="hover:text-primary transition-colors">Comment ça marche</a></li>
         <li><a href="{{ url_for('gestion_publique') }}" class="hover:text-primary transition-colors">Notre gestion</a></li>
         <li><a href="{{ url_for('faq') }}" class="hover:text-primary transition-colors">FAQ</a></li>
       </ul>

@@ -26,7 +26,8 @@
       "Bash(pip install *)",
       "Bash(python -c \"from app import app; from pdf_utils import generer_annexe1_groupe; print\\('OK'\\)\")",
       "Bash(git revert *)",
-      "Bash(python -c \"from app import app; print\\([r.rule for r in app.url_map.iter_rules\\(\\) if 'gestion' in r.rule]\\)\")"
+      "Bash(python -c \"from app import app; print\\([r.rule for r in app.url_map.iter_rules\\(\\) if 'gestion' in r.rule]\\)\")",
+      "Bash(python -c ' *)"
     ]
   }
 }

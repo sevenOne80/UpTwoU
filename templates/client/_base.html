@@ -18,7 +18,7 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <a href="{{ url_for('index') }}" class="sidebar-brand">
+    <a href="{{ url_for('client_dashboard') }}" class="sidebar-brand">
       <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="logo">
       <span class="sidebar-brand-text">Up<span>Two</span>U</span>
     </a>
@@ -34,8 +34,7 @@
     </a>
     <a href="{{ url_for('client_transfert') }}"
        class="sidebar-link {% if request.endpoint in ('client_transfert', 'client_transfert_pdf') %}active{% endif %}">
-      <i data-lucide="send"></i> Formulaires transfert
-    </a>
+      <i data-lucide="send"></i> Transfert de réserves</a>
     <a href="{{ url_for('client_gestion') }}"
        class="sidebar-link {% if request.endpoint == 'client_gestion' %}active{% endif %}">
       <i data-lucide="bar-chart-2"></i> Gestion &amp; fonds

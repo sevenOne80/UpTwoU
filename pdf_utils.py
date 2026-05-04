@@ -153,8 +153,8 @@ def generer_annexe1(client, contrat):
     # ── ORGANISATEUR ───────────────────────────────────────────────────────
     sec_header('ORGANISATEUR  (EMPLOYEUR, SOCIETE OU ORGANISATEUR SECTORIEL)')
     subheader3('Precedent', 'Nouveau (1)')
-    row3('Nom / Forme juridique', '', '')
-    row3('Numero BCE',            '', '')
+    row3('Nom / Forme juridique', _v(contrat.organisateur), '')
+    row3('Numero BCE',            _v(contrat.organisateur_bce), '')
     row3_check('Statut professionnel', checked_prev=True)
     row3('Date de depart',        _v(contrat.date_valeur), '')
     row3("Date d'affiliation (1)", '', '')
