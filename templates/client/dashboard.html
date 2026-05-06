@@ -32,42 +32,43 @@
 </div>
 {% endif %}
 
-<!-- Stats -->
+<!-- ── Stats ──────────────────────────────────────────────────────────── -->
+{% set actifs = client.contrats_actifs %}
+{% set dormants = client.contrats_dormants %}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
 
+  <!-- Contrats actifs UpTwoU -->
+  <div class="stat-card">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="shield-check" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      </div>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Contrats actifs</p>
+    </div>
+    <p class="font-display text-3xl font-bold text-primary">{{ actifs | length or '0' }}</p>
+    <p class="text-xs text-muted mt-1">Géré{{ 's' if actifs | length > 1 }} via UpTwoU</p>
+  </div>
+
+  <!-- Réserves totales UpTwoU -->
   <div class="stat-card">
     <div class="flex items-center gap-3 mb-3">
       <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(172 75% 22% / 0.1);">
         <i data-lucide="wallet" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
       </div>
-      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Réserves totales</p>
+      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Réserves UpTwoU</p>
     </div>
-    <p class="font-display text-3xl font-bold text-primary">
-      {{ client.montant_total or '—' }}
+    {% if actifs %}
+    <p class="font-display text-3xl font-bold text-primary">{{ actifs[0].reserve or '—' }} €</p>
+    <p class="text-xs text-muted mt-1">
+      {% if actifs[0].date_valeur %}Valorisé le {{ actifs[0].date_valeur }}{% else %}Dernière valorisation{% endif %}
     </p>
-    {% if analyses and analyses[0].date_extrait %}
-    <p class="text-xs text-muted mt-1">Au {{ analyses[0].date_extrait }}</p>
     {% else %}
-    <p class="text-xs text-muted mt-1">Valeur au dernier extrait</p>
+    <p class="font-display text-2xl font-bold text-muted">—</p>
+    <p class="text-xs text-muted mt-1">Aucun contrat actif</p>
     {% endif %}
   </div>
 
-  <div class="stat-card">
-    <div class="flex items-center gap-3 mb-3">
-      <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(35 95% 55% / 0.12);">
-        <i data-lucide="file-text" style="width:1.125rem;height:1.125rem;color:var(--accent);"></i>
-      </div>
-      <p class="text-xs uppercase tracking-widest font-semibold text-muted">Contrats (dernière fiche)</p>
-    </div>
-    {% if analyses %}
-    {% set nb = analyses[0].contrats | length or client.contrats | length %}
-    <p class="font-display text-3xl font-bold text-primary">{{ nb }}</p>
-    {% else %}
-    <p class="font-display text-3xl font-bold text-primary">{{ client.contrats | length or '—' }}</p>
-    {% endif %}
-    <p class="text-xs text-muted mt-1">Contrat(s) détecté(s)</p>
-  </div>
-
+  <!-- Profil -->
   <div class="stat-card">
     <div class="flex items-center gap-3 mb-3">
       <div class="h-10 w-10 rounded-xl grid place-items-center" style="background:hsl(142 76% 36% / 0.1);">
@@ -76,148 +77,104 @@
       <p class="text-xs uppercase tracking-widest font-semibold text-muted">Profil</p>
     </div>
     {% if client.profil_risque %}
-      <p class="font-display text-3xl font-bold text-primary capitalize">{{ client.profil_risque }}</p>
-      <p class="text-xs text-muted mt-1">Choisi par : {{ client.profil_choisi_par }}</p>
+    <p class="font-display text-3xl font-bold text-primary capitalize">{{ client.profil_risque }}</p>
+    <p class="text-xs text-muted mt-1">{{ actifs[0].type_branche if actifs else '—' }}</p>
     {% else %}
-      <p class="font-display text-2xl font-bold text-muted">Non défini</p>
-      <a href="{{ url_for('client_profil') }}" class="text-xs text-accent font-semibold mt-1 block hover:underline">Choisir un profil →</a>
+    <p class="font-display text-2xl font-bold text-muted">Non défini</p>
+    <a href="{{ url_for('client_profil') }}" class="text-xs text-accent font-semibold mt-1 block hover:underline">Choisir un profil →</a>
     {% endif %}
   </div>
 
 </div>
 
-<!-- Analyses history -->
-{% if analyses %}
-
-  {# ── Most recent analysis ── #}
-  {% set a = analyses[0] %}
-  {% set a_data = a.resultat_json | from_json %}
-  <div class="dashboard-card mb-4">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-3">
-        <div class="h-9 w-9 rounded-xl grid place-items-center" style="background:hsl(172 75% 22% / 0.1);">
-          <i data-lucide="calendar-check" style="width:1rem;height:1rem;color:var(--primary);"></i>
-        </div>
-        <div>
-          <p class="font-semibold text-primary text-sm">
-            Fiche mypension.be
-            {% if a.date_extrait %}au {{ a.date_extrait }}{% endif %}
-          </p>
-          <p class="text-xs text-muted">Analysée le {{ a.created_at.strftime('%d/%m/%Y') }} · {{ a.contrats | length }} contrat(s)</p>
-        </div>
+<!-- ── Statut des transferts ──────────────────────────────────────────── -->
+<div class="dashboard-card mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <div class="h-9 w-9 rounded-xl grid place-items-center" style="background:hsl(35 90% 45% / 0.1);">
+        <i data-lucide="send" style="width:1rem;height:1rem;color:hsl(35 90% 40%);"></i>
       </div>
-      {% if a_data and a_data.montant_total %}
-      <span class="font-display text-lg font-bold text-primary">{{ a_data.montant_total }}</span>
-      {% endif %}
+      <div>
+        <p class="font-semibold text-primary text-sm">Statut des transferts de réserves</p>
+        <p class="text-xs text-muted mt-0.5">Par organisme de pension cédant</p>
+      </div>
     </div>
-
-    {% set contrats_a = a.contrats if a.contrats else client.contrats %}
-    {% if contrats_a %}
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Assureur</th>
-          <th>Statut</th>
-          <th>Réserve</th>
-          <th>Date de valeur</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in contrats_a %}
-        <tr>
-          <td class="font-semibold">{{ c.assureur or '—' }}</td>
-          <td>
-            {% if c.statut == 'dormant' %}
-            <span class="badge badge-green">Dormant</span>
-            {% elif c.statut == 'actif' %}
-            <span class="badge badge-blue">Actif</span>
-            {% else %}
-            <span class="badge">{{ c.statut or '—' }}</span>
-            {% endif %}
-          </td>
-          <td class="font-semibold">{{ c.reserve or '—' }} €</td>
-          <td class="text-muted">{{ c.date_valeur or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="text-sm text-muted text-center py-4">Aucun contrat dans cette fiche.</p>
+    {% if dormants %}
+    <a href="{{ url_for('client_transfert') }}" class="btn text-xs flex items-center gap-1.5"
+       style="height:2rem;padding:0 0.875rem;background:hsl(172 75% 22% / 0.07);
+              color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);border-radius:0.625rem;
+              font-weight:600;text-decoration:none;">
+      <i data-lucide="file-down" style="width:0.8rem;height:0.8rem;"></i>
+      Formulaires Annexe 1
+    </a>
     {% endif %}
   </div>
 
-  {# ── Older analyses (grayed out) ── #}
-  {% if analyses | length > 1 %}
-  <div class="mb-6">
-    <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Fiches précédentes</p>
+  {% if dormants %}
+  <div class="flex flex-col">
+    {% for d in dormants %}
+    {% set transfere = d.date_transfert %}
+    <div class="flex items-center justify-between gap-4 flex-wrap py-3 transfer-row">
 
-    {% for a in analyses[1:] %}
-    {% set a_data = a.resultat_json | from_json %}
-    <div class="rounded-2xl p-4 mb-3" style="background:hsl(172 75% 22% / 0.03);border:1px solid hsl(172 75% 22% / 0.08);opacity:0.65;">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <div class="flex items-center gap-3">
-          <div class="h-8 w-8 rounded-xl grid place-items-center" style="background:hsl(172 75% 22% / 0.07);">
-            <i data-lucide="calendar" style="width:0.875rem;height:0.875rem;color:var(--muted-foreground);"></i>
-          </div>
-          <div>
-            <p class="font-semibold text-muted text-sm">
-              Fiche mypension.be
-              {% if a.date_extrait %}au {{ a.date_extrait }}{% endif %}
-            </p>
-            <p class="text-xs text-muted">Analysée le {{ a.created_at.strftime('%d/%m/%Y') }} · {{ a.contrats | length }} contrat(s)</p>
-          </div>
+      <!-- Organisme + détails -->
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.07);">
+          <i data-lucide="building-2" style="width:1rem;height:1rem;color:var(--primary);"></i>
         </div>
-        {% if a_data and a_data.montant_total %}
-        <span class="font-semibold text-muted">{{ a_data.montant_total }}</span>
-        {% endif %}
+        <div>
+          <p class="text-sm font-semibold text-primary">{{ d.assureur or '—' }}</p>
+          <div class="flex flex-wrap items-center gap-2 mt-0.5">
+            {% if d.numero %}
+            <span class="text-xs text-muted font-mono">{{ d.numero }}</span>
+            {% endif %}
+            {% if d.reserve %}
+            <span class="text-xs font-semibold text-primary">{{ d.reserve }} €</span>
+            {% endif %}
+            {% if d.date_valeur %}
+            <span class="text-xs text-muted">· au {{ d.date_valeur }}</span>
+            {% endif %}
+          </div>
+          {% if d.organisateur %}
+          <p class="text-xs text-muted mt-0.5">
+            <i data-lucide="briefcase" style="width:0.6rem;height:0.6rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+            {{ d.organisateur }}
+          </p>
+          {% endif %}
+        </div>
       </div>
 
-      {% if a.contrats %}
-      <table class="data-table" style="opacity:0.8;">
-        <thead>
-          <tr>
-            <th>Assureur</th>
-            <th>Statut</th>
-            <th>Réserve</th>
-            <th>Date de valeur</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in a.contrats %}
-          <tr>
-            <td>{{ c.assureur or '—' }}</td>
-            <td>{{ c.statut | capitalize if c.statut else '—' }}</td>
-            <td>{{ c.reserve or '—' }} €</td>
-            <td class="text-muted">{{ c.date_valeur or '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <!-- Statut -->
+      {% if transfere %}
+      <div class="text-right flex-shrink-0">
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+          <i data-lucide="check-circle" style="width:0.75rem;height:0.75rem;"></i>
+          Transféré
+        </span>
+        <p class="text-xs text-muted mt-1">le {{ d.date_transfert }}</p>
+      </div>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
+            style="background:hsl(35 90% 45% / 0.1);color:hsl(35 90% 30%);border:1px solid hsl(35 90% 45% / 0.25);">
+        <i data-lucide="clock" style="width:0.75rem;height:0.75rem;"></i>
+        En attente de réception des fonds
+      </span>
       {% endif %}
+
     </div>
     {% endfor %}
   </div>
-  {% endif %}
-
-{% else %}
-<!-- No analysis yet -->
-<div class="dashboard-card mb-6">
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="font-display text-lg font-semibold text-primary">Mes contrats</h2>
-  </div>
+  {% else %}
   <div class="text-center py-8">
-    <div class="h-12 w-12 rounded-2xl grid place-items-center mx-auto mb-3" style="background:hsl(172 75% 22% / 0.08);">
-      <i data-lucide="file-search" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>
+    <div class="h-12 w-12 rounded-2xl grid place-items-center mx-auto mb-3" style="background:hsl(172 75% 22% / 0.06);">
+      <i data-lucide="check-circle" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>
     </div>
-    <p class="text-sm font-semibold text-primary mb-1">Aucune fiche analysée</p>
-    <p class="text-xs text-muted mb-4">Uploadez votre extrait mypension.be pour visualiser vos contrats.</p>
-    <a href="{{ url_for('analyser') }}" class="btn btn-primary text-sm">
-      <i data-lucide="upload-cloud" style="width:1rem;height:1rem;"></i>
-      Analyser mon extrait
-    </a>
+    <p class="text-sm font-semibold text-primary mb-1">Aucun transfert en cours</p>
+    <p class="text-xs text-muted">Tous vos contrats sont déjà actifs chez UpTwoU.</p>
   </div>
+  {% endif %}
 </div>
-{% endif %}
 
 <!-- Personal data CTA -->
 {% if not client.adresse or not client.iban %}
@@ -233,4 +190,10 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .transfer-row + .transfer-row { border-top: 1px solid var(--border); }
+</style>
 {% endblock %}

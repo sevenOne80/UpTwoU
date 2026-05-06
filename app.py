@@ -6,10 +6,11 @@ import pdfplumber
 import anthropic
 from datetime import datetime, date
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, User, Client, Contrat, Analyse, AssureurRef, ContactMessage, seed_assureurs
+import itsme_auth
 from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, QuestionnaireForm
 
 try:
@@ -273,8 +274,7 @@ Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte av
   "resume": "Phrase synthétique en 1-2 phrases sur la situation de l'assuré.",
   "details": [
     "Point clé 1 — réserves trouvées, montants, assureurs",
-    "Point clé 2 — conditions confirmées ou à vérifier",
-    "Point clé 3 — prochaine étape recommandée"
+    "Point clé 2 — statut des plans (dormant/actif) et conditions confirmées ou à vérifier"
   ],
   "raisons_refus": ["Raison détaillée — uniquement si eligible = false"],
   "montant_total": "XX XXX,XX €" ou null,
@@ -321,9 +321,10 @@ Recherche impérativement ces mentions dans le document :
 - "ex-employeur", "vorige werkgever", "ancien employeur"
 Si aucune de ces mentions n'est présente, le plan est considéré actif et non transférable.
 
-**Condition 3 — Montant minimum**
+**Condition 3 — Montant minimum (condition commerciale UpTwoU, non légale)**
 Le total des réserves transférables doit être **strictement supérieur à 10 000 €**.
-Si le total est ≤ 10 000 €, eligible = false avec mention du montant insuffisant.
+Il s'agit d'un seuil fixé par UpTwoU pour des raisons de viabilité économique, et non d'une obligation légale.
+Si le total est ≤ 10 000 €, eligible = false. Dans raisons_refus, précise explicitement que ce seuil est une condition imposée par UpTwoU et non par la loi.
 
 Note : le type de branche (Branche 21 ou Branche 23) n'est PAS un critère d'éligibilité. Renseigne le champ "type_branche" à titre informatif uniquement, mais ne l'utilise pas pour déterminer eligible.
 
@@ -342,7 +343,8 @@ Note : le type de branche (Branche 21 ou Branche 23) n'est PAS un critère d'él
    → eligible = "a_verifier"
    → Expliquer dans details qu'il n'est pas possible de déterminer le statut des plans et inviter à télécharger l'extrait complet depuis mypension.be
 
-5. Réserves présentes mais ≤ 10 000 € au total → eligible = false avec mention du montant
+5. Réserves présentes mais ≤ 10 000 € au total → eligible = false.
+   Dans raisons_refus, formuler ainsi : "Le total de vos réserves transférables est inférieur au seuil de 10 000 € requis par UpTwoU. Il ne s'agit pas d'une limite légale mais d'une condition commerciale fixée par UpTwoU pour assurer la viabilité économique de la gestion."
 
 **Langues supportées : français, néerlandais, anglais, allemand**"""
 
@@ -596,6 +598,93 @@ def logout():
     return redirect(url_for('index'))
 
 
+# ── itsme OIDC ────────────────────────────────────────────────────────────────
+@app.route("/auth/itsme")
+def auth_itsme():
+    if not itsme_auth.is_configured():
+        flash("La connexion via itsme n'est pas encore configurée.", "error")
+        return redirect(url_for('login'))
+
+    next_url = request.args.get('next', '')
+    redirect_uri = url_for('auth_itsme_callback', _external=True)
+    auth_url = itsme_auth.build_auth_url(session, redirect_uri, next_url)
+    if not auth_url:
+        flash("Impossible de joindre le service itsme. Réessayez dans quelques instants.", "error")
+        return redirect(url_for('login'))
+
+    return redirect(auth_url)
+
+
+@app.route("/auth/itsme/callback")
+def auth_itsme_callback():
+    error = request.args.get('error')
+    if error:
+        desc = request.args.get('error_description', error)
+        flash(f"Connexion itsme annulée : {desc}", "error")
+        return redirect(url_for('login'))
+
+    state = request.args.get('state', '')
+    if state != session.get('itsme_state', ''):
+        flash("Session itsme invalide. Veuillez réessayer.", "error")
+        return redirect(url_for('login'))
+
+    code = request.args.get('code', '')
+    redirect_uri = url_for('auth_itsme_callback', _external=True)
+    claims = itsme_auth.exchange_code(code, session, redirect_uri)
+
+    if not claims:
+        flash("L'authentification itsme a échoué. Veuillez réessayer.", "error")
+        return redirect(url_for('login'))
+
+    # Clean itsme session keys
+    next_url = session.pop('itsme_next', '')
+    session.pop('itsme_state', None)
+    session.pop('itsme_nonce', None)
+    session.pop('itsme_code_verifier', None)
+
+    # Find or create user from itsme sub / email
+    sub   = claims.get('sub', '')
+    email = claims.get('email', '')
+
+    user = None
+    if email:
+        user = User.query.filter_by(email=email).first()
+
+    if user is None:
+        # Auto-create a client account from itsme identity
+        given  = claims.get('given_name', '')
+        family = claims.get('family_name', '')
+        phone  = claims.get('phone_number', '')
+
+        if not email:
+            flash("itsme n'a pas transmis d'adresse e-mail. Veuillez vous connecter avec vos identifiants.", "error")
+            return redirect(url_for('login'))
+
+        user = User(email=email, role='client')
+        user.password_hash = 'itsme:' + sub   # unusable password — itsme only
+        db.session.add(user)
+        db.session.flush()
+
+        client_profile = Client(
+            user_id=user.id,
+            nom=family.upper() if family else '',
+            prenom=given,
+            telephone=phone,
+        )
+        db.session.add(client_profile)
+        db.session.commit()
+        flash(f"Compte créé via itsme. Bienvenue, {given} !", "success")
+    else:
+        flash("Connexion itsme réussie.", "success")
+
+    login_user(user)
+
+    if next_url:
+        return redirect(next_url)
+    dest = 'admin_dashboard' if user.role == 'courtier' else 'client_dashboard'
+    return redirect(url_for(dest))
+
+
 # ── Client routes ──────────────────────────────────────────────────────────────
 @app.route("/client/dashboard")
 @login_required
@@ -610,7 +699,86 @@ def client_dashboard():
 @login_required
 @client_required
 def client_contrats():
-    return render_template("client/contrats.html", client=current_user.client_profile)
+    courtiers = User.query.filter_by(role='courtier').all()
+    nouvel_assureur_nom = os.environ.get('NOUVEL_ASSUREUR_NOM', 'OneLife SA')
+    from datetime import date
+    return render_template("client/contrats.html",
+                           client=current_user.client_profile,
+                           courtiers=courtiers,
+                           nouvel_assureur_nom=nouvel_assureur_nom,
+                           today=date.today())
+
+
+@app.route("/api/courtiers/search")
+@login_required
+def api_courtiers_search():
+    from flask import jsonify
+    q = request.args.get('q', '').strip().lower()
+    if len(q) < 2:
+        return jsonify([])
+    courtiers = User.query.filter_by(role='courtier').all()
+    results = []
+    for u in courtiers:
+        cp = u.client_profile
+        if not cp:
+            continue
+        haystack = ' '.join(filter(None, [
+            cp.prenom, cp.nom, cp.code_postal, cp.ville
+        ])).lower()
+        if q in haystack:
+            results.append({
+                'id': u.id,
+                'nom': f"{cp.prenom or ''} {cp.nom or ''}".strip(),
+                'email': u.email,
+                'telephone': cp.telephone or '',
+                'code_postal': cp.code_postal or '',
+                'ville': cp.ville or '',
+                'initiales': ((cp.prenom or ' ')[0] + (cp.nom or ' ')[0]).upper(),
+            })
+    return jsonify(results)
+
+
+@app.route("/client/demande-changement-courtier", methods=["POST"])
+@login_required
+@client_required
+def client_demande_changement_courtier():
+    client = current_user.client_profile
+    nouveau_courtier_id = request.form.get("courtier_id", "").strip()
+    message_text = request.form.get("message", "").strip()
+
+    if not nouveau_courtier_id:
+        flash("Veuillez sélectionner un conseiller.", "error")
+        return redirect(url_for("client_contrats"))
+
+    nouveau = User.query.filter_by(id=int(nouveau_courtier_id), role='courtier').first()
+    if not nouveau:
+        flash("Conseiller introuvable.", "error")
+        return redirect(url_for("client_contrats"))
+
+    ancien_nom = None
+    if client.courtier and client.courtier.client_profile:
+        cp = client.courtier.client_profile
+        ancien_nom = f"{cp.prenom} {cp.nom}"
+
+    client.courtier_id = nouveau.id
+    if message_text or ancien_nom:
+        nouveau_cp = nouveau.client_profile
+        nouveau_nom = f"{nouveau_cp.prenom} {nouveau_cp.nom}" if nouveau_cp else nouveau.email
+        note = f"Changement de conseiller : {ancien_nom or '(aucun)'} → {nouveau_nom}."
+        if message_text:
+            note += f"\nMessage client : {message_text}"
+        db.session.add(ContactMessage(
+            nom=f"{client.prenom} {client.nom}",
+            email=current_user.email,
+            sujet="Changement de conseiller",
+            message=note,
+        ))
+    db.session.commit()
+
+    nouveau_cp = nouveau.client_profile
+    nouveau_nom = f"{nouveau_cp.prenom} {nouveau_cp.nom}" if nouveau_cp else nouveau.email
+    flash(f"Votre conseiller a été mis à jour : {nouveau_nom}.", "success")
+    return redirect(url_for("client_contrats"))
 
 
 @app.route("/client/modifier-profil", methods=["POST"])
@@ -721,6 +889,20 @@ def client_donnees():
 
 
 # ── Transfert routes ──────────────────────────────────────────────────────────
+@app.route("/client/extrait")
+@login_required
+@client_required
+def client_extrait():
+    """Serve the client's latest uploaded mypension.be PDF."""
+    client = current_user.client_profile
+    analyse = client.latest_analyse
+    if not analyse or not analyse.filename:
+        flash("Aucun extrait disponible.", "error")
+        return redirect(url_for('client_contrats'))
+    return send_from_directory(app.config['UPLOAD_FOLDER'], analyse.filename,
+                               as_attachment=True)
+
+
 @app.route("/client/transfert")
 @login_required
 @client_required
@@ -1042,7 +1224,10 @@ def admin_register():
         db.session.add(Client(
             user_id=user.id,
             nom=form.nom.data,
-            prenom=form.prenom.data
+            prenom=form.prenom.data,
+            code_postal=form.code_postal.data or None,
+            ville=form.ville.data or None,
+            telephone=form.telephone.data or None,
         ))
         db.session.commit()
 

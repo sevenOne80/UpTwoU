@@ -14,7 +14,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='client')  # 'client' | 'courtier'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    client_profile = db.relationship('Client', backref='user', uselist=False)
+    client_profile = db.relationship('Client', foreign_keys='Client.user_id', backref='user', uselist=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -48,6 +48,8 @@ class Client(db.Model):
     kyc_document = db.Column(db.String(200))      # filename of uploaded ID
     frais_acceptes = db.Column(db.Boolean, default=False)
     questionnaire_score = db.Column(db.Integer)   # raw score 0-18
+    courtier_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    courtier = db.relationship('User', foreign_keys='Client.courtier_id', backref='clients_assignes')
     contrats = db.relationship('Contrat', backref='client', lazy=True)
     analyses = db.relationship('Analyse', backref='client', lazy=True)
 
