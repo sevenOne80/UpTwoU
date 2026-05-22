@@ -34,3 +34,7 @@ Thumbs.db
 # Secrets
 *.env
 .env.local
+
+# Database files
+*.db
+*.sqlite3
