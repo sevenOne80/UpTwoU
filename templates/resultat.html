@@ -167,7 +167,7 @@
   {% if not r.eligible and r.raisons_refus %}
   <div class="mb-10">
     <h2 class="font-display text-xl font-semibold mb-4" style="color: hsl(0 84% 30%);">
-      Pourquoi ce n'est pas possible
+      Pourquoi un transfert de réserves n'est pas envisageable
     </h2>
     <div class="flex flex-col gap-3">
       {% for raison in r.raisons_refus %}
@@ -184,6 +184,7 @@
   {% endif %}
 
   <!-- Warning: pledge / policy advance -->
+  {% if is_ok or is_verif %}
   <div class="mb-10 flex items-start gap-4 rounded-2xl p-5"
        style="background:hsl(35 95% 55% / 0.07); border:1px solid hsl(35 95% 55% / 0.35);">
     <div class="flex-shrink-0 h-9 w-9 rounded-xl grid place-items-center"
@@ -202,6 +203,7 @@
       </p>
     </div>
   </div>
+  {% endif %}
 
   <!-- Warning: death coverage surplus -->
   {% if r.couverture_deces_surplus %}
