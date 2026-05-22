@@ -68,9 +68,9 @@
 
 {% block content %}
 <div class="mb-8">
-  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 4</p>
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 6</p>
   <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Questionnaire de profil</h1>
-  <p class="mt-2 text-muted text-sm leading-relaxed">Répondez à ces 6 questions pour que nous puissions vous recommander le profil le plus adapté.</p>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Répondez à ces 6 questions pour que nous puissions vous recommander le profil d'investisseur le plus adapté.</p>
 </div>
 
 <form method="POST">
@@ -135,7 +135,7 @@
   {% endfor %}
 
   <div class="flex items-center justify-between mt-6">
-    <a href="{{ url_for('onboarding_profil') }}" class="btn btn-ghost text-sm">
+    <a href="{{ url_for('onboarding_kyc') }}" class="btn btn-ghost text-sm">
       <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
       Retour
     </a>

@@ -1,0 +1,157 @@
+{% extends "client/_base.html" %}
+{% block title %}Nous contacter{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <h1>Nous contacter</h1>
+  <p>Une question, un problème ? Écrivez-nous — notre équipe vous répondra sous 24 h ouvrables.</p>
+</div>
+
+<div class="grid gap-6" style="grid-template-columns:1fr;">
+
+  <!-- Formulaire -->
+  <div class="dashboard-card max-w-2xl">
+    <form method="POST" class="flex flex-col gap-5">
+      {{ form.hidden_tag() }}
+
+      <!-- Identité (lecture seule) -->
+      <div class="grid grid-cols-2 gap-4 p-4 rounded-xl" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
+        <div>
+          <p class="text-xs text-muted mb-0.5">Nom</p>
+          <p class="font-semibold text-primary text-sm">{{ client.prenom }} {{ client.nom }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-muted mb-0.5">Email</p>
+          <p class="font-semibold text-primary text-sm">{{ current_user.email }}</p>
+        </div>
+      </div>
+
+      <!-- Sujet -->
+      <div class="form-group">
+        <label class="form-label" for="sujet">{{ form.sujet.label.text }}</label>
+        {{ form.sujet(class="form-input", id="sujet") }}
+        {% for e in form.sujet.errors %}
+          <p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>
+        {% endfor %}
+      </div>
+
+      <!-- Message -->
+      <div class="form-group">
+        <label class="form-label" for="message">{{ form.message.label.text }}</label>
+        {{ form.message(
+             class="form-input",
+             id="message",
+             rows="6",
+             placeholder="Décrivez votre question ou problème en détail…",
+             style="resize:vertical;min-height:120px;"
+           ) }}
+        <p id="msg-count" class="text-xs text-muted mt-1 text-right">0 / 2000</p>
+        {% for e in form.message.errors %}
+          <p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn btn-primary self-start flex items-center gap-2"
+              style="height:2.75rem;padding:1.75rem;">
+        <i data-lucide="send" style="width:1rem;height:1rem;"></i>
+        Envoyer le message
+      </button>
+    </form>
+  </div>
+
+  <!-- Coordonnées UpTwoU -->
+  <div class="dashboard-card max-w-2xl">
+    <p class="text-xs font-semibold uppercase tracking-widest text-muted mb-4 flex items-center gap-2">
+      <i data-lucide="info" style="width:0.875rem;height:0.875rem;"></i>
+      Autres moyens de nous joindre
+    </p>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="flex items-start gap-3">
+        <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="mail" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-primary">Email</p>
+          <p class="text-xs text-muted mt-0.5">contact@uptwou.be</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="phone" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-primary">Téléphone</p>
+          <p class="text-xs text-muted mt-0.5">+32 2 000 00 00</p>
+          <p class="text-xs text-muted">Lun–Ven, 9h–17h</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="clock" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-primary">Délai de réponse</p>
+          <p class="text-xs text-muted mt-0.5">Sous 24 h ouvrables</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historique des messages -->
+  {% if messages %}
+  <div class="dashboard-card max-w-2xl">
+    <p class="text-xs font-semibold uppercase tracking-widest text-muted mb-4 flex items-center gap-2">
+      <i data-lucide="history" style="width:0.875rem;height:0.875rem;"></i>
+      Mes messages précédents
+    </p>
+    <div class="flex flex-col gap-3">
+      {% for m in messages %}
+      <div class="rounded-xl p-4" style="background:hsl(0 0% 98%);border:1px solid var(--border);">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                style="background:hsl(172 75% 22% / 0.08);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.15);">
+            {{ m.sujet or 'Sans sujet' }}
+          </span>
+          <span class="text-xs text-muted">{{ m.created_at.strftime('%d/%m/%Y à %H:%M') }}</span>
+        </div>
+        <p class="text-sm text-primary leading-relaxed">{{ m.message }}</p>
+        {% if m.reponse %}
+        <div class="mt-3 pt-3 flex items-start gap-2" style="border-top:1px solid var(--border);">
+          <div class="h-6 w-6 rounded-full grid place-items-center flex-shrink-0"
+               style="background:hsl(142 76% 36% / 0.1);">
+            <i data-lucide="reply" style="width:0.65rem;height:0.65rem;color:hsl(142 76% 28%);"></i>
+          </div>
+          <div>
+            <p class="text-xs font-semibold mb-0.5" style="color:hsl(142 60% 28%);">Réponse UpTwoU</p>
+            <p class="text-sm text-primary leading-relaxed">{{ m.reponse }}</p>
+          </div>
+        </div>
+        {% else %}
+        <div class="mt-2 flex items-center gap-1.5">
+          <i data-lucide="clock" style="width:0.7rem;height:0.7rem;color:var(--muted-foreground);"></i>
+          <p class="text-xs text-muted">En attente de réponse</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const textarea = document.getElementById('message');
+  const counter  = document.getElementById('msg-count');
+  function updateCount() {
+    counter.textContent = textarea.value.length + ' / 2000';
+  }
+  textarea.addEventListener('input', updateCount);
+  updateCount();
+</script>
+{% endblock %}

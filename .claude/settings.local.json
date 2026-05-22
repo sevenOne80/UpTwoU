@@ -36,7 +36,15 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Thibaut\\\\www\\\\UpTwoU\\\\tools\\\\UpTwoU_Connective_Integration\" -Recurse -File)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(python -c \"import os; from dotenv import load_dotenv; load_dotenv\\(\\); k = os.getenv\\('ANTHROPIC_API_KEY',''\\); print\\('Présente:', bool\\(k\\), '| Longueur:', len\\(k\\), '| Début:', k[:15] if k else 'vide'\\)\")",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Thibaut\\\\www\\\\UpTwoU\" -Recurse -Force | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Thibaut\\\\www\\\\UpTwoU\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "Bash(python -c \"from app import app; print\\('app loaded OK'\\)\")",
+      "Bash(pip list *)",
+      "Bash(python -c \"import admin_app; print\\('OK'\\)\")",
+      "Bash(python -c \"import flask_admin; help\\(flask_admin.Admin.__init__\\)\")",
+      "Bash(python -c \"from flask_admin.theme import Bootstrap4Theme; print\\('ok'\\)\")",
+      "Bash(ls /c/Users/Thibaut/www/)",
+      "Read(//c/Users/Thibaut/www//**)",
+      "Bash(python -)"
     ]
   }
 }

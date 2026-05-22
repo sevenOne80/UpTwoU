@@ -9,231 +9,63 @@
   </div>
 </div>
 
-<!-- Onboarding banner -->
-{% if client.onboarding_step != 'complet' %}
-{% set step_labels = {'kyc': ('Vérification d\'identité', 'onboarding_kyc', 1), 'profil': ('Profil d\'investissement', 'onboarding_profil', 2), 'contrat': ('Informations contractuelles', 'onboarding_contrat', 3), 'frais': ('Acceptation des frais', 'onboarding_frais', 4)} %}
-{% set step_info = step_labels.get(client.onboarding_step, ('Continuer', 'onboarding_kyc', 1)) %}
-<div class="rounded-2xl p-5 flex items-center gap-4 mb-6" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.30);">
-  <i data-lucide="alert-circle" style="width:1.5rem;height:1.5rem;flex-shrink:0;color:var(--accent);"></i>
-  <div class="flex-1">
-    <p class="text-sm font-semibold text-primary">Finalisez votre inscription</p>
-    <p class="text-xs text-muted mt-0.5">Étape suivante : <strong>{{ step_info[0] }}</strong> ({{ step_info[2] }}/5)</p>
-  </div>
-  <a href="{{ url_for(step_info[1]) }}" class="btn btn-primary" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;white-space:nowrap;">
-    Continuer
-    <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
-  </a>
-</div>
-{% endif %}
 
-{% if dormants %}
-
-<div class="flex flex-col gap-4">
-  {% for c in dormants %}
-  {% set ts = ts_map.get(c.id) %}
-  <div class="dashboard-card">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-
-      <!-- Infos contrat -->
-      <div class="flex items-start gap-4">
-        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0"
-             style="background:hsl(172 75% 22% / 0.08);">
-          <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
-        </div>
-        <div>
-          <p class="font-semibold text-primary text-base">{{ c.assureur or '—' }}</p>
-          {% if c.numero %}
-          <p class="text-xs text-muted mt-0.5">Réf. contrat : <span class="font-mono">{{ c.numero }}</span></p>
-          {% endif %}
-          {% if ts and ts.nouveau_contrat %}
-          <p class="text-xs text-muted mt-0.5">Nouveau contrat UpTwoU : <span class="font-mono font-semibold" style="color:var(--primary);">{{ ts.reference }}</span></p>
-          {% endif %}
-          <div class="flex flex-wrap gap-2 mt-2">
-            <span class="badge badge-blue">{{ c.type_branche or 'Type inconnu' }}</span>
-            <span class="badge badge-green">Dormant</span>
-            {% if c.reserve %}
-            <span class="badge" style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">
-              {{ c.reserve }} €
-            </span>
-            {% endif %}
-            {% if c.date_valeur %}
-            <span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">
-              Valeur au {{ c.date_valeur }}
-            </span>
-            {% endif %}
-            <!-- Statut signature -->
-            {% if ts %}
-              {% if ts.statut_signature == 'signe' %}
-              <span class="badge" style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
-                <i data-lucide="check-circle" style="width:0.7rem;height:0.7rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
-                Signé — envoyé à l'assureur
-              </span>
-              {% elif ts.statut_signature == 'en_attente' %}
-              <span class="badge" style="background:hsl(220 90% 56% / 0.1);color:hsl(220 70% 40%);border:1px solid hsl(220 90% 56% / 0.25);">
-                <i data-lucide="clock" style="width:0.7rem;height:0.7rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
-                Signature en attente
-              </span>
-              {% elif ts.statut_signature in ('expire', 'revoque') %}
-              <span class="badge" style="background:hsl(0 84% 45% / 0.1);color:hsl(0 84% 40%);border:1px solid hsl(0 84% 45% / 0.2);">
-                <i data-lucide="alert-circle" style="width:0.7rem;height:0.7rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
-                {{ 'Expiré' if ts.statut_signature == 'expire' else 'Révoqué' }}
-              </span>
-              {% endif %}
-            {% endif %}
-          </div>
-
-          {% set ref = c.assureur_ref %}
-          {% if ref %}
-          <p class="text-xs text-muted mt-3 leading-relaxed">
-            <i data-lucide="map-pin" style="width:0.75rem;height:0.75rem;display:inline-block;vertical-align:middle;margin-right:2px;"></i>
-            {{ ref.nom_legal }} — {{ ref.adresse }}, {{ ref.code_postal }} {{ ref.ville }}
-            {% if ref.numero_bce %}· BCE {{ ref.numero_bce }}{% endif %}
-          </p>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Actions -->
-      {% if not c.date_transfert %}
-      <div class="flex flex-col gap-2 flex-shrink-0 items-end">
-
-        {% if ts and ts.statut_signature == 'signe' %}
-        <!-- Signé : rien à faire -->
-        <span class="text-xs text-muted">Document transmis à l'assureur.</span>
-
-        {% elif ts and ts.statut_signature == 'en_attente' %}
-        <!-- En attente : continuer ou relancer -->
-        <button type="button"
-                class="btn btn-primary flex items-center gap-2"
-                style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;"
-                onclick="continuerSignature('{{ ts.reference }}', {{ c.id }})">
-          <i data-lucide="pen-line" style="width:1rem;height:1rem;"></i>
-          Continuer la signature
-        </button>
-        <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
-           class="text-xs text-muted underline hover:text-primary">Télécharger le PDF</a>
-
-        {% else %}
-        <!-- Pas encore initié ou expiré/révoqué -->
-        <button type="button"
-                class="btn btn-primary flex items-center gap-2"
-                style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;"
-                onclick="ouvrirChoixSignature({{ c.id }})">
-          <i data-lucide="pen-line" style="width:1rem;height:1rem;"></i>
-          Signer électroniquement
-        </button>
-        <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
-           class="text-xs text-muted underline hover:text-primary">Télécharger le PDF</a>
-        {% endif %}
-
-      </div>
-      {% endif %}
-
-    </div>
-
-    <!-- Panneau choix méthode de signature (caché par défaut) -->
-    <div id="sign-panel-{{ c.id }}" class="hidden mt-4 rounded-xl p-4"
-         style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.15);">
-      <p class="text-sm font-semibold text-primary mb-3">Choisissez votre méthode d'identification :</p>
-      <div class="flex flex-col sm:flex-row gap-3">
-        <button type="button"
-                class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
-                style="background:white;border:2px solid var(--primary);"
-                onclick="lancerSignature({{ c.id }}, true)">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
-               style="background:hsl(172 75% 22% / 0.1);">
-            <i data-lucide="smartphone" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
-          </div>
-          <div>
-            <p class="text-sm font-semibold text-primary">itsme®</p>
-            <p class="text-xs text-muted">Identification via votre app itsme</p>
-          </div>
-        </button>
-        <button type="button"
-                class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
-                style="background:white;border:2px solid var(--border);"
-                onclick="lancerSignature({{ c.id }}, false)">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
-               style="background:hsl(0 0% 96%);">
-            <i data-lucide="mail" style="width:1.25rem;height:1.25rem;color:#666;"></i>
-          </div>
-          <div>
-            <p class="text-sm font-semibold text-primary">Code par email</p>
-            <p class="text-xs text-muted">Un code OTP vous sera envoyé par email</p>
-          </div>
-        </button>
-      </div>
-      <p id="sign-error-{{ c.id }}" class="text-xs mt-3 hidden" style="color:hsl(0 84% 45%);"></p>
-    </div>
-
-  </div>
-  {% endfor %}
-</div>
-
-<!-- Note légale -->
-<div class="mt-6 flex items-start gap-3 rounded-2xl p-4"
-     style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
-  <i data-lucide="info" style="width:1rem;height:1rem;flex-shrink:0;margin-top:2px;color:var(--primary);"></i>
-  <p class="text-xs text-muted leading-relaxed">
-    <strong class="text-primary">Base légale :</strong>
-    Convention Assuralia du 22 septembre 2015 (mise à jour 2 décembre 2019).
-    L'assureur cédant dispose de <strong>30 jours calendrier</strong> pour transférer vos réserves
-    après réception d'un formulaire complet et signé. Le transfert est
-    <strong>gratuit et sans perte de droits acquis</strong>.
-  </p>
-</div>
-
-{% else %}
-
-<div class="dashboard-card text-center py-12">
-  <div class="mx-auto h-16 w-16 rounded-2xl grid place-items-center mb-4"
-       style="background:hsl(172 75% 22% / 0.08);">
-    <i data-lucide="check-circle" style="width:2rem;height:2rem;color:var(--primary);opacity:0.4;"></i>
-  </div>
-  <p class="font-semibold text-primary">Aucun transfert en cours</p>
-  <p class="text-sm text-muted mt-2 max-w-sm mx-auto">
-    Tous vos contrats sont déjà actifs chez UpTwoU, ou aucun contrat dormant n'a été détecté.
-  </p>
-  <a href="{{ url_for('client_analyser') }}" class="btn btn-primary mt-6 inline-flex items-center gap-2">
-    <i data-lucide="upload-cloud" style="width:1rem;height:1rem;"></i>
-    Analyser un nouvel extrait
-  </a>
-</div>
-
-{% endif %}
-
-<!-- Historique -->
-{% set tous_dormants = client.contrats_dormants %}
-{% if tous_dormants %}
+<!-- Transferts entrants -->
 <div class="dashboard-card mt-6">
   <div class="flex items-center gap-3 mb-4">
     <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
-         style="background:hsl(35 90% 45% / 0.1);">
-      <i data-lucide="clock" style="width:1rem;height:1rem;color:hsl(35 90% 40%);"></i>
+         style="background:hsl(172 75% 22% / 0.1);">
+      <i data-lucide="arrow-down-circle" style="width:1rem;height:1rem;color:var(--primary);"></i>
     </div>
-    <p class="font-semibold text-primary text-sm">Historique de transfert</p>
+    <div>
+      <p class="font-semibold text-primary text-sm">Transferts entrants</p>
+      <p class="text-xs text-muted mt-0.5">Réserves en cours de rapatriement vers UpTwoU</p>
+    </div>
   </div>
+
+  {% if entrants %}
   <div class="flex flex-col">
-    {% for d in tous_dormants %}
+    {% for d in entrants %}
+    {% set d_ts = ts_map.get(d.id) %}
+    {% set recu = d.statut == 'recu' %}
     <div class="flex items-start justify-between gap-4 flex-wrap py-3 hist-row">
       <div class="flex items-start gap-3">
         <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
-             style="background:hsl(172 75% 22% / 0.07);">
-          <i data-lucide="building-2" style="width:1rem;height:1rem;color:var(--primary);"></i>
+             style="background:{% if recu %}hsl(142 76% 36% / 0.07){% else %}hsl(172 75% 22% / 0.07){% endif %};">
+          <i data-lucide="building-2" style="width:1rem;height:1rem;color:{% if recu %}hsl(142 76% 28%){% else %}var(--primary){% endif %};"></i>
         </div>
         <div>
           <p class="font-semibold text-primary text-sm">{{ d.assureur or '—' }}</p>
           {% if d.numero %}<p class="text-xs text-muted mt-0.5">Réf. : <span class="font-mono">{{ d.numero }}</span></p>{% endif %}
           {% if d.organisateur %}<p class="text-xs text-muted mt-0.5"><i data-lucide="briefcase" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>{{ d.organisateur }}</p>{% endif %}
           <div class="flex flex-wrap gap-1.5 mt-2">
-            {% if d.reserve %}<span class="badge" style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">{{ d.reserve }} €</span>{% endif %}
-            {% if d.date_valeur %}<span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">au {{ d.date_valeur }}</span>{% endif %}
+            {% if recu and d.reserve_recue %}
+              {% set rr = d.reserve_recue %}
+              <span class="badge font-semibold" style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 25%);border:1px solid hsl(142 76% 36% / 0.25);">{{ rr.montant }} {{ rr.currency or 'EUR' }}</span>
+              {% if rr.date_reception %}<span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">reçu le {{ rr.date_reception }}</span>{% endif %}
+            {% else %}
+              {% if d.reserve %}<span class="badge" style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">{{ d.reserve }} €</span>{% endif %}
+              {% if d.date_valeur %}<span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">au {{ d.date_valeur }}</span>{% endif %}
+            {% endif %}
           </div>
+          <p class="text-xs text-muted mt-1.5">
+            <i data-lucide="calendar" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:3px;"></i>
+            {% if d_ts and d_ts.cree_le %}
+              Demande envoyée le {{ d_ts.cree_le.strftime('%d/%m/%Y') }}
+            {% elif d.created_at %}
+              Identifié le {{ d.created_at.strftime('%d/%m/%Y') }}
+            {% endif %}
+          </p>
         </div>
       </div>
       <div class="flex-shrink-0 text-right">
-        {% set d_ts = ts_map.get(d.id) %}
-        {% if d_ts and d_ts.statut_signature == 'signe' %}
+        {% if recu %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+          <i data-lucide="check-circle" style="width:0.75rem;height:0.75rem;"></i>
+          Reçu
+        </span>
+        {% elif d_ts and d_ts.statut_signature == 'signe' %}
         <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
               style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
           <i data-lucide="check-circle" style="width:0.75rem;height:0.75rem;"></i>
@@ -256,8 +88,88 @@
     </div>
     {% endfor %}
   </div>
+  {% else %}
+  <p class="text-sm text-muted py-2">Aucun transfert entrant en cours.</p>
+  {% endif %}
 </div>
-{% endif %}
+
+
+<!-- Historique des transferts out -->
+<div class="dashboard-card mt-6">
+  <div class="flex items-center gap-3 mb-4">
+    <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+         style="background:hsl(220 80% 55% / 0.1);">
+      <i data-lucide="arrow-up-circle" style="width:1rem;height:1rem;color:hsl(220 70% 45%);"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-primary text-sm">Historique des transferts out</p>
+      <p class="text-xs text-muted mt-0.5">Demandes de transfert de vos réserves UpTwoU vers un autre assureur</p>
+    </div>
+  </div>
+
+  {% if transferts_out %}
+  <div class="flex flex-col">
+    {% for t in transferts_out %}
+    <div class="flex items-start justify-between gap-4 flex-wrap py-3 hist-row">
+      <div class="flex items-start gap-3">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(220 80% 55% / 0.07);">
+          <i data-lucide="building-2" style="width:1rem;height:1rem;color:hsl(220 70% 45%);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-sm">{{ t.assureur_dest or '—' }}</p>
+          {% if t.numero_dest %}<p class="text-xs text-muted mt-0.5">Réf. destination : <span class="font-mono">{{ t.numero_dest }}</span></p>{% endif %}
+          {% if t.contract %}<p class="text-xs text-muted mt-0.5"><i data-lucide="file-text" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>Contrat UpTwoU {{ t.contract.numero or t.contract.id }}</p>{% endif %}
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            {% if t.montant %}<span class="badge" style="background:hsl(220 80% 55% / 0.1);color:hsl(220 70% 35%);border:1px solid hsl(220 80% 55% / 0.2);">{{ t.montant }} €</span>{% endif %}
+          </div>
+          {% if t.motif %}<p class="text-xs text-muted mt-1.5 italic">{{ t.motif }}</p>{% endif %}
+          <p class="text-xs text-muted mt-1.5">
+            <i data-lucide="calendar" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:3px;"></i>
+            Demande du {{ t.created_at.strftime('%d/%m/%Y') if t.created_at else '—' }}
+          </p>
+        </div>
+      </div>
+      <div class="flex-shrink-0 text-right">
+        {% if t.statut == 'transmis' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+          <i data-lucide="check-circle" style="width:0.75rem;height:0.75rem;"></i>
+          Transmis
+        </span>
+        {% elif t.statut == 'en_cours' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">
+          <i data-lucide="send" style="width:0.75rem;height:0.75rem;"></i>
+          En cours
+        </span>
+        {% elif t.statut == 'refuse' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(0 80% 50% / 0.1);color:hsl(0 70% 40%);border:1px solid hsl(0 80% 50% / 0.25);">
+          <i data-lucide="x-circle" style="width:0.75rem;height:0.75rem;"></i>
+          Refusé
+        </span>
+        {% elif t.statut == 'annule' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(0 0% 90%);color:#666;border:1px solid #ddd;">
+          <i data-lucide="ban" style="width:0.75rem;height:0.75rem;"></i>
+          Annulé
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(35 90% 45% / 0.1);color:hsl(35 90% 30%);border:1px solid hsl(35 90% 45% / 0.25);">
+          <i data-lucide="clock" style="width:0.75rem;height:0.75rem;"></i>
+          En attente
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm text-muted py-2">Aucune demande de transfert sortant pour le moment.</p>
+  {% endif %}
+</div>
 
 {% endblock %}
 

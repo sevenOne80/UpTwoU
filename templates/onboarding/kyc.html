@@ -25,15 +25,34 @@
   <form method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">
     {{ form.hidden_tag() }}
     <input type="hidden" name="action" value="upload">
-    <div class="form-group">
-      <label class="form-label">Carte d'identité (recto + verso) ou passeport</label>
-      <input type="file" name="kyc_file" accept=".jpg,.jpeg,.png,.pdf"
-             class="form-input" style="padding-top:0.5rem;padding-bottom:0.5rem;">
-      <p class="text-xs text-muted mt-1">Formats acceptés : JPG, PNG, PDF — max 10 Mo</p>
-    </div>
+
+    <!-- Drop zone -->
+    <label id="drop-zone"
+           style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                  gap:0.75rem;padding:2rem 1.5rem;border-radius:1rem;cursor:pointer;
+                  border:2px dashed hsl(172 75% 22% / 0.3);background:hsl(172 75% 22% / 0.03);
+                  transition:border-color .15s,background .15s;">
+      <div style="width:3rem;height:3rem;border-radius:0.75rem;display:grid;place-items:center;
+                  background:hsl(172 75% 22% / 0.08);">
+        <i data-lucide="id-card" style="width:1.5rem;height:1.5rem;color:var(--primary);"></i>
+      </div>
+      <div style="text-align:center;">
+        <p class="text-sm font-semibold text-primary">
+          Glissez votre document ici
+          <span class="text-muted font-normal">ou</span>
+          <span style="color:var(--primary);text-decoration:underline;">parcourir</span>
+        </p>
+        <p class="text-xs text-muted mt-1">Recto + verso — JPG, PNG ou PDF — max 10 Mo</p>
+      </div>
+      <!-- File name preview -->
+      <p id="file-name" class="text-xs font-medium" style="color:hsl(172 75% 28%);display:none;"></p>
+      <input id="kyc-file-input" type="file" name="kyc_file" accept=".jpg,.jpeg,.png,.pdf"
+             style="display:none;">
+    </label>
+
     <button type="submit" class="btn btn-primary" style="align-self:flex-start;">
       <i data-lucide="scan" style="width:1rem;height:1rem;"></i>
-      Analyser le document
+      <span style="padding-left: 9px;">Analyser le document</span>
     </button>
   </form>
 </div>
@@ -82,10 +101,30 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">{{ form.niss.label.text }}</label>
-      {{ form.niss(class="form-input", placeholder="XX.XX.XX-XXX.XX") }}
-      {% for e in form.niss.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+    <div class="grid grid-cols-2 gap-3">
+      <div class="form-group">
+        <label class="form-label">{{ form.niss.label.text }}</label>
+        {{ form.niss(class="form-input", placeholder="XX.XX.XX-XXX.XX") }}
+        {% for e in form.niss.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Carte valide jusqu'au</label>
+        <input type="text" class="form-input" value="{{ kyc_data.get('date_validite') or '' }}"
+               readonly style="background:hsl(0 0% 97%);color:#888;cursor:default;"
+               placeholder="JJ/MM/AAAA">
+        {% if kyc_data.get('date_validite') %}
+          {% set parts = kyc_data.get('date_validite').split('/') %}
+          {% if parts|length == 3 %}
+            {% set expiry_year = parts[2]|int %}
+            {% if expiry_year < 2026 %}
+            <p class="text-xs mt-1" style="color:hsl(0 84% 45%);">
+              <i data-lucide="alert-triangle" style="width:0.75rem;height:0.75rem;display:inline;"></i>
+              Carte expirée — veuillez fournir un document valide.
+            </p>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
 
     <div class="form-group">
@@ -189,6 +228,45 @@
   radios.forEach(r => r.addEventListener('change', function () {
     box.classList.toggle('hidden', this.value !== 'oui');
   }));
+})();
+
+// ── Drop zone ─────────────────────────────────────────────────────────────────
+(function () {
+  const zone  = document.getElementById('drop-zone');
+  const input = document.getElementById('kyc-file-input');
+  const label = document.getElementById('file-name');
+  if (!zone || !input || !label) return;
+
+  function showName(file) {
+    if (!file) return;
+    label.textContent = file.name;
+    label.style.display = 'block';
+  }
+
+  input.addEventListener('change', function () { showName(this.files[0]); });
+
+  zone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    this.style.borderColor = 'hsl(172 75% 28%)';
+    this.style.background  = 'hsl(172 75% 22% / 0.08)';
+  });
+
+  zone.addEventListener('dragleave', function () {
+    this.style.borderColor = 'hsl(172 75% 22% / 0.3)';
+    this.style.background  = 'hsl(172 75% 22% / 0.03)';
+  });
+
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    this.style.borderColor = 'hsl(172 75% 22% / 0.3)';
+    this.style.background  = 'hsl(172 75% 22% / 0.03)';
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    showName(file);
+  });
 })();
 
 // ── Date de naissance depuis le NISS ─────────────────────────────────────────

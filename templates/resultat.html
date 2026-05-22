@@ -101,7 +101,7 @@
       <div>
         <p class="text-xs uppercase tracking-widest font-semibold mb-1"
            style="color: {{ 'hsl(142 76% 28%)' if is_ok else ('hsl(35 90% 30%)' if is_verif else 'hsl(0 84% 38%)') }};">
-          Résultat de l'analyse IA
+          Résultat de l'analyse
         </p>
         <h1 class="font-display text-2xl md:text-3xl font-semibold leading-tight"
             style="color: {{ 'hsl(142 76% 20%)' if is_ok else ('hsl(35 90% 25%)' if is_verif else 'hsl(0 84% 25%)') }};">
@@ -202,6 +202,28 @@
       </p>
     </div>
   </div>
+
+  <!-- Warning: death coverage surplus -->
+  {% if r.couverture_deces_surplus %}
+  <div class="mb-10 flex items-start gap-4 rounded-2xl p-5"
+       style="background:hsl(35 95% 55% / 0.07); border:1px solid hsl(35 95% 55% / 0.35);">
+    <div class="flex-shrink-0 h-9 w-9 rounded-xl grid place-items-center"
+         style="background:hsl(35 95% 55% / 0.15);">
+      <i data-lucide="alert-triangle" style="width:1.125rem;height:1.125rem;color:hsl(35 90% 38%);"></i>
+    </div>
+    <div>
+      <p class="text-sm font-semibold mb-1" style="color:hsl(35 90% 28%);">
+        Couverture décès après transfert
+      </p>
+      <p class="text-sm leading-relaxed" style="color:hsl(35 90% 32%);">
+        Votre couverture décès actuelle ({{ r.couverture_deces }}) est supérieure aux réserves
+        transférées ({{ r.montant_total }}). La différence de <strong>{{ r.couverture_deces_surplus }}</strong>
+        ne sera plus assurée après la reprise par le nouveau contrat.
+        Envisagez une assurance décès complémentaire pour maintenir votre niveau de protection.
+      </p>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- CTA -->
   <div class="rounded-3xl p-8 text-center" style="background: linear-gradient(145deg, hsl(172 75% 12%) 0%, hsl(172 75% 22%) 100%);">

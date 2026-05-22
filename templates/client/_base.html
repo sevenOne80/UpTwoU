@@ -28,20 +28,28 @@
        class="sidebar-link {% if request.endpoint == 'client_contrats' %}active{% endif %}">
       <i data-lucide="file-text"></i> Mes contrats
     </a>
-    <a href="{{ url_for('client_transfert') }}"
-       class="sidebar-link {% if request.endpoint in ('client_dashboard', 'client_transfert', 'client_transfert_pdf') %}active{% endif %}">
-      <i data-lucide="send"></i> Transfert de réserves</a>
     <a href="{{ url_for('client_gestion') }}"
        class="sidebar-link {% if request.endpoint == 'client_gestion' %}active{% endif %}">
       <i data-lucide="bar-chart-2"></i> Gestion &amp; fonds
     </a>
+    <a href="{{ url_for('client_transfert') }}"
+       class="sidebar-link {% if request.endpoint in ('client_dashboard', 'client_transfert', 'client_transfert_pdf') %}active{% endif %}">
+      <i data-lucide="send"></i> Transfert de réserves</a>
     <a href="{{ url_for('client_profil') }}"
        class="sidebar-link {% if request.endpoint == 'client_profil' %}active{% endif %}">
-      <i data-lucide="sliders-horizontal"></i> Mon profil
+      <i data-lucide="sliders-horizontal"></i> Mon profil d'investisseur
     </a>
     <a href="{{ url_for('client_donnees') }}"
        class="sidebar-link {% if request.endpoint == 'client_donnees' %}active{% endif %}">
       <i data-lucide="user"></i> Mes données
+    </a>
+    <a href="{{ url_for('client_conditions_generales') }}"
+       class="sidebar-link {% if request.endpoint == 'client_conditions_generales' %}active{% endif %}">
+      <i data-lucide="book-open"></i> Conditions générales
+    </a>
+    <a href="{{ url_for('client_contact') }}"
+       class="sidebar-link {% if request.endpoint == 'client_contact' %}active{% endif %}">
+      <i data-lucide="message-circle"></i> Nous contacter
     </a>
 
     <div class="sidebar-spacer"></div>

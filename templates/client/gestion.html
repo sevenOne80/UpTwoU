@@ -28,25 +28,50 @@
 
   {% set actifs = client.contrats_actifs %}
   {% if actifs %}
-  <div style="position:relative;height:320px;">
+  <div style="position:relative;height:340px;">
     <canvas id="reserveChart"></canvas>
   </div>
 
   <!-- Legend -->
-  <div class="flex flex-wrap gap-4 mt-4 text-xs text-muted">
+  <div class="flex flex-wrap gap-x-5 gap-y-2 mt-4 text-xs text-muted">
     <div class="flex items-center gap-1.5">
-      <span style="display:inline-block;width:24px;height:3px;background:var(--primary);border-radius:2px;"></span>
-      Projection de croissance
+      <svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="hsl(142 76% 36%)" stroke-width="1.5" stroke-dasharray="5,3"/></svg>
+      Scénario favorable
     </div>
     <div class="flex items-center gap-1.5">
-      <span style="display:inline-block;width:3px;height:14px;background:hsl(142 76% 36%);border-radius:2px;"></span>
+      <span style="display:inline-block;width:28px;height:3px;background:hsl(172 75% 22%);border-radius:2px;"></span>
+      Scénario de base
+    </div>
+    <div class="flex items-center gap-1.5">
+      <svg width="28" height="10"><line x1="0" y1="5" x2="28" y2="5" stroke="hsl(35 90% 45%)" stroke-width="1.5" stroke-dasharray="5,3"/></svg>
+      Scénario défavorable
+    </div>
+    <div class="flex items-center gap-1.5" style="margin-left:0.5rem;padding-left:0.5rem;border-left:1px solid var(--border);">
+      <span style="display:inline-block;width:2px;height:14px;background:hsl(142 76% 36%);border-radius:2px;"></span>
       Injection de réserve
     </div>
     <div class="flex items-center gap-1.5">
-      <span style="display:inline-block;width:3px;height:14px;background:hsl(35 95% 45%);border-radius:2px;"></span>
+      <span style="display:inline-block;width:2px;height:14px;background:hsl(35 95% 45%);border-radius:2px;"></span>
       Date terme / pension
     </div>
   </div>
+
+  <!-- Terminal projections summary -->
+  <div class="grid grid-cols-3 gap-3 mt-5" id="scenario-summary" style="display:none!important;">
+    <div class="rounded-xl p-3 text-center" style="background:hsl(35 90% 45% / 0.06);border:1px solid hsl(35 90% 45% / 0.2);">
+      <p class="text-xs text-muted mb-1">Scénario défavorable</p>
+      <p class="font-display text-lg font-bold" style="color:hsl(35 80% 35%);" id="term-pess">—</p>
+    </div>
+    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.2);">
+      <p class="text-xs text-muted mb-1">Scénario de base</p>
+      <p class="font-display text-lg font-bold text-primary" id="term-base">—</p>
+    </div>
+    <div class="rounded-xl p-3 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
+      <p class="text-xs text-muted mb-1">Scénario favorable</p>
+      <p class="font-display text-lg font-bold" style="color:hsl(142 60% 28%);" id="term-opt">—</p>
+    </div>
+  </div>
+  <p class="text-xs text-muted mt-2 text-center" id="scenario-label" style="display:none;"></p>
   {% else %}
   <div class="text-center py-10">
     <div class="mx-auto h-14 w-14 rounded-2xl grid place-items-center mb-3"
@@ -64,19 +89,19 @@
   ('prudent',   'Prudent',   'shield',       'hsl(142 76% 36%)', 'hsl(142 76% 36% / 0.08)', 'hsl(142 76% 36% / 0.2)',
    'Priorité à la préservation du capital. Votre portefeuille est majoritairement constitué d\'obligations de qualité et d\'actifs monétaires, avec une exposition actions limitée pour capter une croissance modeste tout en contenant la volatilité.',
    [('Actions', '0 – 15 %', 80), ('Obligations', '60 – 80 %', 80), ('Monétaire &amp; divers', '10 – 30 %', 30)],
-   '3,5 %', 'Faible'),
+   '3,5 %', 'Faible', '1,0 – 6,0 %'),
   ('equilibre', 'Équilibré', 'scale',        'hsl(172 75% 28%)', 'hsl(172 75% 22% / 0.06)', 'hsl(172 75% 22% / 0.2)',
    'Un équilibre entre croissance et stabilité. La moitié de votre portefeuille est investie en actions diversifiées mondiales, l\'autre moitié en obligations. Ce profil vise un rendement régulier avec une volatilité maîtrisée sur le long terme.',
    [('Actions', '30 – 50 %', 50), ('Obligations', '40 – 60 %', 60), ('Divers', '5 – 15 %', 15)],
-   '5,0 %', 'Modérée'),
+   '5,0 %', 'Modérée', '1,5 – 8,5 %'),
   ('dynamique', 'Dynamique', 'trending-up',  'hsl(220 70% 45%)', 'hsl(220 70% 45% / 0.06)', 'hsl(220 70% 45% / 0.2)',
    'Votre portefeuille est majoritairement exposé aux marchés actions mondiaux. L\'objectif est la croissance du capital sur le long terme, en acceptant une volatilité plus marquée en contrepartie d\'un potentiel de rendement supérieur.',
    [('Actions', '60 – 80 %', 80), ('Obligations', '15 – 30 %', 30), ('Divers', '5 – 15 %', 15)],
-   '7,0 %', 'Élevée'),
+   '7,0 %', 'Élevée', '2,0 – 12,0 %'),
   ('conviction','Conviction', 'zap',         'hsl(35 95% 45%)', 'hsl(35 95% 55% / 0.06)', 'hsl(35 95% 55% / 0.3)',
    'Portefeuille concentré sur 8 à 11 positions actions à forte conviction (8–11 % par ligne). Maximum de diversification au sein des meilleures idées du gestionnaire. Volatilité élevée, potentiel de rendement maximal sur horizon long.',
    [('Actions (concentrées)', '80 – 100 %', 100), ('Liquidités', '0 – 20 %', 20)],
-   '9,0 %', 'Très élevée'),
+   '9,0 %', 'Très élevée', '2,0 – 16,0 %'),
 ] %}
 
 {% set found_profil = [] %}
@@ -123,17 +148,18 @@
   <!-- Key metrics -->
   <div class="grid sm:grid-cols-3 gap-3 mb-5">
     <div class="rounded-xl p-3 text-center" style="background:{{ p[4] }};border:1px solid {{ p[5] }};">
-      <p class="text-xs text-muted mb-1">Rendement attendu*</p>
+      <p class="text-xs text-muted mb-1">Scénario de base*</p>
       <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">{{ p[8] }}</p>
       <p class="text-xs text-muted">/ an</p>
     </div>
     <div class="rounded-xl p-3 text-center" style="background:{{ p[4] }};border:1px solid {{ p[5] }};">
-      <p class="text-xs text-muted mb-1">Volatilité</p>
-      <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">{{ p[9] }}</p>
+      <p class="text-xs text-muted mb-1">Fourchette de projection*</p>
+      <p class="font-display text-lg font-bold" style="color:{{ p[3] }};">{{ p[10] }}</p>
+      <p class="text-xs text-muted">/ an — se resserre dans le temps</p>
     </div>
     <div class="rounded-xl p-3 text-center" style="background:{{ p[4] }};border:1px solid {{ p[5] }};">
-      <p class="text-xs text-muted mb-1">Frais de gestion</p>
-      <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">1,95 %</p>
+      <p class="text-xs text-muted mb-1">Frais de gestion et de sous-jacents</p>
+      <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">0,10 % + 1,85 %</p>
       <p class="text-xs text-muted">/ an sur l'encours</p>
     </div>
   </div>
@@ -175,15 +201,8 @@
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0, 0, 0, 300);
-  grad.addColorStop(0, 'hsl(172 75% 22% / 0.20)');
-  grad.addColorStop(1, 'hsl(172 75% 22% / 0.00)');
-
-  // Format currency
   const fmt = v => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 
-  // Find pixel x for a date string (used for annotation lines)
   function dateIndex(iso) {
     return raw.dates.findIndex(d => d >= iso);
   }
@@ -192,17 +211,43 @@
     type: 'line',
     data: {
       labels: raw.dates,
-      datasets: [{
-        label: 'Réserve projetée',
-        data: raw.values,
-        borderColor: 'hsl(172 75% 22%)',
-        borderWidth: 2.5,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        fill: true,
-        backgroundColor: grad,
-        tension: 0.35,
-      }]
+      datasets: [
+        // 0 — Favorable (top of band), fills down to défavorable
+        {
+          label: 'Scénario favorable',
+          data: raw.opt,
+          borderColor: 'rgba(34,139,80,0.75)',
+          borderWidth: 1.5,
+          borderDash: [6, 3],
+          fill: { target: 1, above: 'rgba(34,139,80,0.07)' },
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.35,
+        },
+        // 1 — Défavorable (bottom of band)
+        {
+          label: 'Scénario défavorable',
+          data: raw.pess,
+          borderColor: 'rgba(210,120,30,0.75)',
+          borderWidth: 1.5,
+          borderDash: [6, 3],
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.35,
+        },
+        // 2 — Base (rendered last → on top)
+        {
+          label: 'Scénario de base',
+          data: raw.base,
+          borderColor: 'hsl(172,60%,28%)',
+          borderWidth: 2.5,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          tension: 0.35,
+        },
+      ]
     },
     options: {
       responsive: true,
@@ -216,13 +261,21 @@
           bodyColor: '#555',
           borderColor: 'hsl(172 75% 22% / 0.2)',
           borderWidth: 1,
-          padding: 10,
+          padding: 12,
+          itemSort: (a, b) => b.parsed.y - a.parsed.y,
           callbacks: {
             title: items => {
               const d = new Date(items[0].label);
               return d.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' });
             },
-            label: item => ' ' + fmt(item.parsed.y),
+            label: item => {
+              const names = { 0: '↑ Favorable', 1: '↓ Défavorable', 2: '◆ De base' };
+              return '  ' + (names[item.datasetIndex] || item.dataset.label) + ' : ' + fmt(item.parsed.y);
+            },
+            labelColor: item => {
+              const colors = ['rgba(34,139,80,1)', 'rgba(210,120,30,1)', 'hsl(172,60%,28%)'];
+              return { borderColor: colors[item.datasetIndex], backgroundColor: colors[item.datasetIndex] };
+            },
           }
         },
       },
@@ -232,7 +285,7 @@
           ticks: {
             maxTicksLimit: 8,
             maxRotation: 0,
-            callback: function(val, idx) {
+            callback: function(val) {
               const d = new Date(this.getLabelForValue(val));
               return d.toLocaleDateString('fr-BE', { month: 'short', year: '2-digit' });
             },
@@ -243,13 +296,21 @@
           border: { display: false },
         },
         y: {
+          min: 0,
+          suggestedMax: (function() {
+            const last = raw.opt[raw.opt.length - 1];
+            if (!last || last <= 0) return raw.reserve_actuelle * 1.5;
+            const target = last * 1.03;
+            const step = Math.pow(10, Math.floor(Math.log10(target)) - 1);
+            return Math.ceil(target / step) * step;
+          })(),
           ticks: {
             callback: v => fmt(v),
             color: '#888',
             font: { size: 11 },
             maxTicksLimit: 6,
           },
-          grid: { color: 'hsl(172 75% 22% / 0.07)' },
+          grid: { color: 'rgba(0,80,60,0.06)' },
           border: { display: false },
         }
       }
@@ -260,11 +321,10 @@
         const { ctx, scales: { x, y } } = chart;
         const top = y.top, bottom = y.bottom;
 
-        // Injection lines
         raw.injections.forEach(inj => {
           const idx = dateIndex(inj.date);
           if (idx < 0) return;
-          const xPos = x.getPixelForIndex(idx);
+          const xPos = x.getPixelForValue(raw.dates[idx]);
           ctx.save();
           ctx.beginPath();
           ctx.setLineDash([4, 4]);
@@ -273,8 +333,6 @@
           ctx.moveTo(xPos, top);
           ctx.lineTo(xPos, bottom);
           ctx.stroke();
-
-          // Label
           ctx.font = '10px Plus Jakarta Sans, sans-serif';
           ctx.fillStyle = 'hsl(142 76% 28%)';
           ctx.textAlign = 'left';
@@ -283,12 +341,11 @@
           ctx.restore();
         });
 
-        // Date terme / pension date line
         const endIso = raw.date_terme || raw.pension_date;
         if (endIso) {
           const idx = dateIndex(endIso);
           if (idx >= 0) {
-            const xPos = x.getPixelForIndex(idx);
+            const xPos = x.getPixelForValue(raw.dates[idx]);
             ctx.save();
             ctx.beginPath();
             ctx.setLineDash([]);
@@ -297,7 +354,6 @@
             ctx.moveTo(xPos, top);
             ctx.lineTo(xPos, bottom);
             ctx.stroke();
-
             ctx.font = 'bold 10px Plus Jakarta Sans, sans-serif';
             ctx.fillStyle = 'hsl(35 90% 35%)';
             ctx.textAlign = 'right';
@@ -308,6 +364,24 @@
       }
     }]
   });
+
+  // Terminal scenario values (at pension / end date)
+  const n = raw.base.length;
+  if (n > 0) {
+    document.getElementById('term-pess').textContent = fmt(raw.pess[n - 1]);
+    document.getElementById('term-base').textContent = fmt(raw.base[n - 1]);
+    document.getElementById('term-opt').textContent  = fmt(raw.opt[n - 1]);
+    const summary = document.getElementById('scenario-summary');
+    summary.style.removeProperty('display');
+    const endIso = raw.date_terme || raw.pension_date;
+    if (endIso) {
+      const d = new Date(endIso);
+      const label = d.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' });
+      const el = document.getElementById('scenario-label');
+      el.textContent = 'Projections à l\'échéance — ' + label + ' — la fourchette se resserre à mesure que l\'horizon s\'allonge.';
+      el.style.display = '';
+    }
+  }
 })();
 </script>
 {% endblock %}

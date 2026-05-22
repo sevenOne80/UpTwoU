@@ -60,6 +60,25 @@
       </button>
 
       <button type="button" class="clause-card text-left rounded-xl p-4 transition-all"
+              data-type="conjoint_enfants" data-label="Mon conjoint ou cohabitant légal et mes enfants, par parts égales"
+              style="border:2px solid var(--border);background:transparent;">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0"
+                 style="background:hsl(172 75% 22% / 0.08);">
+              <i data-lucide="users" style="width:1rem;height:1rem;color:var(--primary);"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-primary">Mon conjoint ou cohabitant légal et mes enfants</p>
+              <p class="text-xs text-muted">En premier rang, par parts égales entre eux, en pleine propriété</p>
+            </div>
+          </div>
+          <div class="clause-check flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0 font-bold"
+               style="border:2px solid var(--border);background:white;font-size:0.6rem;color:white;visibility:hidden;">✓</div>
+        </div>
+      </button>
+
+      <button type="button" class="clause-card text-left rounded-xl p-4 transition-all"
               data-type="enfants" data-label="Mes enfants"
               style="border:2px solid var(--border);background:transparent;">
         <div class="flex items-center justify-between gap-3">
@@ -418,9 +437,10 @@
       const d = JSON.parse(existing);
       if (d.type) {
         const lbl = d.label || (
-          d.type === 'conjoint'     ? 'Mon conjoint ou cohabitant légal' :
-          d.type === 'enfants'      ? 'Mes enfants en premier rang' :
-          d.type === 'heritiers'    ? 'Mes héritiers légaux selon l\'ordre successoral' :
+          d.type === 'conjoint'          ? 'Mon conjoint ou cohabitant légal' :
+          d.type === 'conjoint_enfants' ? 'Mon conjoint ou cohabitant légal et mes enfants, par parts égales' :
+          d.type === 'enfants'          ? 'Mes enfants en premier rang' :
+          d.type === 'heritiers'        ? 'Mes héritiers légaux selon l\'ordre successoral' :
           'Personnalisé'
         );
         selectClause(d.type, lbl);

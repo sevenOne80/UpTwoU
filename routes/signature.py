@@ -19,7 +19,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request, abort, current_app, send_file
 from flask_login import login_required, current_user
 
-from models import db, Contrat, TransfertSignature, SignatureEvent
+from models import db, Contrat, TransfertReserve, TransfertSignature, SignatureEvent
 from pdf_utils import generer_annexe1, NOUVEL_NOM, NOUVEL_BCE, NOUVEL_IBAN
 from services.connective_service import (
     initiate_transfer_signature,
@@ -104,22 +104,22 @@ def _traiter_signature_complete(transfert_sig: TransfertSignature):
 
         # Envoi email à l'assureur cédant + CC client
         try:
-            contrat = transfert_sig.contrat
-            client  = contrat.client
-            ref_ass = contrat.assureur_ref
-            if ref_ass and ref_ass.email_transfert:
+            transfert = transfert_sig.transfert   # TransfertReserve (source dormant)
+            client    = transfert.client if transfert else None
+            ref_ass   = transfert.assureur_ref if transfert else None
+            if client and ref_ass and ref_ass.email_transfert:
                 send_signed_transfer_email(
                     client_email=client.user.email,
                     client_nom=f"{client.prenom or ''} {client.nom or ''}".strip(),
                     insurer_email=ref_ass.email_transfert,
-                    insurer_nom=ref_ass.nom_legal or contrat.assureur or '',
+                    insurer_nom=ref_ass.nom_legal or (transfert.assureur if transfert else '') or '',
                     reference=transfert_sig.reference,
                     signed_pdf_path=docs["signed_pdf_path"],
                 )
             else:
                 logger.warning(
                     "Pas d'email_transfert pour %s — envoi ignoré (réf. %s)",
-                    contrat.assureur, transfert_sig.reference,
+                    transfert.assureur if transfert else '?', transfert_sig.reference,
                 )
         except Exception:
             logger.exception("Erreur envoi email post-signature (réf. %s)", transfert_sig.reference)
@@ -140,56 +140,46 @@ def initier_signature():
     Response  : { "ok": true, "reference": "UTU-2026-00001", "package_id": "...", "signing_url": "..." }
     """
     data = request.get_json(force=True)
-    contrat_id = data.get("contrat_id")
+    transfert_id = data.get("transfert_id") or data.get("contrat_id")
     use_itsme = data.get("use_itsme", True)
 
-    if not contrat_id:
-        abort(400, description="contrat_id est requis")
+    if not transfert_id:
+        abort(400, description="transfert_id est requis")
 
-    contrat = db.session.get(Contrat, contrat_id)
-    if not contrat:
-        abort(404, description=f"Contrat {contrat_id} introuvable")
+    transfert = db.session.get(TransfertReserve, transfert_id)
+    if not transfert:
+        abort(404, description=f"TransfertReserve {transfert_id} introuvable")
 
-    # Vérification d'accès : le client ne peut signer que ses propres contrats
-    client = contrat.client
+    client = transfert.client
     if current_user.role == 'client' and client.user_id != current_user.id:
         abort(403)
 
-    # Crée ou récupère le TransfertSignature pour ce contrat
-    ts = TransfertSignature.query.filter_by(contrat_id=contrat_id).first()
+    ts = TransfertSignature.query.filter_by(transfert_id=transfert_id).first()
     if not ts:
         ts = TransfertSignature(
             reference=_generate_reference(),
-            contrat_id=contrat_id,
+            transfert_id=transfert_id,
             statut_signature='non_initie',
         )
         db.session.add(ts)
         db.session.flush()
 
-    # Crée le contrat B23 UpTwoU si ce n'est pas déjà fait (un seul par client)
-    if not ts.nouveau_contrat_id:
-        b23_contrat = next(
-            (c for c in client.contrats
-             if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
-            None
-        )
+    if not ts.contrat_id:
+        b23_contrat = next(iter(client.contrats), None)
         if not b23_contrat:
             b23_contrat = Contrat(
                 client_id=client.id,
-                assureur=NOUVEL_NOM,
                 numero=ts.reference,
                 type_branche='Branche 23',
                 statut='actif',
             )
             db.session.add(b23_contrat)
             db.session.flush()
-        ts.nouveau_contrat_id = b23_contrat.id
+        ts.contrat_id = b23_contrat.id
         db.session.flush()
 
-    # Génère le PDF Annexe 1 avec le numéro du contrat B23 partagé
-    b23_num = ts.nouveau_contrat.numero if ts.nouveau_contrat else ts.reference
-    dest = ts.nouveau_contrat.assureur_dest if ts.nouveau_contrat else None
-    pdf_bytes = generer_annexe1(client, contrat, nouveau_contrat_ref=b23_num, dest=dest)
+    b23_num = ts.contrat.numero if ts.contrat else ts.reference
+    pdf_bytes = generer_annexe1(client, transfert, nouveau_contrat_ref=b23_num)
     pdf_path = _save_draft_pdf(ts.reference, pdf_bytes)
 
     affilie = {
@@ -253,21 +243,15 @@ def initier_signature_tout():
     transfers = []
 
     from pdf_utils import NOUVEL_NOM
-    # Find or create ONE shared B23 UpTwoU contract for this client
-    b23_contrat = next(
-        (c for c in client.contrats
-         if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
-        None
-    )
+    b23_contrat = next(iter(client.contrats), None)
 
-    for contrat in dormants:
-        ts = TransfertSignature.query.filter_by(contrat_id=contrat.id).first()
+    for transfert in dormants:
+        ts = TransfertSignature.query.filter_by(transfert_id=transfert.id).first()
         if not ts:
             ref = _generate_reference()
             if not b23_contrat:
                 b23_contrat = Contrat(
                     client_id=client.id,
-                    assureur=NOUVEL_NOM,
                     numero=ref,
                     type_branche='Branche 23',
                     statut='actif',
@@ -276,29 +260,27 @@ def initier_signature_tout():
                 db.session.flush()
             ts = TransfertSignature(
                 reference=ref,
-                contrat_id=contrat.id,
+                transfert_id=transfert.id,
                 statut_signature='non_initie',
-                nouveau_contrat_id=b23_contrat.id,
+                contrat_id=b23_contrat.id,
             )
             db.session.add(ts)
             db.session.flush()
-        elif not ts.nouveau_contrat_id:
+        elif not ts.contrat_id:
             if not b23_contrat:
                 b23_contrat = Contrat(
                     client_id=client.id,
-                    assureur=NOUVEL_NOM,
                     numero=ts.reference,
                     type_branche='Branche 23',
                     statut='actif',
                 )
                 db.session.add(b23_contrat)
                 db.session.flush()
-            ts.nouveau_contrat_id = b23_contrat.id
+            ts.contrat_id = b23_contrat.id
             db.session.flush()
 
-        b23_num = ts.nouveau_contrat.numero if ts.nouveau_contrat else ts.reference
-        dest = ts.nouveau_contrat.assureur_dest if ts.nouveau_contrat else None
-        pdf_bytes = generer_annexe1(client, contrat, nouveau_contrat_ref=b23_num, dest=dest)
+        b23_num = ts.contrat.numero if ts.contrat else ts.reference
+        pdf_bytes = generer_annexe1(client, transfert, nouveau_contrat_ref=b23_num)
         pdf_path = _save_draft_pdf(ts.reference, pdf_bytes)
 
         ts_list.append(ts)

@@ -9,3 +9,7 @@ flask-wtf
 email-validator
 fpdf2
 requests
+flask-admin
+pymupdf
+pytesseract
+pillow

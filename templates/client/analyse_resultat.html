@@ -1,4 +1,4 @@
-{% extends "client/_base.html" %}
+﻿{% extends "client/_base.html" %}
 {% block title %}Résultat de l'analyse{% endblock %}
 
 {% block content %}
@@ -110,11 +110,33 @@
 </div>
 {% endif %}
 
+<!-- Warning: death coverage surplus -->
+{% if r.couverture_deces_surplus %}
+<div class="dashboard-card mb-5 flex items-start gap-4"
+     style="background:hsl(35 95% 55% / 0.07); border:1px solid hsl(35 95% 55% / 0.35);">
+  <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+       style="background:hsl(35 95% 55% / 0.15);">
+    <i data-lucide="alert-triangle" style="width:1.125rem;height:1.125rem;color:hsl(35 90% 38%);"></i>
+  </div>
+  <div>
+    <p class="text-sm font-semibold mb-1" style="color:hsl(35 90% 28%);">
+      Couverture décès après transfert
+    </p>
+    <p class="text-sm leading-relaxed" style="color:hsl(35 90% 32%);">
+      Votre couverture décès actuelle ({{ r.couverture_deces }}) est supérieure aux réserves
+      transférées ({{ r.montant_total }}). La différence de <strong>{{ r.couverture_deces_surplus }}</strong>
+      ne sera plus assurée après la reprise par le nouveau contrat.
+      Envisagez une assurance décès complémentaire pour maintenir votre niveau de protection.
+    </p>
+  </div>
+</div>
+{% endif %}
+
 <!-- Actions -->
 <div class="flex flex-wrap items-center gap-3">
   <form method="POST" action="{{ url_for('client_maj_analyse') }}">
     {{ form.hidden_tag() }}
-    <button type="submit" class="btn btn-primary" style="height:2.75rem;padding:0 1.75rem;">
+    <button type="submit" class="btn btn-primary" style="height:2.75rem;padding:1.75rem;">
       <i data-lucide="save" style="width:1rem;height:1rem;margin-right:0.5rem;"></i>
       Mettre à jour mon dossier
     </button>

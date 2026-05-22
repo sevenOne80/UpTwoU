@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, SubmitField, RadioField, HiddenField
+from wtforms import StringField, PasswordField, SelectField, SubmitField, RadioField, HiddenField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp, ValidationError
 
 
@@ -168,6 +168,20 @@ class OnboardingContratForm(FlaskForm):
                 raise ValidationError('IBAN invalide — caractères non autorisés.')
         if int(numeric) % 97 != 1:
             raise ValidationError('IBAN invalide — numéro de contrôle incorrect.')
+
+
+class ClientContactForm(FlaskForm):
+    sujet = SelectField('Sujet', choices=[
+        ('', '— Choisissez un sujet —'),
+        ('Mon contrat', 'Mon contrat'),
+        ('Transfert de réserves', 'Transfert de réserves'),
+        ("Profil d'investissement", "Profil d'investissement"),
+        ('Question générale', 'Question générale'),
+        ('Problème technique', 'Problème technique'),
+        ('Autre', 'Autre'),
+    ], validators=[DataRequired(message='Veuillez choisir un sujet.')])
+    message = TextAreaField('Message', validators=[DataRequired(), Length(min=10, max=2000)])
+    submit = SubmitField('Envoyer le message')
 
 
 class QuestionnaireForm(FlaskForm):

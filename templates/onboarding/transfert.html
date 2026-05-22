@@ -39,7 +39,7 @@
     <p class="text-xs text-muted mt-0.5">n° {{ c.numero or '—' }} · {{ c.reserve or '—' }} €</p>
   </div>
   <div class="flex items-center gap-2">
-    <a href="{{ url_for('onboarding_annexe1_pdf', contrat_id=c.id) }}" target="_blank"
+    <a href="{{ url_for('onboarding_annexe1_pdf', transfert_id=c.id) }}" target="_blank"
        class="btn btn-ghost text-xs flex items-center gap-1" style="padding:0.25rem 0.6rem;">
       <i data-lucide="file-text" style="width:0.75rem;height:0.75rem;"></i>
       PDF
@@ -75,7 +75,7 @@
     <p class="text-xs text-muted mt-0.5">n° {{ c.numero or '—' }} · {{ c.reserve or '—' }} €</p>
   </div>
   <div class="flex items-center gap-2 flex-shrink-0">
-    <a href="{{ url_for('onboarding_annexe1_pdf', contrat_id=c.id) }}" target="_blank"
+    <a href="{{ url_for('onboarding_annexe1_pdf', transfert_id=c.id) }}" target="_blank"
        class="btn btn-ghost text-xs flex items-center gap-1" style="padding:0.25rem 0.6rem;">
       <i data-lucide="file-text" style="width:0.75rem;height:0.75rem;"></i>
       PDF
@@ -219,7 +219,7 @@
                   Dormant
                 </span>
               </div>
-              <a href="{{ url_for('onboarding_annexe1_pdf', contrat_id=c.id) }}" target="_blank"
+              <a href="{{ url_for('onboarding_annexe1_pdf', transfert_id=c.id) }}" target="_blank"
                  class="btn btn-ghost text-xs flex items-center gap-1 flex-shrink-0"
                  style="padding:0.2rem 0.55rem;">
                 <i data-lucide="file-text" style="width:0.7rem;height:0.7rem;"></i>

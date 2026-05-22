@@ -2,10 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Subdomain architecture
+
+| Subdomain | Dev URL | Project | Description |
+|---|---|---|---|
+| `www.uptwou.be` | `localhost:5000` | `UpTwoU/` | Public website (same Flask app as app.) |
+| `app.uptwou.be` | `localhost:5000` | `UpTwoU/` | Client & onboarding space (same Flask app) |
+| `admin.uptwou.be` | `localhost:5001` | `admin.uptwou/` | Separate Flask-Admin project |
+
+The admin panel lives in the sibling `../admin.uptwou/` project. It imports `models.py` from
+this project and points at the same `uptwou.db` database file.
+
 ## Running the app
 
 ```bash
-python app.py          # starts Flask dev server on http://localhost:5000
+python app.py     # main app → http://localhost:5000  (www + app subdomains)
+# admin panel: cd ../admin.uptwou && python app.py
 ```
 
 ## Database migrations

@@ -10,18 +10,20 @@ from email.mime.base import MIMEBase
 from email import encoders as email_encoders
 import pdfplumber
 import anthropic
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 from functools import wraps
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, User, Client, Contrat, Analyse, ContactMessage, ProfilChangeLog, CabinetCourtage, TransfertSignature, SignatureEvent, seed_assureurs
-from pdf_utils import generer_annexe1, NOUVEL_NOM
+from models import db, User, Client, Contrat, Analyse, ContactMessage, ProfilChangeLog, CabinetCourtage, TransfertSignature, SignatureEvent, TransfertReserve, seed_assureurs
+from pdf_utils import generer_annexe1, generer_extrait_contrat, NOUVEL_NOM
+from pdf_parser import parse_mypension_pdf
+from kyc_parser import parse_belgian_eid
 from services.connective_service import initiate_batch_transfer_signature
 from routes.signature import signature_bp
 import itsme_auth
-from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, OnboardingContratForm, QuestionnaireForm, EmptyForm
+from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, OnboardingContratForm, QuestionnaireForm, EmptyForm, ClientContactForm
 
 try:
     from dotenv import load_dotenv
@@ -49,6 +51,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# ── Session security ──────────────────────────────────────────────────────────
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_COOKIE_HTTPONLY']    = True
+app.config['SESSION_COOKIE_SAMESITE']   = 'Lax'
+app.config['SESSION_COOKIE_SECURE']     = os.environ.get('FLASK_ENV') == 'production'
+
 db.init_app(app)
 app.register_blueprint(signature_bp)
 
@@ -58,6 +66,25 @@ login_manager.login_message = 'Veuillez vous connecter pour accéder à cette pa
 login_manager.login_message_category = 'error'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+@app.before_request
+def enforce_session_timeout():
+    """Force logout after 30 min of inactivity for authenticated users."""
+    if not current_user.is_authenticated:
+        return
+    last_str = session.get('_last_activity')
+    if last_str:
+        try:
+            last = datetime.fromisoformat(last_str)
+            if (datetime.now(timezone.utc).replace(tzinfo=None) - last).total_seconds() > 1800:
+                logout_user()
+                session.clear()
+                flash("Votre session a expiré. Veuillez vous reconnecter.", "error")
+                return redirect(url_for('login'))
+        except (ValueError, TypeError):
+            pass
+    session['_last_activity'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 
 def _parse_reserve(val) -> float:
@@ -297,6 +324,18 @@ def pension_date_for(bd):
     Age 66 if reached before 01/01/2030, else 67."""
     at_66 = _add_years(bd, 66)
     return at_66 if at_66 < date(2030, 1, 1) else _add_years(bd, 67)
+
+
+_MOIS_FR = ['janvier','février','mars','avril','mai','juin',
+            'juillet','août','septembre','octobre','novembre','décembre']
+
+
+def retirement_date_for(bd):
+    """1st of the month following the statutory pension birthday."""
+    pd = pension_date_for(bd)
+    if pd.month == 12:
+        return date(pd.year + 1, 1, 1)
+    return date(pd.year, pd.month + 1, 1)
 
 
 def remaining_to_pension(bd):
@@ -657,12 +696,7 @@ def analyser():
         file.save(filepath)
 
         try:
-            texte = extract_pdf_text(filepath)
-            if not texte.strip():
-                flash("Le PDF semble vide ou illisible.", "error")
-                return redirect(url_for("analyser"))
-
-            json_brut = analyse_avec_claude(texte)
+            json_brut = parse_mypension_pdf(filepath)
             resultat = json.loads(json_brut)
 
             # ── Post-process: exclude Vitis / Onelife ──────────────────────
@@ -724,9 +758,6 @@ def analyser():
 
         except json.JSONDecodeError:
             flash("L'analyse n'a pas pu être interprétée. Veuillez réessayer.", "error")
-            return redirect(url_for("analyser"))
-        except anthropic.APIError as e:
-            flash(f"Erreur lors de l'analyse IA : {e}", "error")
             return redirect(url_for("analyser"))
         except Exception as e:
             flash(f"Une erreur inattendue s'est produite : {e}", "error")
@@ -792,13 +823,13 @@ def register():
         db.session.flush()
 
         for c in analyse.get('contrats', []):
-            db.session.add(Contrat(
+            db.session.add(TransfertReserve(
                 client_id=client_profile.id,
                 analyse_id=analyse_record.id,
                 assureur=c.get('assureur'),
                 numero=c.get('numero'),
                 type_branche=c.get('type_branche'),
-                statut=c.get('statut', 'inconnu'),
+                statut=c.get('statut', 'dormant'),
                 reserve=c.get('reserve'),
                 date_valeur=c.get('date_valeur'),
                 organisateur=c.get('organisateur'),
@@ -832,6 +863,8 @@ def verifier_email(token):
     user.email_token = None
     db.session.commit()
     login_user(user)
+    session.permanent = True
+    session['_last_activity'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     flash("Votre adresse e-mail est confirmée. Bienvenue sur UpTwoU !", "success")
     return redirect(url_for('onboarding_kyc'))
 
@@ -857,16 +890,40 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = User.query.filter_by(email=form.email.data.strip().lower()).first()
+
+        # ── Lockout check ────────────────────────────────────────────────────
+        if user and user.is_locked():
+            remaining = int((user.locked_until - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds() / 60) + 1
+            flash(f"Compte temporairement bloqué suite à trop de tentatives. "
+                  f"Réessayez dans {remaining} minute{'s' if remaining > 1 else ''}.", "error")
+            return render_template("login.html", form=form)
+
         if user and user.check_password(form.password.data):
             if not user.email_confirmed:
                 return redirect(url_for('email_en_attente', email=user.email))
+            user.reset_login_attempts()
+            db.session.commit()
             login_user(user)
+            session.permanent = True
+            session['_last_activity'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             next_page = request.args.get('next')
             if not next_page:
                 next_page = url_for('admin_dashboard' if user.role == 'courtier' else 'client_dashboard')
             return redirect(next_page)
-        flash("Email ou mot de passe incorrect.", "error")
+
+        # ── Failed attempt ───────────────────────────────────────────────────
+        if user:
+            user.record_failed_login()
+            db.session.commit()
+            remaining_attempts = max(0, 5 - (user.failed_login_attempts or 0))
+            if user.is_locked():
+                flash("Compte bloqué pendant 15 minutes après 5 tentatives échouées.", "error")
+            else:
+                flash(f"Email ou mot de passe incorrect. "
+                      f"Il vous reste {remaining_attempts} tentative{'s' if remaining_attempts != 1 else ''}.", "error")
+        else:
+            flash("Email ou mot de passe incorrect.", "error")
 
     return render_template("login.html", form=form)
 
@@ -958,6 +1015,8 @@ def auth_itsme_callback():
         flash("Connexion itsme réussie.", "success")
 
     login_user(user)
+    session.permanent = True
+    session['_last_activity'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
     if next_url:
         return redirect(next_url)
@@ -982,20 +1041,58 @@ def client_contrats():
     actifs = client.contrats_actifs
     new_ids = [c.id for c in actifs]
     ts_rows = TransfertSignature.query.filter(
-        TransfertSignature.nouveau_contrat_id.in_(new_ids)
+        TransfertSignature.contrat_id.in_(new_ids)
     ).all() if new_ids else []
     ts_by_contrat = {}
     for ts in ts_rows:
-        ts_by_contrat.setdefault(ts.nouveau_contrat_id, []).append(ts)
+        ts_by_contrat.setdefault(ts.contrat_id, []).append(ts)
     ts_statuts_by_contrat = {
         cid: {t.statut_signature for t in lst}
         for cid, lst in ts_by_contrat.items()
     }
+    date_retraite_str = None
+    age_retraite = None
+    if client.niss:
+        bd = birthdate_from_niss(client.niss)
+        if bd:
+            at_66 = _add_years(bd, 66)
+            age_retraite = 66 if at_66 < date(2030, 1, 1) else 67
+            rd = retirement_date_for(bd)
+            date_retraite_str = f"1er {_MOIS_FR[rd.month - 1]} {rd.year}"
+
+    profil_locked = False
+    next_profil_change = None
+    if client.profil_date:
+        days_since = (datetime.now(timezone.utc).replace(tzinfo=None) - client.profil_date).days
+        if days_since < 90:
+            profil_locked = True
+            next_profil_change = (client.profil_date + timedelta(days=90)).strftime('%d/%m/%Y')
+
     return render_template("client/contrats.html",
                            client=client,
                            ts_by_contrat=ts_by_contrat,
                            ts_statuts_by_contrat=ts_statuts_by_contrat,
-                           today=date.today())
+                           today=date.today(),
+                           date_retraite_str=date_retraite_str,
+                           age_retraite=age_retraite,
+                           profil_locked=profil_locked,
+                           next_profil_change=next_profil_change)
+
+
+@app.route("/client/contrat/<int:contract_id>/extrait")
+@login_required
+@client_required
+def client_extrait_contrat(contract_id):
+    client = current_user.client_profile
+    contract = db.session.get(Contrat, contract_id)
+    if not contract or contract.client_id != client.id:
+        abort(404)
+    pdf_bytes = generer_extrait_contrat(client, contract)
+    from flask import Response
+    filename = f"extrait-contrat-{contract.numero or contract_id}.pdf"
+    return Response(pdf_bytes, mimetype='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    })
 
 
 @app.route("/api/courtiers/search")
@@ -1083,6 +1180,12 @@ def client_demande_changement_courtier():
 @client_required
 def client_modifier_profil():
     client = current_user.client_profile
+    if client.profil_date:
+        days_since = (datetime.now(timezone.utc).replace(tzinfo=None) - client.profil_date).days
+        if days_since < 90:
+            next_date = (client.profil_date + timedelta(days=90)).strftime('%d/%m/%Y')
+            flash(f"Profil modifiable une fois par trimestre. Prochain changement possible le {next_date}.", "error")
+            return redirect(url_for('client_contrats'))
     profil = request.form.get("profil_risque", "").strip()
     if profil in ("prudent", "equilibre", "dynamique", "conviction"):
         _log_profil_change(client, profil, "client")
@@ -1184,7 +1287,10 @@ def client_gestion():
         day = min(d.day, 28)
         return date(y, m, day)
 
-    reserve_actuelle = sum(_parse_reserve(c.reserve) for c in client.contrats_actifs)
+    # Valeur des réserves reçues sur les contrats UpTwoU
+    reserve_actuelle = sum(
+        (rr.montant or 0.0) for c in client.contrats_actifs for rr in c.reserves_recues
+    )
 
     date_terme = None
     for c in client.contrats_actifs:
@@ -1203,29 +1309,44 @@ def client_gestion():
         end_date = date(today.year + 20, today.month, today.day)
 
     injections = []
-    for c in client.contrats:
-        inj = _parse_date_fr(c.date_transfert)
-        if inj:
-            injections.append({'date': inj.isoformat(), 'label': c.assureur or 'Injection'})
+    for c in client.contrats_actifs:
+        for rr in c.reserves_recues:
+            inj = _parse_date_fr(rr.date_reception)
+            if inj:
+                label = rr.transfert.assureur if rr.transfert else 'Injection'
+                injections.append({'date': inj.isoformat(), 'label': label})
 
-    RETURN_RATES = {'prudent': 0.035, 'equilibre': 0.05, 'dynamique': 0.07, 'conviction': 0.09}
-    rate = RETURN_RATES.get(client.profil_risque, 0.05)
-    monthly_rate = (1 + rate) ** (1 / 12) - 1
+    # Scenario parameters: base return + annual volatility spread (σ)
+    # Spread decays as σ/√t → band is wide near term, converges over time
+    SCENARIO_PROFILES = {
+        'prudent':    {'r': 0.035, 'sigma': 0.025},
+        'equilibre':  {'r': 0.050, 'sigma': 0.035},
+        'dynamique':  {'r': 0.070, 'sigma': 0.050},
+        'conviction': {'r': 0.090, 'sigma': 0.070},
+    }
+    sp = SCENARIO_PROFILES.get(client.profil_risque or '', {'r': 0.050, 'sigma': 0.035})
+    r_base, sigma = sp['r'], sp['sigma']
 
-    proj_dates, proj_values = [], []
+    proj_dates, proj_base, proj_opt, proj_pess = [], [], [], []
     if reserve_actuelle > 0:
-        cur, val = today, reserve_actuelle
+        cur, m = today, 0
         while cur <= end_date:
+            t = m / 12                          # years elapsed
+            spread = sigma / max(t, 1.0) ** 0.5 # cap at t=1 → max spread = sigma
             proj_dates.append(cur.isoformat())
-            proj_values.append(round(val, 2))
+            proj_base.append(round(reserve_actuelle * (1 + r_base) ** t, 2))
+            proj_opt.append(round(reserve_actuelle * (1 + r_base + spread) ** t, 2))
+            proj_pess.append(round(max(reserve_actuelle * (1 + r_base - spread) ** t, 0), 2))
             cur = _add_month(cur)
-            val *= (1 + monthly_rate)
+            m += 1
 
     chart_data = json.dumps({
-        'dates': proj_dates,
-        'values': proj_values,
-        'injections': injections,
-        'date_terme': date_terme.isoformat() if date_terme else None,
+        'dates':       proj_dates,
+        'base':        proj_base,
+        'opt':         proj_opt,
+        'pess':        proj_pess,
+        'injections':  injections,
+        'date_terme':  date_terme.isoformat() if date_terme else None,
         'pension_date': pension_dt.isoformat() if pension_dt else None,
         'reserve_actuelle': reserve_actuelle,
     })
@@ -1251,7 +1372,8 @@ def client_profil():
         flash("Profil d'investissement mis à jour.", "success")
         return redirect(url_for('client_profil'))
 
-    return render_template("client/profil.html", client=client, form=form)
+    logs = sorted(client.profil_logs, key=lambda l: l.created_at, reverse=True)
+    return render_template("client/profil.html", client=client, form=form, logs=logs)
 
 
 @app.route("/client/questionnaire", methods=["GET", "POST"])
@@ -1322,6 +1444,36 @@ def client_donnees():
     return render_template("client/donnees.html", client=client, form=form)
 
 
+@app.route("/client/contact", methods=["GET", "POST"])
+@login_required
+@client_required
+def client_contact():
+    client = current_user.client_profile
+    form = ClientContactForm()
+    if form.validate_on_submit():
+        msg = ContactMessage(
+            client_id=client.id,
+            nom=f"{client.prenom or ''} {client.nom or ''}".strip() or current_user.email,
+            email=current_user.email,
+            sujet=form.sujet.data,
+            message=form.message.data,
+        )
+        db.session.add(msg)
+        db.session.commit()
+        flash("Votre message a bien été envoyé. Notre équipe vous répondra dans les plus brefs délais.", "success")
+        return redirect(url_for('client_contact'))
+    messages = ContactMessage.query.filter_by(client_id=client.id)\
+                                   .order_by(ContactMessage.created_at.desc()).all()
+    return render_template("client/contact.html", client=client, form=form, messages=messages)
+
+
+@app.route("/client/conditions-generales")
+@login_required
+@client_required
+def client_conditions_generales():
+    return render_template("client/conditions_generales.html")
+
+
 # ── Transfert routes ──────────────────────────────────────────────────────────
 @app.route("/client/extrait")
 @login_required
@@ -1342,27 +1494,38 @@ def client_extrait():
 @client_required
 def client_transfert():
     client = current_user.client_profile
-    dormants = client.contrats_dormants
+    latest = client.latest_analyse
+    if latest:
+        entrants = [t for t in client.transfer_requests
+                    if t.analyse_id == latest.id and t.statut in ('dormant', 'en_cours', 'recu')]
+    else:
+        entrants = [t for t in client.transfer_requests if t.statut in ('dormant', 'en_cours', 'recu')]
     ts_map = {}
-    for c in dormants:
-        sigs = sorted(c.transfert_signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
-        ts_map[c.id] = sigs[0] if sigs else None
+    for t in client.transfer_requests:
+        sigs = sorted(t.signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
+        ts_map[t.id] = sigs[0] if sigs else None
+    transferts_out = sorted(client.outgoing_transfers,
+                            key=lambda t: t.created_at or datetime.min,
+                            reverse=True)
     return render_template("client/transfert.html", client=client,
-                           dormants=dormants, ts_map=ts_map)
+                           entrants=entrants, ts_map=ts_map,
+                           transferts_out=transferts_out)
 
 
-@app.route("/client/transfert/<int:contrat_id>/pdf")
+@app.route("/client/transfert/<int:transfert_id>/pdf")
 @login_required
 @client_required
-def client_transfert_pdf(contrat_id):
+def client_transfert_pdf(transfert_id):
     from io import BytesIO
-    from pdf_utils import generer_annexe1
-    contrat = Contrat.query.get_or_404(contrat_id)
-    if contrat.client_id != current_user.client_profile.id:
+    transfert = db.session.get(TransfertReserve, transfert_id)
+    if not transfert or transfert.client_id != current_user.client_profile.id:
         flash("Accès non autorisé.", "error")
         return redirect(url_for('client_transfert'))
-    pdf_bytes = generer_annexe1(current_user.client_profile, contrat)
-    slug = re.sub(r'[^a-z0-9]+', '_', (contrat.assureur or 'assureur').lower())[:30]
+    ts = next((s for s in transfert.signatures), None)
+    b23_num = ts.contrat.numero if ts and ts.contrat else None
+    pdf_bytes = generer_annexe1(current_user.client_profile, transfert,
+                                nouveau_contrat_ref=b23_num)
+    slug = re.sub(r'[^a-z0-9]+', '_', (transfert.assureur or 'assureur').lower())[:30]
     return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
                      as_attachment=True,
                      download_name=f"annexe1_transfert_{slug}.pdf")
@@ -1393,10 +1556,42 @@ def onboarding_kyc():
                     file.save(fpath)
                     client.kyc_document = fname
                     db.session.commit()
-                    extracted = analyse_piece_identite(fpath)
-                    session['kyc_data'] = extracted
-                    kyc_data = extracted
-                    flash("Document analysé. Vérifiez et complétez vos données.", "success")
+                    try:
+                        extracted = parse_belgian_eid(fpath)
+                        session['kyc_data'] = extracted
+
+                        # ── Validité de la carte d'identité ──────────────
+                        date_val = extracted.get('date_validite')
+                        if date_val:
+                            try:
+                                d, m, y = date_val.split('/')
+                                if date(int(y), int(m), int(d)) < date.today():
+                                    flash(
+                                        f"Carte d'identité expirée le {date_val}. "
+                                        "Veuillez fournir un document en cours de validité.",
+                                        "error"
+                                    )
+                            except (ValueError, AttributeError):
+                                pass
+
+                        # ── Concordance NISS mypension ↔ carte d'identité ──
+                        niss_mp = re.sub(r'\D', '', client.niss or '')
+                        niss_ci = re.sub(r'\D', '', extracted.get('niss') or '')
+                        if niss_mp and niss_ci and niss_mp != niss_ci:
+                            flash(
+                                f"Attention : le numéro national de la carte ({extracted.get('niss')}) "
+                                f"ne correspond pas à celui de l'extrait mypension.be ({client.niss}). "
+                                "Vérifiez et corrigez avant de confirmer.",
+                                "error"
+                            )
+                        else:
+                            flash("Document analysé. Vérifiez et complétez vos données.", "success")
+
+                        kyc_data = extracted
+                    except FileNotFoundError as e:
+                        flash(str(e), "error")
+                    except Exception as e:
+                        flash(f"Lecture du document impossible : {e}. Remplissez le formulaire manuellement.", "error")
                 else:
                     flash("Format non supporté (JPG, PNG ou PDF uniquement).", "error")
             return redirect(url_for('onboarding_kyc'))
@@ -1427,10 +1622,11 @@ def onboarding_kyc():
             client.pays = form.pays.data
             client.est_ppe = (form.est_ppe.data == 'oui')
             client.ppe_details = form.ppe_details.data.strip() if client.est_ppe else None
+            client.ci_date_validite = session.get('kyc_data', {}).get('date_validite')
             client.kyc_verifie = True
             db.session.commit()
             session.pop('kyc_data', None)
-            return redirect(url_for('onboarding_profil'))
+            return redirect(url_for('onboarding_questionnaire'))
 
     # Pre-fill form from AI extraction or existing client data
     if request.method == 'GET':
@@ -1483,6 +1679,10 @@ def onboarding_profil():
     client = current_user.client_profile
     if not client.kyc_verifie:
         return redirect(url_for('onboarding_kyc'))
+    if client.questionnaire_score is None:
+        return redirect(url_for('onboarding_questionnaire'))
+
+    questionnaire_profil = score_to_profil(client.questionnaire_score)
 
     if request.method == 'POST':
         profil = request.form.get('profil')
@@ -1496,7 +1696,9 @@ def onboarding_profil():
 
     return render_template("onboarding/profil.html", current_step=2,
                            profil_actuel=client.profil_risque,
-                           prev_url=url_for('onboarding_kyc'))
+                           questionnaire_profil=questionnaire_profil,
+                           questionnaire_score=client.questionnaire_score,
+                           prev_url=url_for('onboarding_questionnaire'))
 
 
 @app.route("/onboarding/questionnaire", methods=["GET", "POST"])
@@ -1539,7 +1741,7 @@ def onboarding_questionnaire():
         client.profil_date = datetime.now(timezone.utc)
         client.questionnaire_score = score
         db.session.commit()
-        return redirect(url_for('onboarding_contrat'))
+        return redirect(url_for('onboarding_profil'))
 
     if q1_prefill is not None:
         form.q1.data = q1_prefill
@@ -1670,43 +1872,50 @@ def onboarding_transfert():
     dormants = client.contrats_dormants
 
     if request.method == 'POST':
+        # Compute retirement date once — used when creating the B23 contract
+        _date_terme_str = None
+        if client.niss:
+            _bd = birthdate_from_niss(client.niss)
+            if _bd:
+                _date_terme_str = retirement_date_for(_bd).strftime('%d/%m/%Y')
+
         # ── Test bypass: skip validation and Connective ────────────────────────
         if request.form.get('skip_test') == '1':
-            b23_contrat = next(
-                (c for c in client.contrats
-                 if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
-                None
-            )
+            b23_contrat = next(iter(client.contrats), None)
             ts_count = TransfertSignature.query.count()
             year = datetime.now(timezone.utc).year
-            for c in dormants:
-                if TransfertSignature.query.filter_by(contrat_id=c.id).first():
+            for t in dormants:
+                if TransfertSignature.query.filter_by(transfert_id=t.id).first():
                     continue
                 ts_count += 1
                 ts_ref = f"UTU-{year}-{ts_count:05d}"
                 if not b23_contrat:
                     b23_contrat = Contrat(
-                        client_id=client.id, assureur=NOUVEL_NOM,
+                        client_id=client.id,
+                        pension_insurer_id=1,
+                        cabinet_id=client.cabinet_id,
                         numero=ts_ref, type_branche='Branche 23', statut='actif',
+                        date_terme=_date_terme_str,
+                        beneficiaires_json=client.beneficiaires_json,
                     )
                     db.session.add(b23_contrat)
                     db.session.flush()
                 db.session.add(TransfertSignature(
-                    reference=ts_ref, contrat_id=c.id,
-                    statut_signature='non_initie', nouveau_contrat_id=b23_contrat.id,
+                    reference=ts_ref, transfert_id=t.id,
+                    statut_signature='non_initie', contrat_id=b23_contrat.id,
                 ))
             db.session.commit()
             return redirect(url_for('onboarding_synthese'))
 
         selected_ids = [int(i) for i in request.form.getlist('contrat_ids') if i.isdigit()]
-        dormants_by_id = {c.id: c for c in dormants}
+        dormants_by_id = {t.id: t for t in dormants}
         selected = [dormants_by_id[i] for i in selected_ids if i in dormants_by_id]
 
         if not selected:
             flash("Sélectionnez au moins un contrat à transférer.", "error")
             return redirect(url_for('onboarding_transfert'))
 
-        total = sum(_parse_reserve(c.reserve) for c in selected)
+        total = sum(_parse_reserve(t.reserve) for t in selected)
         if total < 10_000:
             flash(
                 f"Le total des réserves sélectionnées ({total:,.0f} €) est inférieur à 10 000 € "
@@ -1715,11 +1924,7 @@ def onboarding_transfert():
             )
             return redirect(url_for('onboarding_transfert'))
 
-        b23_contrat = next(
-            (c for c in client.contrats
-             if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
-            None
-        )
+        b23_contrat = next(iter(client.contrats), None)
         ts_count = TransfertSignature.query.count()
         year = datetime.now(timezone.utc).year
         ts_list = []
@@ -1727,10 +1932,10 @@ def onboarding_transfert():
         folder = Path(app.root_path) / 'transfer_pdfs'
         folder.mkdir(parents=True, exist_ok=True)
 
-        for c in selected:
-            existing = TransfertSignature.query.filter_by(contrat_id=c.id).first()
+        for t in selected:
+            existing = TransfertSignature.query.filter_by(transfert_id=t.id).first()
             if existing and existing.statut_signature == 'signe':
-                continue  # already signed — skip
+                continue
             ts = existing
             if not ts:
                 ts_count += 1
@@ -1738,25 +1943,27 @@ def onboarding_transfert():
                 if not b23_contrat:
                     b23_contrat = Contrat(
                         client_id=client.id,
-                        assureur=NOUVEL_NOM,
+                        pension_insurer_id=1,
+                        cabinet_id=client.cabinet_id,
                         numero=ts_ref,
                         type_branche='Branche 23',
                         statut='actif',
+                        date_terme=_date_terme_str,
+                        beneficiaires_json=client.beneficiaires_json,
                     )
                     db.session.add(b23_contrat)
                     db.session.flush()
                 ts = TransfertSignature(
                     reference=ts_ref,
-                    contrat_id=c.id,
+                    transfert_id=t.id,
                     statut_signature='non_initie',
-                    nouveau_contrat_id=b23_contrat.id,
+                    contrat_id=b23_contrat.id,
                 )
                 db.session.add(ts)
                 db.session.flush()
             ts_list.append(ts)
-            b23_num = ts.nouveau_contrat.numero if ts.nouveau_contrat else ts.reference
-            dest = ts.nouveau_contrat.assureur_dest if ts.nouveau_contrat else None
-            pdf_bytes = generer_annexe1(client, c, nouveau_contrat_ref=b23_num, dest=dest)
+            b23_num = ts.contrat.numero if ts.contrat else ts.reference
+            pdf_bytes = generer_annexe1(client, t, nouveau_contrat_ref=b23_num)
             pdf_path = folder / f"{ts.reference}.pdf"
             pdf_path.write_bytes(pdf_bytes)
             transfers.append((ts.reference, pdf_path))
@@ -1807,7 +2014,7 @@ def onboarding_transfert():
         return redirect(url_for('onboarding_transfert'))
 
     # ── GET ────────────────────────────────────────────────────────────────────
-    ts_all = [ts for c in dormants for ts in c.transfert_signatures]
+    ts_all = [ts for t in dormants for ts in t.signatures]
     phase = 'selection'
     signing_url = None
 
@@ -1821,11 +2028,11 @@ def onboarding_transfert():
             signing_url = ts_with_url.signing_url if ts_with_url else None
 
     ts_map = {}
-    for c in dormants:
-        sigs = sorted(c.transfert_signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
-        ts_map[c.id] = sigs[0] if sigs else None
+    for t in dormants:
+        sigs = sorted(t.signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
+        ts_map[t.id] = sigs[0] if sigs else None
 
-    reserves = {c.id: _parse_reserve(c.reserve) for c in dormants}
+    reserves = {t.id: _parse_reserve(t.reserve) for t in dormants}
 
     return render_template("onboarding/transfert.html", client=client,
                            dormants=dormants, ts_map=ts_map,
@@ -1833,23 +2040,22 @@ def onboarding_transfert():
                            reserves=reserves, current_step=5)
 
 
-@app.route("/onboarding/contrat/<int:contrat_id>/pdf")
+@app.route("/onboarding/transfert/<int:transfert_id>/pdf")
 @login_required
 @client_required
-def onboarding_annexe1_pdf(contrat_id):
-    """Generate and serve the Annexe 1 PDF for a given dormant contract (inline)."""
+def onboarding_annexe1_pdf(transfert_id):
+    """Generate and serve the Annexe 1 PDF for a given transfer request (inline)."""
     from flask import Response
     client = current_user.client_profile
-    contrat = db.session.get(Contrat, contrat_id)
-    if not contrat or contrat.client_id != client.id:
+    transfert = db.session.get(TransfertReserve, transfert_id)
+    if not transfert or transfert.client_id != client.id:
         abort(404)
-    ts = TransfertSignature.query.filter_by(contrat_id=contrat_id).first()
-    b23_num = ts.nouveau_contrat.numero if ts and ts.nouveau_contrat else None
-    dest = ts.nouveau_contrat.assureur_dest if ts and ts.nouveau_contrat else None
-    pdf_bytes = generer_annexe1(client, contrat, nouveau_contrat_ref=b23_num, dest=dest)
+    ts = next((s for s in transfert.signatures), None)
+    b23_num = ts.contrat.numero if ts and ts.contrat else None
+    pdf_bytes = generer_annexe1(client, transfert, nouveau_contrat_ref=b23_num)
     return Response(
         pdf_bytes, mimetype='application/pdf',
-        headers={'Content-Disposition': f'inline; filename="annexe1_{contrat_id}.pdf"'},
+        headers={'Content-Disposition': f'inline; filename="annexe1_{transfert_id}.pdf"'},
     )
 
 
@@ -1868,22 +2074,17 @@ def onboarding_synthese():
         return redirect(url_for('onboarding_frais'))
     dormants = client.contrats_dormants
     if dormants and not any(
-        TransfertSignature.query.filter_by(contrat_id=c.id).first() for c in dormants
+        TransfertSignature.query.filter_by(transfert_id=t.id).first() for t in dormants
     ):
         return redirect(url_for('onboarding_transfert'))
     ts_map = {}
-    for c in dormants:
-        sigs = sorted(c.transfert_signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
-        ts_map[c.id] = sigs[0] if sigs else None
+    for t in dormants:
+        sigs = sorted(t.signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
+        ts_map[t.id] = sigs[0] if sigs else None
 
-    # Only show contracts actually selected in step 5 (have a TS record)
-    contrats_selectionnes = [c for c in dormants if ts_map.get(c.id)]
+    contrats_selectionnes = [t for t in dormants if ts_map.get(t.id)]
 
-    b23_contrat = next(
-        (c for c in client.contrats
-         if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
-        None
-    )
+    b23_contrat = next(iter(client.contrats), None)
     uptwou_refs = [b23_contrat.numero] if b23_contrat else []
 
     non_null_ts = [ts for ts in ts_map.values() if ts]
@@ -1928,12 +2129,7 @@ def client_analyser():
         file.save(filepath)
 
         try:
-            texte = extract_pdf_text(filepath)
-            if not texte.strip():
-                flash("Le PDF semble vide ou illisible.", "error")
-                return redirect(url_for("client_analyser"))
-
-            json_brut = analyse_avec_claude(texte)
+            json_brut = parse_mypension_pdf(filepath)
             resultat = json.loads(json_brut)
 
             if 'contrats' in resultat:
@@ -1976,8 +2172,6 @@ def client_analyser():
 
         except json.JSONDecodeError:
             flash("L'analyse n'a pas pu être interprétée. Veuillez réessayer.", "error")
-        except anthropic.APIError as e:
-            flash(f"Erreur IA : {e}", "error")
         except Exception as e:
             flash(f"Erreur inattendue : {e}", "error")
         return redirect(url_for("client_analyser"))
@@ -2028,15 +2222,15 @@ def client_maj_analyse():
     db.session.add(new_analyse)
     db.session.flush()  # populate new_analyse.id
 
-    # Add new contracts linked to this analysis (historical ones are preserved)
+    # Add new transfer requests linked to this analysis
     for c in analyse.get('contrats', []):
-        db.session.add(Contrat(
+        db.session.add(TransfertReserve(
             client_id=client.id,
             analyse_id=new_analyse.id,
             assureur=c.get('assureur'),
             numero=c.get('numero'),
             type_branche=c.get('type_branche'),
-            statut=c.get('statut', 'inconnu'),
+            statut=c.get('statut', 'dormant'),
             reserve=c.get('reserve'),
             date_valeur=c.get('date_valeur'),
             organisateur=c.get('organisateur'),
@@ -2114,6 +2308,8 @@ def admin_register():
         db.session.commit()
 
         login_user(user)
+        session.permanent = True
+        session['_last_activity'] = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         return redirect(url_for('admin_dashboard'))
 
     return render_template("admin/register.html", form=form)
@@ -2148,8 +2344,8 @@ def dev_fake_analyse():
             "Statut salarié confirmé pour les deux contrats."
         ],
         "personne": {
-            "prenom": "Thomas",
-            "nom":    "Dumont",
+            "prenom": "Tahsin",
+            "nom":    "Bilgin",
             "niss":   "80031524705",
             "adresse": "Rue de la Loi 42, 1040 Bruxelles"
         },

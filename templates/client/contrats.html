@@ -32,7 +32,7 @@
   {% for c in client.contrats_actifs %}
   {% set is_b21 = c.type_branche == 'Branche 21' %}
   {% set is_b23 = c.type_branche == 'Branche 23' %}
-  {% set is_uptwou = is_b23 and c.analyse_id is none %}
+  {% set is_uptwou = is_b23 %}
   {% set branch_color = 'hsl(213 80% 50%)' if is_b21 else ('hsl(172 75% 28%)' if is_b23 else 'hsl(260 60% 55%)') %}
   {% set branch_bg    = 'hsl(213 80% 50% / 0.08)' if is_b21 else ('hsl(172 75% 28% / 0.08)' if is_b23 else 'hsl(260 60% 55% / 0.08)') %}
   {% set profil = client.profil_risque %}
@@ -109,7 +109,7 @@
           <i data-lucide="building-2" style="width:1.125rem;height:1.125rem;color:{{ branch_color }};"></i>
         </div>
         <div>
-          <p class="font-semibold text-primary">{{ 'Contrat de pension extra-légal individuel' if is_uptwou else (c.assureur or 'Assureur inconnu') }}</p>
+          <p class="font-semibold text-primary">{{ 'Contrat de pension extra-légal individuel salarié' if is_uptwou else (c.assureur or 'Assureur inconnu') }}</p>
           {% if c.numero %}
           <span class="text-xs text-muted font-mono tracking-wide">{{ c.numero }}</span>
           {% endif %}
@@ -205,11 +205,11 @@
 
       <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);">
         <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Réserve</p>
-        <p class="font-display text-xl font-bold text-primary">{{ c.reserve or '—' }}{% if c.reserve %} €{% endif %}</p>
+        <p class="font-display text-xl font-bold text-primary">{{ c.total_reserve or '—' }}{% if c.total_reserve %} €{% endif %}</p>
         <p class="text-xs text-muted mt-0.5">
-          {% if c.date_valeur %}au {{ c.date_valeur }}{% else %}non valorisé{% endif %}
+          {% if c.derniere_reception %}au {{ c.derniere_reception }}{% else %}non valorisé{% endif %}
         </p>
-        <p class="text-xs text-muted mt-0.5">Organisme de pension : {{ c.assureur_dest.nom if c.assureur_dest else c.assureur or 'UpTwoU' }}</p>
+        <p class="text-xs text-muted mt-0.5">Organisme de pension : {{ c.pension_insurer.nom_legal if c.pension_insurer else 'UpTwoU' }}</p>
       </div>
 
       <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);border-left:1px solid var(--border);border-right:1px solid var(--border);">
@@ -229,8 +229,13 @@
 
       <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);">
         <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Retraite</p>
-        <p class="font-display text-xl font-bold text-primary">{{ c.date_terme or '—' }}</p>
-        <p class="text-xs text-muted mt-0.5">échéance du contrat</p>
+        {% if date_retraite_str %}
+        <p class="font-display text-base font-bold text-primary leading-tight">{{ date_retraite_str }}</p>
+        <p class="text-xs text-muted mt-0.5">âge légal : {{ age_retraite }} ans</p>
+        {% else %}
+        <p class="font-display text-xl font-bold text-muted">—</p>
+        <p class="text-xs text-muted mt-0.5">NISS requis</p>
+        {% endif %}
       </div>
 
     </div>
@@ -325,7 +330,7 @@
 
           {# Frais #}
           <div class="px-4 pt-4 pb-3">
-            <div class="grid grid-cols-3 gap-2 mb-2">
+            <div class="grid grid-cols-4 gap-2 mb-2">
               <div class="rounded-lg p-2.5 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.15);">
                 <p class="text-xs text-muted mb-0.5">Entrée</p>
                 <p class="font-bold text-base" style="color:hsl(142 60% 28%);">0 %</p>
@@ -333,7 +338,12 @@
               </div>
               <div class="rounded-lg p-2.5 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
                 <p class="text-xs text-muted mb-0.5">Gestion</p>
-                <p class="font-bold text-base text-primary">1,95 %</p>
+                <p class="font-bold text-base text-primary">0,10 %</p>
+                <p class="text-xs text-muted" style="font-size:0.65rem;">par an</p>
+              </div>
+              <div class="rounded-lg p-2.5 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+                <p class="text-xs text-muted mb-0.5">Actifs sous-jacents</p>
+                <p class="font-bold text-base text-primary">1,85 %</p>
                 <p class="text-xs text-muted" style="font-size:0.65rem;">par an</p>
               </div>
               <div class="rounded-lg p-2.5 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.15);">
@@ -346,20 +356,16 @@
 
           {# Documents #}
           <div class="px-4 pb-4 pt-1 flex flex-col sm:flex-row gap-2">
-            {% if client.latest_analyse and client.latest_analyse.filename %}
-            <a href="{{ url_for('client_extrait') }}"
-               target="_blank"
+            <a href="{{ url_for('client_extrait_contrat', contract_id=c.id) }}"
                class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
                style="background:hsl(172 75% 22% / 0.07);color:var(--primary);text-decoration:none;border:1px solid hsl(172 75% 22% / 0.15);">
-              <i data-lucide="file-text" style="width:0.875rem;height:0.875rem;"></i>
-              Mon contrat
+              <i data-lucide="file-down" style="width:0.875rem;height:0.875rem;"></i>
+              Extrait de contrat
             </a>
-            {% endif %}
-            <a href="{{ url_for('static', filename='docs/conditions-generales.pdf') }}"
-               target="_blank"
+            <a href="{{ url_for('client_conditions_generales') }}"
                class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
                style="background:hsl(35 90% 45% / 0.07);color:hsl(35 80% 30%);text-decoration:none;border:1px solid hsl(35 90% 45% / 0.2);">
-              <i data-lucide="scroll-text" style="width:0.875rem;height:0.875rem;"></i>
+              <i data-lucide="book-open" style="width:0.875rem;height:0.875rem;"></i>
               Conditions générales
             </a>
           </div>
@@ -393,6 +399,24 @@
         <i data-lucide="x" style="width:1.25rem;height:1.25rem;"></i>
       </button>
     </div>
+    {% if profil_locked %}
+    <div class="flex items-start gap-3 rounded-xl p-4 mb-5" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 90% 50% / 0.30);">
+      <i data-lucide="lock" style="width:1rem;height:1rem;flex-shrink:0;margin-top:1px;color:hsl(35 90% 38%);"></i>
+      <div>
+        <p class="text-sm font-semibold" style="color:hsl(35 90% 28%);">Modification temporairement bloquée</p>
+        <p class="text-xs mt-1 leading-relaxed" style="color:hsl(35 80% 35%);">
+          Le profil d'investissement ne peut être modifié qu'une fois par trimestre.
+          Prochain changement possible le <strong>{{ next_profil_change }}</strong>.
+        </p>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button type="button" onclick="document.getElementById('modal-profil').close()"
+              class="btn" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;background:hsl(0 0% 96%);color:var(--muted-foreground);border:1px solid var(--border);">
+        Fermer
+      </button>
+    </div>
+    {% else %}
     <form method="post" action="{{ url_for('client_modifier_profil') }}">
       <div class="flex flex-col gap-3 mb-6">
         {% for slug, label, desc, color in [
@@ -437,6 +461,7 @@
         </button>
       </div>
     </form>
+    {% endif %}
   </div>
 </dialog>
 

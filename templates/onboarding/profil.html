@@ -3,28 +3,42 @@
 
 {% block head_extra %}
 <style>
-  .profil-ob-card {
+  .profil-card {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1.25rem 1.5rem;
-    border-radius: 1rem;
+    padding: 1.125rem 1.25rem;
+    border-radius: 0.875rem;
     border: 2px solid var(--border);
     background: white;
     cursor: pointer;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
     width: 100%;
     text-align: left;
+    position: relative;
   }
-  .profil-ob-card:hover {
-    border-color: hsl(172 75% 35%);
-    box-shadow: 0 4px 16px hsl(172 75% 22% / 0.12);
-  }
-  .profil-ob-card.selected {
+  .profil-card:hover { border-color: hsl(172 75% 35%); }
+  .profil-card.selected {
     border-color: var(--primary);
     background: hsl(172 75% 22% / 0.04);
-    box-shadow: 0 4px 20px hsl(172 75% 22% / 0.18);
+    box-shadow: 0 4px 20px hsl(172 75% 22% / 0.15);
   }
+  .profil-card.risky:hover { border-color: hsl(35 90% 45%); }
+  .profil-card.risky.selected {
+    border-color: hsl(35 90% 45%);
+    background: hsl(35 95% 55% / 0.05);
+    box-shadow: 0 4px 20px hsl(35 95% 55% / 0.15);
+  }
+  .profil-card input[type="radio"] { display: none; }
+  .pill-dot {
+    width: 1rem; height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid hsl(172 30% 65%);
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .profil-card.selected .pill-dot { background: var(--primary); border-color: var(--primary); }
+  .profil-card.risky.selected .pill-dot { background: hsl(35 90% 45%); border-color: hsl(35 90% 45%); }
 </style>
 {% endblock %}
 
@@ -32,93 +46,138 @@
 <div class="mb-8">
   <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 6</p>
   <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Votre profil d'investissement</h1>
-  <p class="mt-2 text-muted text-sm leading-relaxed">Choisissez le profil qui correspond le mieux à vos objectifs et à votre tolérance au risque.</p>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Le questionnaire MiFID a déterminé votre profil. Confirmez-le ou adaptez-le si vous le souhaitez.</p>
 </div>
 
-<!-- Questionnaire CTA — mis en avant -->
-<a href="{{ url_for('onboarding_questionnaire') }}"
-   class="flex items-center gap-4 rounded-2xl p-5 mb-5 transition-all hover:shadow-md"
-   style="background:hsl(35 95% 55% / 0.10);border:2px solid hsl(35 95% 55% / 0.45);text-decoration:none;">
-  <div class="flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0"
-       style="background:hsl(35 95% 55% / 0.18);">
-    <i data-lucide="clipboard-list" style="width:1.375rem;height:1.375rem;color:hsl(35 90% 35%);"></i>
-  </div>
-  <div class="flex-1 min-w-0">
-    <p class="font-semibold text-sm" style="color:hsl(35 90% 28%);">Vous hésitez ? Faites le test !</p>
-    <p class="text-xs mt-0.5" style="color:hsl(35 80% 38%);">Répondez à 6 questions pour découvrir votre profil optimal — 2 minutes chrono.</p>
-  </div>
-  <i data-lucide="arrow-right" style="width:1.125rem;height:1.125rem;color:hsl(35 90% 35%);flex-shrink:0;"></i>
-</a>
+{# ── Résultat du questionnaire ── #}
+{% set PROFIL_META = {
+  'prudent':   {'icon': 'shield',      'color': 'hsl(172 75% 22%)', 'bg': 'hsl(172 75% 22% / 0.08)', 'label': 'Prudent',   'desc': 'Capital préservé en priorité · rendement stable · risque faible',       'perf': '~2–3 % /an'},
+  'equilibre': {'icon': 'scale',       'color': 'hsl(35 90% 35%)',  'bg': 'hsl(35 95% 55% / 0.12)',   'label': 'Équilibré', 'desc': 'Mix actions / obligations · volatilité modérée · rendement régulier',    'perf': '~4–6 % /an'},
+  'dynamique': {'icon': 'trending-up', 'color': 'hsl(142 76% 36%)','bg': 'hsl(142 76% 36% / 0.10)',  'label': 'Dynamique', 'desc': 'Orienté actions · croissance long terme · volatilité acceptée',           'perf': '~6–9 % /an'},
+  'conviction':{'icon': 'target',      'color': 'hsl(270 60% 50%)','bg': 'hsl(270 60% 55% / 0.10)',  'label': 'Conviction','desc': 'Portefeuille concentré · forte volatilité · rendement maximal',           'perf': '~9–12 % /an'},
+} %}
+{% set qp = PROFIL_META[questionnaire_profil] %}
 
-<div class="rounded-2xl p-6" style="background:white;border:1px solid var(--border);">
-  <p class="text-xs font-semibold uppercase tracking-widest text-muted mb-4">Ou choisissez directement</p>
-  <div class="flex flex-col gap-3">
+<div class="rounded-2xl p-6 mb-6" style="background:hsl(172 75% 22% / 0.04);border:2px solid hsl(172 75% 22% / 0.25);">
+  <p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:hsl(172 75% 28%);">Résultat du questionnaire MiFID</p>
 
-    <!-- Prudent -->
+  <div class="flex items-center gap-4 mb-5">
+    <div class="h-14 w-14 rounded-xl grid place-items-center flex-shrink-0" style="background:{{ qp.bg }};">
+      <i data-lucide="{{ qp.icon }}" style="width:1.5rem;height:1.5rem;color:{{ qp.color }};"></i>
+    </div>
+    <div>
+      <p class="font-display text-2xl font-semibold text-primary">{{ qp.label }}</p>
+      <p class="text-xs text-muted mt-0.5">{{ qp.desc }}</p>
+      <p class="text-xs font-semibold mt-1" style="color:{{ qp.color }};">{{ qp.perf }}</p>
+    </div>
+    <div class="ml-auto text-right flex-shrink-0">
+      <p class="text-2xl font-bold text-primary">{{ questionnaire_score }}<span class="text-sm font-normal text-muted">/18</span></p>
+      <p class="text-xs text-muted">score MiFID</p>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3 flex-wrap">
     <form method="POST">
-      <input type="hidden" name="profil" value="prudent">
-      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'prudent' }}">
-        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.1);">
-          <i data-lucide="shield" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+      <input type="hidden" name="profil" value="{{ questionnaire_profil }}">
+      <button type="submit" class="btn btn-primary">
+        <i data-lucide="check" style="width:1rem;height:1rem;"></i>
+        Confirmer ce profil
+      </button>
+    </form>
+    <a href="{{ url_for('onboarding_questionnaire') }}" class="btn btn-ghost text-sm">
+      <i data-lucide="refresh-cw" style="width:0.875rem;height:0.875rem;"></i>
+      Refaire le questionnaire
+    </a>
+  </div>
+</div>
+
+{# ── Override section ── #}
+<div class="rounded-2xl p-6" style="background:white;border:1px solid var(--border);">
+  <p class="text-xs font-semibold uppercase tracking-widest text-muted mb-4">Adapter mon profil</p>
+
+  <form method="POST" id="profil-form">
+    <div class="flex flex-col gap-3 mb-4">
+
+      {# Prudent #}
+      <label class="profil-card {{ 'selected' if profil_actuel == 'prudent' }}" data-rank="0">
+        <input type="radio" name="profil" value="prudent" {{ 'checked' if profil_actuel == 'prudent' }}>
+        <span class="pill-dot"></span>
+        <div class="h-10 w-10 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="shield" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-primary">Prudent</p>
+          <p class="font-semibold text-primary text-sm">Prudent</p>
           <p class="text-xs text-muted mt-0.5">Capital préservé en priorité · rendement stable · risque faible</p>
           <p class="text-xs font-semibold mt-1" style="color:hsl(172 75% 28%);">~2–3 % /an</p>
         </div>
-        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
-      </button>
-    </form>
+      </label>
 
-    <!-- Équilibré -->
-    <form method="POST">
-      <input type="hidden" name="profil" value="equilibre">
-      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'equilibre' }}">
-        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(35 95% 55% / 0.12);">
-          <i data-lucide="scale" style="width:1.25rem;height:1.25rem;color:var(--accent);"></i>
+      {# Équilibré #}
+      <label class="profil-card {{ 'selected' if profil_actuel == 'equilibre' }}" data-rank="1">
+        <input type="radio" name="profil" value="equilibre" {{ 'checked' if profil_actuel == 'equilibre' }}>
+        <span class="pill-dot"></span>
+        <div class="h-10 w-10 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(35 95% 55% / 0.12);">
+          <i data-lucide="scale" style="width:1.125rem;height:1.125rem;color:var(--accent);"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-primary">Équilibré</p>
+          <p class="font-semibold text-primary text-sm">Équilibré</p>
           <p class="text-xs text-muted mt-0.5">Mix actions / obligations · volatilité modérée · rendement régulier</p>
           <p class="text-xs font-semibold mt-1" style="color:hsl(35 90% 32%);">~4–6 % /an</p>
         </div>
-        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
-      </button>
-    </form>
+      </label>
 
-    <!-- Dynamique -->
-    <form method="POST">
-      <input type="hidden" name="profil" value="dynamique">
-      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'dynamique' }}">
-        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(142 76% 36% / 0.1);">
-          <i data-lucide="trending-up" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);"></i>
+      {# Dynamique #}
+      <label class="profil-card {{ 'selected' if profil_actuel == 'dynamique' }}" data-rank="2">
+        <input type="radio" name="profil" value="dynamique" {{ 'checked' if profil_actuel == 'dynamique' }}>
+        <span class="pill-dot"></span>
+        <div class="h-10 w-10 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(142 76% 36% / 0.1);">
+          <i data-lucide="trending-up" style="width:1.125rem;height:1.125rem;color:hsl(142 76% 36%);"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-primary">Dynamique</p>
+          <p class="font-semibold text-primary text-sm">Dynamique</p>
           <p class="text-xs text-muted mt-0.5">Orienté actions · croissance long terme · volatilité acceptée</p>
           <p class="text-xs font-semibold mt-1" style="color:hsl(142 60% 28%);">~6–9 % /an</p>
         </div>
-        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
-      </button>
-    </form>
+      </label>
 
-    <!-- Conviction -->
-    <form method="POST">
-      <input type="hidden" name="profil" value="conviction">
-      <button type="submit" class="profil-ob-card {{ 'selected' if profil_actuel == 'conviction' }}">
-        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0" style="background:hsl(270 60% 55% / 0.1);">
-          <i data-lucide="target" style="width:1.25rem;height:1.25rem;color:hsl(270 60% 50%);"></i>
+      {# Conviction #}
+      <label class="profil-card {{ 'selected' if profil_actuel == 'conviction' }}" data-rank="3">
+        <input type="radio" name="profil" value="conviction" {{ 'checked' if profil_actuel == 'conviction' }}>
+        <span class="pill-dot"></span>
+        <div class="h-10 w-10 rounded-lg grid place-items-center flex-shrink-0" style="background:hsl(270 60% 55% / 0.1);">
+          <i data-lucide="target" style="width:1.125rem;height:1.125rem;color:hsl(270 60% 50%);"></i>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-primary">Conviction</p>
+          <p class="font-semibold text-primary text-sm">Conviction</p>
           <p class="text-xs text-muted mt-0.5">Portefeuille concentré · forte volatilité · rendement maximal</p>
           <p class="text-xs font-semibold mt-1" style="color:hsl(270 50% 35%);">~9–12 % /an</p>
         </div>
-        <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
-      </button>
-    </form>
+      </label>
+    </div>
 
-  </div>
+    {# Risk warning (shown by JS when a riskier profile is selected) #}
+    <div id="risk-warning" class="hidden rounded-xl p-4 mb-4" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 90% 50% / 0.35);">
+      <div class="flex items-start gap-2">
+        <i data-lucide="triangle-alert" style="width:1rem;height:1rem;flex-shrink:0;margin-top:1px;color:hsl(35 90% 38%);"></i>
+        <div>
+          <p class="text-sm font-semibold" style="color:hsl(35 90% 28%);">Profil plus risqué que votre résultat MiFID</p>
+          <p class="text-xs mt-1 leading-relaxed" style="color:hsl(35 80% 35%);">
+            Le profil sélectionné est plus exposé aux marchés financiers que celui calculé par le questionnaire.
+            Les pertes potentielles sont plus importantes et la volatilité plus élevée.
+            Ce choix sera consigné dans votre dossier conformément aux règles MiFID II.
+          </p>
+          <label class="flex items-center gap-2 mt-3 cursor-pointer">
+            <input type="checkbox" id="risk-confirm" style="accent-color:hsl(35 90% 38%);width:1rem;height:1rem;">
+            <span class="text-xs font-semibold" style="color:hsl(35 85% 28%);">Je comprends et j'accepte un profil plus risqué que recommandé.</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" id="override-submit" class="btn btn-primary" disabled>
+      Choisir ce profil
+    </button>
+  </form>
 </div>
 
 <div class="mt-4 flex items-start gap-3 rounded-2xl p-4"
@@ -132,4 +191,60 @@
     Vous pouvez récupérer un montant inférieur à celui investi.
   </p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const RANK = { prudent: 0, equilibre: 1, dynamique: 2, conviction: 3 };
+  const scoredRank = RANK['{{ questionnaire_profil }}'];
+
+  const cards      = document.querySelectorAll('.profil-card');
+  const warning    = document.getElementById('risk-warning');
+  const checkbox   = document.getElementById('risk-confirm');
+  const submitBtn  = document.getElementById('override-submit');
+
+  function updateState(selectedCard) {
+    const rank = parseInt(selectedCard.dataset.rank, 10);
+    const isRisky = rank > scoredRank;
+
+    cards.forEach(c => {
+      c.classList.remove('selected', 'risky');
+      const r = c.querySelector('input[type="radio"]');
+      if (r && r.checked) {
+        c.classList.add('selected');
+        if (isRisky) c.classList.add('risky');
+      }
+    });
+
+    if (isRisky) {
+      warning.classList.remove('hidden');
+      checkbox.checked = false;
+      submitBtn.disabled = true;
+    } else {
+      warning.classList.add('hidden');
+      submitBtn.disabled = false;
+    }
+  }
+
+  cards.forEach(card => {
+    card.addEventListener('click', function () {
+      const radio = this.querySelector('input[type="radio"]');
+      if (!radio) return;
+      radio.checked = true;
+      updateState(this);
+    });
+  });
+
+  checkbox.addEventListener('change', function () {
+    submitBtn.disabled = !this.checked;
+  });
+
+  // Init state if a card is already selected
+  cards.forEach(card => {
+    const radio = card.querySelector('input[type="radio"]');
+    if (radio && radio.checked) updateState(card);
+  });
+})();
+</script>
 {% endblock %}

@@ -1,0 +1,450 @@
+{% extends "client/_base.html" %}
+{% block title %}Conditions Générales{% endblock %}
+
+{% block content %}
+<style>
+  .cg-shell { display: block; }
+  .cg-toc {
+    position: fixed;
+    left: calc(260px + 2.5rem);   /* app sidebar + dashboard-main padding */
+    top: 2.5rem;
+    width: 220px;
+    background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 1.25rem; max-height: calc(100vh - 5rem); overflow-y: auto;
+    z-index: 10;
+  }
+  .cg-doc { margin-left: calc(220px + 2rem); }
+  .cg-toc h3 { font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9ca3af; margin-bottom: .75rem; }
+  .cg-toc a { display: block; font-size: .8rem; color: #374151; padding: .25rem .5rem; border-radius: 6px; text-decoration: none; line-height: 1.4; transition: background .15s, color .15s; }
+  .cg-toc a:hover, .cg-toc a.active { background: #eff6ff; color: #1d4ed8; }
+  .cg-toc a.toc-sub { padding-left: 1.25rem; color: #6b7280; font-size: .75rem; }
+  .cg-toc a.toc-sub:hover, .cg-toc a.toc-sub.active { background: #eff6ff; color: #1d4ed8; }
+
+  .cg-doc { background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 2.5rem; }
+
+  .cg-doc-header { border-bottom: 2px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .cg-doc-header h1 { font-family: 'Fraunces', serif; font-size: 1.75rem; color: #111827; }
+  .cg-doc-header .subtitle { color: #4b5563; font-size: .9rem; margin-top: .25rem; }
+  .cg-doc-header .meta { display: flex; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap; }
+  .cg-doc-header .meta-item { font-size: .8rem; }
+  .cg-doc-header .meta-item span { font-weight: 600; color: #111827; }
+  .cg-doc-header .meta-item label { color: #6b7280; display: block; }
+
+  .cg-article { margin-bottom: 2.5rem; scroll-margin-top: 1.5rem; }
+  .cg-article h2 { font-size: 1.15rem; font-weight: 700; color: #1d4ed8; border-bottom: 1px solid #dbeafe; padding-bottom: .5rem; margin-bottom: 1rem; }
+  .cg-article h3 { font-size: .95rem; font-weight: 700; color: #111827; margin: 1.25rem 0 .5rem; }
+  .cg-article p { font-size: .875rem; color: #374151; line-height: 1.7; margin-bottom: .75rem; }
+  .cg-article ul { list-style: none; padding: 0; margin: .5rem 0 .75rem 0; }
+  .cg-article ul li { font-size: .875rem; color: #374151; line-height: 1.6; padding: .2rem 0 .2rem 1.1rem; position: relative; }
+  .cg-article ul li::before { content: '–'; position: absolute; left: 0; color: #9ca3af; }
+
+  .cg-table { width: 100%; border-collapse: collapse; font-size: .825rem; margin: .75rem 0 1rem; }
+  .cg-table thead tr { background: #1d4ed8; color: white; }
+  .cg-table thead th { padding: .6rem .75rem; text-align: left; font-weight: 600; }
+  .cg-table tbody tr:nth-child(even) { background: #f8fafc; }
+  .cg-table tbody td { padding: .55rem .75rem; color: #374151; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  .cg-table tbody td:first-child { font-weight: 600; color: #1d4ed8; }
+
+  .cg-def-table { width: 100%; border-collapse: collapse; font-size: .825rem; margin: .75rem 0 1rem; }
+  .cg-def-table tr { border-bottom: 1px solid #e5e7eb; }
+  .cg-def-table tr:last-child { border-bottom: none; }
+  .cg-def-table td { padding: .6rem .75rem; vertical-align: top; line-height: 1.6; color: #374151; }
+  .cg-def-table td:first-child { font-weight: 700; color: #1d4ed8; width: 30%; white-space: nowrap; background: #f8fafc; border-right: 2px solid #dbeafe; }
+
+  .cg-alert { border-radius: 10px; padding: .9rem 1.1rem; font-size: .825rem; line-height: 1.6; margin: 1rem 0; }
+  .cg-alert-warning { background: #fff7ed; border: 1px solid #fed7aa; color: #92400e; }
+  .cg-alert-warning strong { color: #c2410c; display: block; margin-bottom: .25rem; }
+  .cg-alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+  .cg-alert-info strong { display: block; margin-bottom: .25rem; }
+  .cg-alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .cg-alert-success strong { display: block; margin-bottom: .25rem; }
+
+  .badge-ok { display: inline-block; background: #dcfce7; color: #166534; font-size: .7rem; font-weight: 700; padding: .2rem .5rem; border-radius: 4px; letter-spacing: .05em; }
+
+  @media (max-width: 900px) {
+    .cg-toc { position: static; width: auto; max-height: none; margin-bottom: 1.5rem; }
+    .cg-doc { margin-left: 0; }
+  }
+</style>
+
+<div class="cg-shell">
+
+  <!-- TOC -->
+  <nav class="cg-toc">
+    <h3>Table des matières</h3>
+    <a href="#art1">1. Définitions</a>
+    <a href="#art2">2. Objet et cadre légal</a>
+    <a href="#art3">3. Qualité des parties</a>
+    <a href="#art31" class="toc-sub">3.1 L'Assureur</a>
+    <a href="#art32" class="toc-sub">3.2 UpTwoU (CSM)</a>
+    <a href="#art33" class="toc-sub">3.3 Gestionnaire d'actifs</a>
+    <a href="#art34" class="toc-sub">3.4 L'Affilié</a>
+    <a href="#art4">4. La vie du contrat</a>
+    <a href="#art41" class="toc-sub">4.1 Transfert entrant</a>
+    <a href="#art42" class="toc-sub">4.2 Entrée en vigueur</a>
+    <a href="#art43" class="toc-sub">4.3 Durée et fin</a>
+    <a href="#art44" class="toc-sub">4.4 Clause de blocage</a>
+    <a href="#art45" class="toc-sub">4.5 Avances &amp; mises en gage</a>
+    <a href="#art5">5. Supports d'investissement</a>
+    <a href="#art51" class="toc-sub">5.1 Profils</a>
+    <a href="#art52" class="toc-sub">5.2 Valorisation</a>
+    <a href="#art53" class="toc-sub">5.3 Risques</a>
+    <a href="#art6">6. Distribution des bénéfices</a>
+    <a href="#art7">7. Structure de frais</a>
+    <a href="#art71" class="toc-sub">7.1 Frais de contrat</a>
+    <a href="#art72" class="toc-sub">7.2 TER du Fonds</a>
+    <a href="#art8">8. Couverture décès</a>
+    <a href="#art9">9. Versement de la pension</a>
+    <a href="#art91" class="toc-sub">9.1 Fiscalité</a>
+    <a href="#art10">10. DB2P / Sigedis</a>
+    <a href="#art11">11. Information annuelle</a>
+    <a href="#art12">12. Profilage des risques</a>
+    <a href="#art13">13. Protection des données</a>
+    <a href="#art14">14. Droit applicable</a>
+    <a href="#art15">15. Plaintes</a>
+    <a href="#art16">16. Dispositions finales</a>
+  </nav>
+
+  <!-- Document -->
+  <div class="cg-doc">
+
+    <!-- Header -->
+    <div class="cg-doc-header">
+      <h1>Conditions Générales</h1>
+      <p class="subtitle">Contrat d'assurance-vie individuel de pension complémentaire — Branche 23 — Gestion unit-linked<br>
+      <em>Article 32, §1, alinéa 1<sup>er</sup>, 2° LPC — Loi du 28 avril 2003</em></p>
+      <div class="meta">
+        <div class="meta-item"><label>Assureur</label><span>Voir Conditions Particulières</span></div>
+        <div class="meta-item"><label>Courtier souscripteur mandaté (CSM)</label><span>UpTwoU SRL — FSMA n° 111680A</span></div>
+        <div class="meta-item"><label>Gestionnaire d'actifs</label><span>Voir Conditions Particulières</span></div>
+        <div class="meta-item"><label>Version</label><span>1.2 — Mai 2026 — Confidentiel</span></div>
+      </div>
+    </div>
+
+    <!-- Art 1 -->
+    <div class="cg-article" id="art1">
+      <h2>1. Définitions</h2>
+      <p>En cas de contradiction entre les Conditions Générales et les Conditions Particulières, ces dernières prévalent.</p>
+      <table class="cg-def-table">
+        <tr><td>Affilié sortant</td><td>Personne physique qui, à la suite de la fin de son contrat de travail, dispose de réserves de pension complémentaire acquises au titre d'un engagement de pension relevant de la LPC et qui choisit de les transférer vers un Contrat UpTwoU en application de l'article 32, §1, 2° LPC. L'Affilié est le preneur d'assurance et l'assuré.</td></tr>
+        <tr><td>AR LPC</td><td>L'arrêté royal du 14 novembre 2003 relatif à l'octroi d'avantages extra-légaux aux travailleurs salariés, tel que modifié.</td></tr>
+        <tr><td>Assureur</td><td>L'entreprise d'assurance désignée dans les Conditions Particulières, agréée par l'autorité de contrôle compétente de son pays d'établissement et autorisée à exercer des activités d'assurance sur la vie en Belgique.</td></tr>
+        <tr><td>Conditions Particulières</td><td>Le document personnalisé émis par le CSM à chaque Affilié lors de la souscription, précisant notamment : l'identité de l'Assureur et du Gestionnaire d'actifs, le montant des réserves transférées, le Fonds sélectionné et la date d'effet du Contrat.</td></tr>
+        <tr><td>Contrat</td><td>Le contrat d'assurance-vie individuel de pension complémentaire de type branche 23 souscrit entre l'Affilié et l'Assureur, régi par les présentes Conditions Générales, les Conditions Particulières et le Règlement de gestion du Fonds.</td></tr>
+        <tr><td>CSM</td><td>UpTwoU SRL, courtier d'assurances inscrit à la FSMA sous le numéro 111680A, agissant comme mandataire souscripteur de l'Assureur. Le CSM n'est pas organisme de pension et ne détient pas les réserves des Affiliés.</td></tr>
+        <tr><td>DB2P / Sigedis</td><td>La Banque de données des pensions complémentaires gérée par Sigedis, dans laquelle l'Assureur est tenu de déclarer les réserves et droits des Affiliés.</td></tr>
+        <tr><td>Fonds d'investissement</td><td>Le fonds de fonds géré par le Gestionnaire d'actifs (SICAV ou FCP agréé CSSF Luxembourg), dans lequel sont investies les réserves des Affiliés. Son identité et ses caractéristiques figurent dans les Conditions Particulières et le KID PRIIPs.</td></tr>
+        <tr><td>FSMA</td><td>Financial Services and Markets Authority, autorité de contrôle belge compétente en matière de pensions complémentaires.</td></tr>
+        <tr><td>Gestionnaire d'actifs</td><td>L'établissement désigné dans les Conditions Particulières, agréé par le CSSF Luxembourg, responsable de la gestion du Fonds sous-jacent au Contrat.</td></tr>
+        <tr><td>Garantie de rendement légale</td><td>La garantie minimale définie à l'article 24 LPC. Conformément à l'article 32, §1, 2° LPC, elle ne s'applique pas aux réserves volontairement transférées dans un Contrat UpTwoU ; le risque financier est intégralement assumé par l'Affilié.</td></tr>
+        <tr><td>KID PRIIPs</td><td>Le document d'informations clés au sens du Règlement (UE) n° 1286/2014, remis à l'Affilié avant la souscription.</td></tr>
+        <tr><td>LPC</td><td>La Loi du 28 avril 2003 relative aux pensions complémentaires, telle que modifiée.</td></tr>
+        <tr><td>NAV</td><td>Valeur nette d'inventaire — la valeur par unité du Fonds, calculée hebdomadairement par le Gestionnaire d'actifs, déduction faite du TER.</td></tr>
+        <tr><td>Organisme de pension</td><td>L'Assureur, en sa qualité d'entreprise d'assurance assumant les obligations d'organisme de pension au sens de l'article 7 LPC pour les Contrats UpTwoU.</td></tr>
+        <tr><td>Réserves acquises transférées</td><td>Le montant des réserves de pension complémentaire, éventuellement porté au niveau des minima légaux, transféré depuis l'organisme de pension précédent vers le Contrat UpTwoU.</td></tr>
+        <tr><td>RIY</td><td>Reduction in Yield — la réduction de rendement due à l'ensemble des frais, telle qu'indiquée dans le KID PRIIPs. Maximum applicable : 1,90 % / an.</td></tr>
+        <tr><td>TER</td><td>Total Expense Ratio — le taux de frais total du Fonds, prélevé sur la NAV et correspondant aux coûts de gestion, de dépositaire et de distribution.</td></tr>
+      </table>
+    </div>
+
+    <!-- Art 2 -->
+    <div class="cg-article" id="art2">
+      <h2>2. Objet du contrat et cadre légal</h2>
+      <p>Le Contrat UpTwoU est un contrat d'assurance-vie individuel de type branche 23 (unit-linked), souscrit par un Affilié sortant auprès de l'Assureur, ayant pour objet l'accueil et la gestion de réserves de pension complémentaire transférées en application de l'article 32, §1, alinéa 1<sup>er</sup>, 2° LPC.</p>
+      <p>L'Assureur assume la qualité d'organisme de pension au sens de la LPC et s'engage à gérer les réserves transférées dans le respect de l'ensemble des dispositions légales et réglementaires applicables, notamment la LPC, l'AR LPC, le Règlement PRIIPs, la Directive IDD et les règlements FSMA.</p>
+      <div class="cg-alert cg-alert-info">
+        <strong>Base légale : article 32, §1, alinéa 1<sup>er</sup>, 2° LPC</strong>
+        L'affilié sortant peut transférer ses réserves acquises vers une entreprise d'assurance qui répartit la totalité des bénéfices entre les affiliés proportionnellement à leurs réserves et qui limite les frais conformément à l'article 4 AR LPC. La FSMA a confirmé par position officielle que la gestion en branche 23 unit-linked est licite dans ce cadre.
+      </div>
+      <div class="cg-alert cg-alert-warning">
+        <strong>⚠ Risque financier — Absence de garantie de capital</strong>
+        Le Contrat est à capital variable. L'Affilié supporte intégralement le risque lié à l'évolution des marchés. L'Assureur ne garantit ni le remboursement du capital transféré, ni un rendement minimum. La garantie de rendement légale (art. 24 LPC) ne s'applique pas aux réserves volontairement transférées.
+      </div>
+    </div>
+
+    <!-- Art 3 -->
+    <div class="cg-article" id="art3">
+      <h2>3. Qualité des parties</h2>
+
+      <h3 id="art31">3.1 L'Assureur</h3>
+      <p>L'Assureur est désigné dans les Conditions Particulières. Il est agréé par l'autorité de contrôle compétente de son pays d'établissement, autorisé à exercer des activités d'assurance sur la vie en Belgique, et assume la qualité d'organisme de pension au sens de l'article 7 LPC pour les Contrats UpTwoU.</p>
+      <table class="cg-table">
+        <tbody>
+          <tr><td>Forme juridique</td><td>Société anonyme de droit luxembourgeois</td></tr>
+          <tr><td>Branches autorisées</td><td>Branche 23 (unit-linked), Branche 21, Branche 22</td></tr>
+          <tr><td>Activité en Belgique</td><td>Agréé dans son pays d'établissement — autorisé en Belgique (LPS ou agrément local)</td></tr>
+          <tr><td>Qualité LPC</td><td>Organisme de pension (art. 7 LPC)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="art32">3.2 Le Courtier souscripteur mandaté (CSM) — UpTwoU</h3>
+      <p>UpTwoU SRL agit comme mandataire souscripteur de l'Assureur pour les Contrats UpTwoU. À ce titre, UpTwoU est habilité à accepter les demandes de souscription, à émettre les pièces contractuelles au nom de l'Assureur et à assurer la relation client.</p>
+      <p>UpTwoU n'est pas organisme de pension, ne détient pas les réserves des Affiliés et n'est pas soumis au plafond de frais de l'article 4 AR LPC. Sa rémunération est constituée d'une commission de distribution (trail fee) prélevée sur le TER du Fonds.</p>
+
+      <h3 id="art33">3.3 Le Gestionnaire d'actifs</h3>
+      <p>Le Gestionnaire d'actifs, désigné dans les Conditions Particulières, est agréé par le CSSF Luxembourg. Il est responsable de la gestion du Fonds de fonds sous-jacent, dont la politique d'investissement est décrite dans le Règlement de gestion du Fonds et le KID PRIIPs.</p>
+
+      <h3 id="art34">3.4 L'Affilié</h3>
+      <p>L'Affilié est à la fois le preneur d'assurance et l'assuré. Il est l'unique bénéficiaire des réserves constituées, sous réserve des dispositions relatives à la couverture décès (art. 8). Il supporte intégralement le risque financier lié à l'investissement en branche 23.</p>
+    </div>
+
+    <!-- Art 4 -->
+    <div class="cg-article" id="art4">
+      <h2>4. La vie du contrat</h2>
+
+      <h3 id="art41">4.1 Transfert entrant</h3>
+      <p>Tout affilié sortant dispose du droit, à tout moment après sa sortie de service, de transférer ses réserves acquises vers un Contrat UpTwoU en application de l'article 32, §1, 2° LPC. Ce droit est personnel et incessible.</p>
+      <p><strong>Conditions de recevabilité :</strong></p>
+      <ul>
+        <li>L'Affilié justifie de sa qualité d'affilié sortant par la fiche de sortie remise par l'organisme de pension précédent ;</li>
+        <li>Il a complété le questionnaire de profilage MiFID II et reçu une évaluation d'adéquation favorable ;</li>
+        <li>Il a reçu et signé l'accusé de réception du KID PRIIPs et du document d'information IDD ;</li>
+        <li>Le montant minimum de transfert est de 1.000 € (mille euros).</li>
+      </ul>
+      <p><strong>Procédure :</strong></p>
+      <ul>
+        <li>L'Affilié complète la demande de transfert UpTwoU ;</li>
+        <li>UpTwoU, au nom de l'Assureur, notifie l'organisme de pension sortant conformément à l'article 32 LPC ;</li>
+        <li>L'organisme sortant procède au transfert dans les 30 jours calendrier suivant la réception de la demande complète ;</li>
+        <li>À réception des fonds, l'Assureur émet les Conditions Particulières dans les 5 jours ouvrables ;</li>
+        <li>Les réserves sont investies dans le Fonds au plus tard le deuxième jour de valorisation hebdomadaire suivant la réception des fonds.</li>
+      </ul>
+      <div class="cg-alert cg-alert-success">
+        <strong>Aucun frais d'entrée n'est prélevé par l'Assureur ou UpTwoU.</strong>
+        L'organisme de pension sortant peut retenir une indemnité maximale de 5 % sur les réserves avant la date d'anniversaire du contrat de groupe. Cette indemnité éventuelle est à charge de l'Affilié et ne relève pas du Contrat UpTwoU.
+      </div>
+
+      <h3 id="art42">4.2 Entrée en vigueur</h3>
+      <p>Le Contrat entre en vigueur à la date indiquée dans les Conditions Particulières, qui ne peut être antérieure à la date de réception effective des réserves par l'Assureur et à la date de signature du document de souscription par l'Affilié.</p>
+
+      <h3 id="art43">4.3 Durée et fin du contrat</h3>
+      <p>Le Contrat est conclu pour une durée indéterminée. Il prend fin lors de la survenance de l'un des événements suivants :</p>
+      <ul>
+        <li>Versement de la prestation de retraite (art. 9) ;</li>
+        <li>Décès de l'Affilié et versement du capital décès (art. 8) ;</li>
+        <li>Transfert des réserves vers un autre organisme de pension dans les cas légalement admis ;</li>
+        <li>Liquidation judiciaire de l'Assureur, sous réserve du super-privilège des assurés.</li>
+      </ul>
+      <p>Le Contrat ne peut être résilié de plein droit hors des cas prévus par la loi.</p>
+
+      <h3 id="art44">4.4 Clause de blocage — Interdiction de rachat anticipé</h3>
+      <div class="cg-alert cg-alert-warning">
+        <strong>⚠ Disposition impérative — Lex specialis LPC</strong>
+        Conformément aux articles 25 et 26 LPC, les réserves sont insaisissables et incessibles. Elles ne peuvent être rachetées, mises en gage ou avancées avant l'âge légal de la retraite, sauf dans les cas expressément prévus par la loi. Cette interdiction prévaut sur le droit général de rachat prévu par la loi du 4 avril 2014 relative aux assurances.
+      </div>
+      <p>Le Contrat UpTwoU ne prévoit ni avance sur police ni mise en gage des réserves au profit de l'Affilié. Les seuls cas de déblocage anticipé admis sont :</p>
+      <ul>
+        <li>Liquidation judiciaire de l'Assureur ;</li>
+        <li>Autre cas prévu par la LPC ou ses arrêtés d'exécution.</li>
+      </ul>
+      <p>Toute liquidation anticipée non légalement justifiée peut entraîner l'application de la taxe de 33 % prévue à l'article 171, 1°, b) CIR 1992.</p>
+
+      <h3 id="art45">4.5 Avances immobilières et mises en gage — Non disponibles</h3>
+      <p><strong>Avance immobilière :</strong> le Contrat UpTwoU ne permet pas d'obtenir une avance sur les réserves constituées en vue de financer l'acquisition, la construction ou la rénovation d'un bien immobilier. Aucune demande d'avance sur police ne peut être accordée par l'Assureur dans le cadre des Contrats UpTwoU.</p>
+      <p><strong>Mise en gage :</strong> les réserves du Contrat ne peuvent être données en gage, ni au profit de l'Affilié ni au profit d'un tiers, notamment en garantie d'un crédit hypothécaire. Conformément à l'article 26 LPC, les réserves sont incessibles et insaisissables ; toute convention de gage portant sur celles-ci est nulle de plein droit.</p>
+      <p>L'Affilié qui souhaite financer un projet immobilier devra recourir à d'autres instruments financiers ne mettant pas en jeu ses réserves de pension complémentaire.</p>
+    </div>
+
+    <!-- Art 5 -->
+    <div class="cg-article" id="art5">
+      <h2>5. Supports d'investissement</h2>
+
+      <h3 id="art51">5.1 Profils d'investissement</h3>
+      <p>Les réserves sont investies dans le Fonds géré par le Gestionnaire d'actifs selon le profil d'investissement choisi par l'Affilié lors de la souscription et modifiable en cours de contrat.</p>
+      <table class="cg-table">
+        <thead><tr><th>Profil</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Prudent</td><td>Priorité à la préservation du capital. Exposition majoritaire aux actifs obligataires et monétaires, faible part en actions. Adapté à un horizon court ou à une forte aversion au risque.</td></tr>
+          <tr><td>Neutre</td><td>Équilibre entre rendement et protection du capital. Répartition diversifiée entre obligations et actions. Convient à un investisseur avec un horizon de moyen terme et une tolérance au risque modérée.</td></tr>
+          <tr><td>Dynamique</td><td>Recherche de performance à long terme avec une exposition plus importante aux marchés actions. Part obligataire réduite. Adapté à un horizon long et à une capacité à accepter des fluctuations plus marquées.</td></tr>
+          <tr><td>Conviction</td><td>Allocation maximale en actifs de croissance (actions, actifs alternatifs). Profil le plus exposé aux marchés. Réservé aux affiliés disposant d'un horizon d'investissement long et d'une forte tolérance au risque.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="art52">5.2 Valorisation</h3>
+      <p>La NAV est calculée chaque mercredi (ou le jour ouvrable précédent si jour férié) par le Gestionnaire d'actifs et publiée sur la plateforme UpTwoU. Les réserves transférées sont converties en unités au prix de la NAV du premier jour de valorisation suivant la réception effective des fonds.</p>
+
+      <h3 id="art53">5.3 Risques d'investissement</h3>
+      <p>L'Affilié est informé des principaux risques inhérents à la nature unit-linked du Contrat :</p>
+      <ul>
+        <li><strong>Risque de marché :</strong> la valeur des actifs sous-jacents peut fluctuer à la hausse comme à la baisse ;</li>
+        <li><strong>Risque de liquidité :</strong> dans des circonstances exceptionnelles, la liquidation des unités peut être différée ;</li>
+        <li><strong>Risque de change :</strong> si des actifs sous-jacents sont libellés dans une devise autre que l'euro ;</li>
+        <li><strong>Risque de contrepartie :</strong> lié à la solvabilité des émetteurs des titres détenus dans le Fonds.</li>
+      </ul>
+      <p>En cas de faillite de l'Assureur, les actifs du Fonds constituent un patrimoine distinct bénéficiant du super-privilège des assurés prévu par la loi luxembourgeoise du 7 décembre 2015 sur le secteur des assurances.</p>
+    </div>
+
+    <!-- Art 6 -->
+    <div class="cg-article" id="art6">
+      <h2>6. Distribution des bénéfices</h2>
+      <p>L'Assureur, en sa qualité d'organisme de pension au sens de l'article 32, §1, 2° LPC, répartit la totalité des bénéfices entre les Affiliés proportionnellement à leurs réserves.</p>
+      <p>Cette condition est structurellement satisfaite par le mécanisme unit-linked : la performance nette du Fonds (après déduction du TER) est intégralement attribuée à chaque Affilié via la variation de la NAV. Aucune fraction de la performance n'est prélevée par l'Assureur ou UpTwoU au titre de participation aux bénéfices.</p>
+    </div>
+
+    <!-- Art 7 -->
+    <div class="cg-article" id="art7">
+      <h2>7. Structure de frais</h2>
+
+      <h3 id="art71">7.1 Frais de contrat — soumis à l'article 4 AR LPC</h3>
+      <p>L'Assureur prélève sur les réserves des Affiliés des frais de contrat strictement conformes au plafond de l'article 4 AR LPC :</p>
+      <table class="cg-table">
+        <thead><tr><th>Type de frais</th><th>Taux</th><th>Assiette</th></tr></thead>
+        <tbody>
+          <tr><td>Frais d'entrée</td><td><strong>0 %</strong></td><td>Réserves transférées</td></tr>
+          <tr><td>Frais de gestion (Assureur)</td><td><strong>0,10 % / an</strong></td><td>Actifs en début d'exercice</td></tr>
+          <tr><td>Frais de sortie</td><td><strong>0 %</strong></td><td>Réserves liquidées</td></tr>
+          <tr><td>Plafond Art. 4 AR LPC</td><td><strong>0,10 % / an</strong></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="art72">7.2 TER du Fonds — hors Article 4 AR LPC</h3>
+      <p>Les frais du Fonds sont prélevés sur la NAV avant comptabilisation par l'Assureur. Ils ne constituent pas des frais de l'organisme de pension au sens de l'article 4 AR LPC.</p>
+      <table class="cg-table">
+        <thead><tr><th>Composante TER</th><th>Taux / an</th><th>Bénéficiaire</th></tr></thead>
+        <tbody>
+          <tr><td>TER total du Fonds</td><td><strong>1,85 % / an</strong></td><td>Prélevé sur NAV</td></tr>
+        </tbody>
+      </table>
+      <div class="cg-alert cg-alert-info">
+        <strong>Coût total maximum supporté par l'Affilié : 1,95 % / an (RIY)</strong>
+        Le coût global (Niveau 1 + Niveau 2) s'établit à maximum 1,95 % / an des réserves, tel qu'indiqué dans le KID PRIIPs. Les frais de transaction estimés s'ajoutent au TER et sont détaillés dans le KID PRIIPs.
+      </div>
+    </div>
+
+    <!-- Art 8 -->
+    <div class="cg-article" id="art8">
+      <h2>8. Couverture décès</h2>
+      <p>En cas de décès de l'Affilié avant la liquidation de sa prestation de retraite, l'Assureur verse au(x) bénéficiaire(s) désigné(s) un capital décès égal à la valeur des réserves au Contrat à la date de la première valorisation suivant la réception des documents requis. La valeur peut être inférieure aux réserves initialement transférées en cas d'évolution défavorable des marchés.</p>
+      <p>L'Affilié désigne le(s) bénéficiaire(s) dans la proposition de souscription. À défaut ou en cas de prédécès, la prestation est versée à la succession. Toute modification de désignation doit être notifiée par écrit à l'Assureur.</p>
+      <p><strong>Documents requis pour le versement :</strong> formulaire de liquidation fourni par l'Assureur, extrait d'acte de décès, et tout document établissant la qualité du bénéficiaire.</p>
+      <p>Le capital décès est soumis aux droits de succession selon le droit belge applicable. L'Assureur procède aux retenues légales (cotisation INAMI 3,55 % et cotisation de solidarité le cas échéant).</p>
+    </div>
+
+    <!-- Art 9 -->
+    <div class="cg-article" id="art9">
+      <h2>9. Versement de la pension complémentaire</h2>
+      <p>La prestation est versée à l'Affilié lors de la prise effective de sa pension légale (anticipée ou ordinaire) ou, à sa demande, dès l'atteinte de l'âge légal de la retraite (actuellement 67 ans). L'Assureur est informé automatiquement via le mécanisme Sigedis.</p>
+      <p>La prestation est versée sous forme d'un capital unique, en euros, dans un délai de 10 jours ouvrables à compter de la réception du dossier complet par l'Assureur.</p>
+
+      <h3 id="art91">9.1 Fiscalité</h3>
+      <p>La prestation est soumise au régime fiscal belge des pensions complémentaires :</p>
+      <ul>
+        <li><strong>IPP :</strong> 10 % si l'Affilié a exercé une activité professionnelle effective jusqu'à l'âge légal de la retraite ; 16,5 % dans les autres cas ;</li>
+        <li><strong>Cotisation INAMI :</strong> 3,55 % ;</li>
+        <li><strong>Cotisation de solidarité :</strong> 0 % à 2 % selon le montant global des pensions perçues.</li>
+      </ul>
+      <p>L'Assureur procède au précompte professionnel libératoire. L'Affilié est invité à consulter un conseiller fiscal pour sa situation personnelle.</p>
+    </div>
+
+    <!-- Art 10 -->
+    <div class="cg-article" id="art10">
+      <h2>10. Obligations réglementaires — DB2P / Sigedis</h2>
+      <p>L'Assureur, en sa qualité d'organisme de pension, assume l'intégralité des obligations déclaratives vis-à-vis de Sigedis (DB2P) pour les Contrats UpTwoU, notamment :</p>
+      <ul>
+        <li>Déclaration annuelle des réserves et prestations acquises de chaque Affilié ;</li>
+        <li>Déclaration des coûts de gestion conformément aux AR du 24 janvier 2025 et au Règlement FSMA du 13 mai 2025 ;</li>
+        <li>Fourniture des données nécessaires au relevé annuel accessible sur mypension.be ;</li>
+        <li>Déclaration des entrées et sorties d'affiliés (art. 32 LPC) ;</li>
+        <li>Notification au SFP lors de la mise à la retraite de l'Affilié.</li>
+      </ul>
+      <p>UpTwoU fournit à l'Assureur les données nécessaires issues de son système de gestion dans les délais convenus par la convention CSM.</p>
+    </div>
+
+    <!-- Art 11 -->
+    <div class="cg-article" id="art11">
+      <h2>11. Information annuelle de l'affilié</h2>
+      <p>L'Assureur, via UpTwoU, fournit à chaque Affilié, au moins une fois par an :</p>
+      <ul>
+        <li>Le relevé annuel des droits à retraite (format FSMA / Sigedis), accessible sur mypension.be, incluant la valeur des réserves, les coûts prélevés et les projections de prestation ;</li>
+        <li>La NAV du Fonds et l'évolution de la valeur des unités attribuées au Contrat ;</li>
+        <li>Le rapport annuel de gestion du Fonds ;</li>
+        <li>La mise à jour du KID PRIIPs en cas d'évolution significative des caractéristiques du Fonds.</li>
+      </ul>
+      <p>Toute modification substantielle des Conditions Générales est notifiée avec un préavis d'au moins 30 jours calendrier. Ces informations sont transmises électroniquement via la plateforme UpTwoU, ou par courrier postal sur demande.</p>
+    </div>
+
+    <!-- Art 12 -->
+    <div class="cg-article" id="art12">
+      <h2>12. Profilage des risques et adéquation</h2>
+      <p>Préalablement à la souscription, UpTwoU soumet à l'Affilié un questionnaire de profilage conformément à la Directive MiFID II (art. 25) et à la Directive IDD, évaluant la situation financière, l'horizon d'investissement, la tolérance au risque et les connaissances financières de l'Affilié.</p>
+      <p>UpTwoU établit une évaluation d'adéquation confirmant la compatibilité du profil de l'Affilié avec les caractéristiques du Contrat et du Fonds. En cas d'inadéquation constatée, UpTwoU en informe l'Affilié et peut refuser la souscription dans son intérêt.</p>
+    </div>
+
+    <!-- Art 13 -->
+    <div class="cg-article" id="art13">
+      <h2>13. Protection des données personnelles</h2>
+      <p>L'Assureur et UpTwoU traitent les données personnelles des Affiliés conformément au RGPD (Règlement (UE) 2016/679). Les données sont nécessaires à l'exécution du Contrat et aux obligations réglementaires (DB2P, FSMA, CAA, LBC/FT).</p>
+      <p>Elles peuvent être partagées avec le Gestionnaire d'actifs, Sigedis, le SFP, la FSMA et le CAA dans les limites de leurs missions légales. L'Affilié peut exercer ses droits d'accès, rectification, effacement et portabilité auprès de l'Assureur (coordonnées dans les Conditions Particulières) ou d'UpTwoU à l'adresse <strong>privacy@uptwoU.be</strong>.</p>
+    </div>
+
+    <!-- Art 14 -->
+    <div class="cg-article" id="art14">
+      <h2>14. Droit applicable et juridiction compétente</h2>
+      <p>Le Contrat est régi par le <strong>droit belge</strong> pour toutes les questions relatives à la LPC, à l'AR LPC, aux obligations FSMA et à la fiscalité des pensions complémentaires. Le <strong>droit luxembourgeois</strong> s'applique aux questions relatives à la validité et à l'exécution du contrat d'assurance, conformément au Règlement Rome I.</p>
+      <p>Les <strong>tribunaux belges</strong> sont compétents pour les litiges relatifs à la LPC et à la réglementation FSMA. Les <strong>tribunaux luxembourgeois</strong> sont compétents pour les litiges relatifs au contrat d'assurance au sens strict.</p>
+    </div>
+
+    <!-- Art 15 -->
+    <div class="cg-article" id="art15">
+      <h2>15. Plaintes</h2>
+      <p>Toute plainte peut être adressée en première instance à UpTwoU (<strong>contact@uptwoU.be</strong>), qui s'engage à y répondre dans les 15 jours ouvrables.</p>
+      <p>En l'absence de réponse satisfaisante, l'Affilié peut s'adresser au service des plaintes de l'Assureur (coordonnées dans les Conditions Particulières) ou à l'<strong>Ombudsman des Assurances</strong> (Square de Meeûs 35, 1000 Bruxelles — info@ombudsman-insurance.be).</p>
+      <p>Pour les litiges relatifs à l'application de la LPC, l'Affilié peut également saisir la <strong>FSMA</strong> (www.fsma.be).</p>
+    </div>
+
+    <!-- Art 16 -->
+    <div class="cg-article" id="art16">
+      <h2>16. Dispositions finales</h2>
+
+      <h3>16.1 Modification des conditions générales</h3>
+      <p>L'Assureur se réserve le droit de modifier les présentes Conditions Générales, notamment en cas de modification légale ou réglementaire, avec un préavis d'au moins 30 jours calendrier. En l'absence d'opposition écrite dans ce délai, l'Affilié est réputé avoir accepté les modifications.</p>
+
+      <h3>16.2 Nullité partielle</h3>
+      <p>La nullité éventuelle d'une clause n'entraîne pas la nullité de l'ensemble du Contrat. La clause nulle est remplacée par la disposition légale applicable la plus proche de l'intention des parties.</p>
+
+      <h3>16.3 Documents contractuels</h3>
+      <p>Par ordre de prévalence en cas de contradiction :</p>
+      <ul>
+        <li>1. Les Conditions Particulières ;</li>
+        <li>2. Les présentes Conditions Générales ;</li>
+        <li>3. Le Règlement de gestion du Fonds (désigné dans les Conditions Particulières) ;</li>
+        <li>4. Le KID PRIIPs.</li>
+      </ul>
+
+      <div class="cg-alert cg-alert-info" style="margin-top:1.5rem;text-align:center;">
+        <strong>UpTwoU — l'Assureur — le Gestionnaire d'actifs</strong>
+        Conditions Générales Version 1.2 — Mai 2026 — Document confidentiel
+      </div>
+    </div>
+
+  </div><!-- /.cg-doc -->
+</div><!-- /.cg-shell -->
+
+<script>
+  // Highlight active TOC link on scroll
+  const articles = document.querySelectorAll('[id^="art"]');
+  const tocLinks = document.querySelectorAll('.cg-toc a');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`.cg-toc a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+
+  articles.forEach(el => observer.observe(el));
+
+  // Smooth scroll
+  tocLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+{% endblock %}
