@@ -1,0 +1,385 @@
+{% extends "onboarding/_base.html" %}
+{% block title %}Vos contrats à transférer{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 5 sur 6</p>
+  {% if phase == 'signed' %}
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Documents signés</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Tous vos formulaires de transfert ont été signés. Continuez vers la synthèse.</p>
+  {% elif phase == 'signing' %}
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Signez vos documents</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Vos formulaires sont prêts. Cliquez sur le bouton pour les signer électroniquement.</p>
+  {% else %}
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Vos contrats à transférer</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Sélectionnez les contrats dormants à transférer vers UpTwoU. Le total doit dépasser <strong>10 000 €</strong>.</p>
+  {% endif %}
+</div>
+
+{# ── Phase : SIGNED ─────────────────────────────────────────────────────────── #}
+{% if phase == 'signed' %}
+<div class="rounded-2xl p-6 mb-6 flex items-center gap-4"
+     style="background:hsl(142 76% 36% / 0.08);border:1.5px solid hsl(142 76% 36% / 0.3);">
+  <div class="flex h-12 w-12 items-center justify-center rounded-full flex-shrink-0"
+       style="background:hsl(142 76% 36% / 0.15);">
+    <i data-lucide="check-circle" style="width:1.5rem;height:1.5rem;color:hsl(142 60% 30%);"></i>
+  </div>
+  <div>
+    <p class="font-semibold" style="color:hsl(142 60% 25%);">Tous les documents sont signés</p>
+    <p class="text-xs mt-0.5" style="color:hsl(142 50% 35%);">Les demandes de transfert seront transmises à vos assureurs.</p>
+  </div>
+</div>
+
+{% for c in dormants %}
+{% set ts = ts_map.get(c.id) %}
+<div class="rounded-xl p-4 mb-3 flex items-center justify-between gap-4"
+     style="background:white;border:1px solid var(--border);">
+  <div>
+    <p class="font-semibold text-primary text-sm">{{ c.assureur or 'Assureur inconnu' }}</p>
+    <p class="text-xs text-muted mt-0.5">n° {{ c.numero or '—' }} · {{ c.reserve or '—' }} €</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{{ url_for('onboarding_annexe1_pdf', contrat_id=c.id) }}" target="_blank"
+       class="btn btn-ghost text-xs flex items-center gap-1" style="padding:0.25rem 0.6rem;">
+      <i data-lucide="file-text" style="width:0.75rem;height:0.75rem;"></i>
+      PDF
+    </a>
+    {% if ts and ts.statut_signature == 'signe' %}
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+          style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);">
+      <i data-lucide="check-circle" style="width:0.65rem;height:0.65rem;"></i>
+      Signé
+    </span>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<div class="mt-6 flex justify-end">
+  <a href="{{ url_for('onboarding_synthese') }}" class="btn btn-primary flex items-center gap-2">
+    Continuer vers la synthèse
+    <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
+  </a>
+</div>
+
+
+{# ── Phase : SIGNING ────────────────────────────────────────────────────────── #}
+{% elif phase == 'signing' %}
+
+{% for c in dormants %}
+{% set ts = ts_map.get(c.id) %}
+<div class="rounded-xl p-4 mb-3 flex items-center justify-between gap-4"
+     style="background:white;border:1px solid var(--border);">
+  <div class="flex-1 min-w-0">
+    <p class="font-semibold text-primary text-sm">{{ c.assureur or 'Assureur inconnu' }}</p>
+    <p class="text-xs text-muted mt-0.5">n° {{ c.numero or '—' }} · {{ c.reserve or '—' }} €</p>
+  </div>
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <a href="{{ url_for('onboarding_annexe1_pdf', contrat_id=c.id) }}" target="_blank"
+       class="btn btn-ghost text-xs flex items-center gap-1" style="padding:0.25rem 0.6rem;">
+      <i data-lucide="file-text" style="width:0.75rem;height:0.75rem;"></i>
+      PDF
+    </a>
+    {% if ts %}
+      {% if ts.statut_signature == 'signe' %}
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+            style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);">
+        <i data-lucide="check-circle" style="width:0.65rem;height:0.65rem;"></i>
+        Signé
+      </span>
+      {% elif ts.statut_signature == 'en_attente' %}
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+            style="background:hsl(220 90% 56% / 0.1);color:hsl(220 70% 40%);">
+        <i data-lucide="clock" style="width:0.65rem;height:0.65rem;"></i>
+        En attente
+      </span>
+      {% elif ts.statut_signature in ('expire', 'revoque') %}
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+            style="background:hsl(0 84% 45% / 0.1);color:hsl(0 84% 40%);">
+        <i data-lucide="alert-circle" style="width:0.65rem;height:0.65rem;"></i>
+        {{ 'Expiré' if ts.statut_signature == 'expire' else 'Révoqué' }}
+      </span>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<div class="rounded-2xl p-5 mb-6 mt-2" style="background:white;border:1px solid var(--border);">
+  {% if signing_url %}
+  <a href="{{ signing_url }}" target="_blank" rel="noopener"
+     class="btn btn-primary w-full flex items-center justify-center gap-2 mb-3"
+     style="height:2.75rem;">
+    <i data-lucide="pen-line" style="width:1rem;height:1rem;"></i>
+    Reprendre la signature
+  </a>
+  <p class="text-xs text-muted text-center mb-4">
+    Vous serez redirigé vers la plateforme de signature. Revenez ensuite sur cette page.
+  </p>
+  {% else %}
+  <div class="flex items-center gap-3 mb-4 rounded-xl p-3"
+       style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.3);">
+    <i data-lucide="alert-triangle" style="width:1rem;height:1rem;flex-shrink:0;color:hsl(35 80% 40%);"></i>
+    <p class="text-xs" style="color:hsl(35 70% 35%);">
+      Le lien de signature n'est plus disponible. Veuillez relancer la procédure.
+    </p>
+  </div>
+  {% endif %}
+
+  <form method="POST" id="resign-form">
+    <input type="hidden" name="use_itsme" id="resign-itsme-field" value="1">
+    {% for c in dormants %}
+    <input type="hidden" name="contrat_ids" value="{{ c.id }}">
+    {% endfor %}
+
+    <button type="button" id="resign-btn"
+            class="btn btn-ghost text-sm w-full flex items-center justify-center gap-2"
+            onclick="ouvrirMethodeResign()">
+      <i data-lucide="refresh-cw" style="width:0.875rem;height:0.875rem;"></i>
+      Relancer la procédure de signature
+    </button>
+
+    <div id="resign-method-panel" class="hidden mt-4">
+      <p class="text-sm font-semibold text-primary mb-3 text-center">Méthode d'identification :</p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button type="button"
+                class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
+                style="background:white;border:2px solid var(--primary);"
+                onclick="soumettreResign('1')">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
+               style="background:hsl(172 75% 22% / 0.1);">
+            <i data-lucide="smartphone" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-primary">itsme®</p>
+            <p class="text-xs text-muted">Via votre app itsme</p>
+          </div>
+        </button>
+        <button type="button"
+                class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
+                style="background:white;border:2px solid var(--border);"
+                onclick="soumettreResign('0')">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
+               style="background:hsl(0 0% 96%);">
+            <i data-lucide="mail" style="width:1.25rem;height:1.25rem;color:#666;"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-primary">Code par email</p>
+            <p class="text-xs text-muted">Un code OTP vous sera envoyé</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="flex items-center justify-between">
+  <a href="{{ url_for('onboarding_frais') }}" class="btn btn-ghost text-sm flex items-center gap-2">
+    <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+    Retour
+  </a>
+  <a href="{{ url_for('onboarding_synthese') }}" class="btn btn-ghost text-sm flex items-center gap-2">
+    Continuer vers la synthèse
+    <i data-lucide="arrow-right" style="width:1rem;height:1rem;"></i>
+  </a>
+</div>
+
+
+{# ── Phase : SELECTION ──────────────────────────────────────────────────────── #}
+{% else %}
+
+<form method="POST" id="transfert-form">
+  <input type="hidden" name="use_itsme" id="use-itsme-field" value="1">
+
+  {% if dormants %}
+  <div class="rounded-2xl p-6 mb-4" style="background:white;border:1px solid var(--border);">
+    <h2 class="font-semibold text-primary mb-4 flex items-center gap-2">
+      <i data-lucide="moon" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      Contrats dormants ({{ dormants | length }})
+    </h2>
+
+    <div class="flex flex-col gap-3">
+      {% for c in dormants %}
+      {% set reserve_float = reserves.get(c.id, 0) %}
+      <div class="rounded-xl p-4"
+           style="background:hsl(172 75% 22% / 0.04);border:1.5px solid hsl(172 75% 22% / 0.15);">
+        <div class="flex items-start gap-4">
+          <input type="checkbox" name="contrat_ids" value="{{ c.id }}"
+                 data-reserve="{{ reserve_float }}"
+                 checked
+                 class="contract-cb mt-1 h-4 w-4 rounded flex-shrink-0"
+                 style="accent-color:var(--primary);">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-0.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="font-semibold text-primary text-sm">{{ c.assureur or 'Assureur inconnu' }}</p>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+                      style="background:hsl(142 76% 36% / 0.1);color:hsl(142 60% 28%);">
+                  <i data-lucide="moon" style="width:0.6rem;height:0.6rem;"></i>
+                  Dormant
+                </span>
+              </div>
+              <a href="{{ url_for('onboarding_annexe1_pdf', contrat_id=c.id) }}" target="_blank"
+                 class="btn btn-ghost text-xs flex items-center gap-1 flex-shrink-0"
+                 style="padding:0.2rem 0.55rem;">
+                <i data-lucide="file-text" style="width:0.7rem;height:0.7rem;"></i>
+                Télécharger PDF
+              </a>
+            </div>
+            <p class="text-xs text-muted mt-0.5">
+              Contrat n° {{ c.numero or '—' }} ·
+              <span class="font-semibold text-primary">{{ c.reserve or '—' }} €</span>
+              {% if c.date_valeur %} · au {{ c.date_valeur }}{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Total dynamique -->
+  <div id="total-box" class="rounded-xl px-5 py-3 mb-3 flex items-center justify-between"
+       style="background:hsl(172 75% 22% / 0.06);border:1.5px solid hsl(172 75% 22% / 0.2);">
+    <span class="text-sm font-semibold text-primary">Total sélectionné</span>
+    <span id="total-amount" class="text-lg font-bold text-primary">—</span>
+  </div>
+
+  <!-- Avertissement < 10 000 € -->
+  <div id="warning-box" class="hidden rounded-xl px-5 py-3 mb-4 flex items-center gap-3"
+       style="background:hsl(0 84% 45% / 0.07);border:1.5px solid hsl(0 84% 45% / 0.25);">
+    <i data-lucide="alert-circle" style="width:1rem;height:1rem;flex-shrink:0;color:hsl(0 75% 45%);"></i>
+    <p class="text-xs" style="color:hsl(0 65% 40%);">
+      Le total doit être <strong>supérieur à 10 000 €</strong> pour initier le transfert.
+    </p>
+  </div>
+
+  <!-- Panneau choix méthode (affiché après click Valider) -->
+  <div id="method-panel" class="hidden rounded-2xl p-5 mb-4"
+       style="background:white;border:1.5px solid var(--primary-light, hsl(172 75% 22% / 0.2));">
+    <p class="text-sm font-semibold text-primary mb-3">Choisissez votre méthode d'identification :</p>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <button type="button"
+              class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
+              style="background:white;border:2px solid var(--primary);"
+              onclick="soumettre('1')">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.1);">
+          <i data-lucide="smartphone" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary">itsme®</p>
+          <p class="text-xs text-muted">Identification via votre app itsme</p>
+        </div>
+      </button>
+      <button type="button"
+              class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
+              style="background:white;border:2px solid var(--border);"
+              onclick="soumettre('0')">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
+             style="background:hsl(0 0% 96%);">
+          <i data-lucide="mail" style="width:1.25rem;height:1.25rem;color:#666;"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary">Code par email</p>
+          <p class="text-xs text-muted">Un code OTP vous sera envoyé par email</p>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <div class="rounded-2xl p-4 mb-6 flex items-start gap-3"
+       style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
+    <i data-lucide="info" style="width:1rem;height:1rem;flex-shrink:0;margin-top:1px;color:var(--primary);"></i>
+    <p class="text-xs text-muted leading-relaxed">
+      <strong class="text-primary">Base légale :</strong>
+      Convention Assuralia du 22 septembre 2015. Le transfert est
+      <strong>gratuit et sans perte de droits acquis</strong>. Vous pouvez également
+      télécharger chaque formulaire Annexe 1 pour le signer manuellement.
+    </p>
+  </div>
+
+  {% else %}
+  <div class="rounded-2xl p-6 mb-6 text-center" style="background:white;border:1px solid var(--border);">
+    <i data-lucide="inbox" style="width:2rem;height:2rem;color:hsl(172 30% 65%);margin:0 auto 0.75rem;"></i>
+    <p class="text-sm text-muted">Aucun contrat dormant détecté. Votre dossier sera examiné par votre conseiller.</p>
+  </div>
+  {% endif %}
+
+  <div class="flex items-center justify-between">
+    <a href="{{ url_for('onboarding_frais') }}" class="btn btn-ghost text-sm flex items-center gap-2">
+      <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+      Retour
+    </a>
+    <div class="flex flex-col items-end gap-2">
+      <button type="button" id="sign-btn"
+              class="btn btn-primary flex items-center gap-2"
+              {% if not dormants %}disabled{% endif %}
+              onclick="ouvrirMethode()">
+        <i data-lucide="pen-line" style="width:1rem;height:1rem;"></i>
+        Valider et signer électroniquement
+      </button>
+      <form method="POST">
+        <input type="hidden" name="skip_test" value="1">
+        <button type="submit" class="text-xs underline" style="color:hsl(172 30% 55%);">
+          Passer cette étape (test)
+        </button>
+      </form>
+    </div>
+  </div>
+</form>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const MIN = 10000;
+  const checkboxes = document.querySelectorAll('.contract-cb');
+  const totalEl    = document.getElementById('total-amount');
+  const warnEl     = document.getElementById('warning-box');
+  const signBtn    = document.getElementById('sign-btn');
+
+  function updateTotal() {
+    let total = 0;
+    checkboxes.forEach(cb => {
+      if (cb.checked) total += parseFloat(cb.dataset.reserve) || 0;
+    });
+    if (totalEl) {
+      totalEl.textContent = total.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+    const ok = total >= MIN;
+    if (warnEl)  warnEl.classList.toggle('hidden', ok);
+    if (signBtn) { signBtn.disabled = !ok; signBtn.style.opacity = ok ? '' : '0.45'; }
+  }
+
+  checkboxes.forEach(cb => cb.addEventListener('change', updateTotal));
+  updateTotal();
+})();
+
+function ouvrirMethode() {
+  const panel = document.getElementById('method-panel');
+  const btn   = document.getElementById('sign-btn');
+  if (!panel || !btn) return;
+  panel.classList.remove('hidden');
+  btn.classList.add('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function soumettre(useItsme) {
+  document.getElementById('use-itsme-field').value = useItsme;
+  document.getElementById('transfert-form').submit();
+}
+
+function ouvrirMethodeResign() {
+  document.getElementById('resign-method-panel').classList.remove('hidden');
+  document.getElementById('resign-btn').classList.add('hidden');
+}
+
+function soumettreResign(useItsme) {
+  document.getElementById('resign-itsme-field').value = useItsme;
+  document.getElementById('resign-form').submit();
+}
+</script>
+{% endblock %}

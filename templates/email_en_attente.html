@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmez votre e-mail — UpTwoU</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/uptwou-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { container: { center:true, padding:'2rem' }, extend: { fontFamily: { display:['Fraunces','serif'], sans:['Plus Jakarta Sans','sans-serif'] } } } }</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background-color:var(--background);" class="min-h-screen">
+
+<header class="navbar">
+  <div class="container flex h-20 items-center justify-between">
+    <a href="{{ url_for('index') }}" class="brand-logo">
+      <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="UpTwoU logo">
+      <span class="brand-wordmark">Up<span>Two</span>U</span>
+    </a>
+  </div>
+</header>
+
+<main class="container py-24 max-w-lg">
+  <div class="rounded-3xl bg-card p-10 shadow-soft text-center" style="border:1px solid var(--border);">
+
+    <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+         style="background:hsl(172 75% 22% / 0.10);">
+      <i data-lucide="mail-check" style="width:2rem;height:2rem;color:var(--primary);"></i>
+    </div>
+
+    <h1 class="font-display text-2xl font-semibold text-primary mb-3">
+      Vérifiez votre boîte de réception
+    </h1>
+
+    <p class="text-muted leading-relaxed mb-2">
+      Un e-mail de confirmation a été envoyé à
+    </p>
+    {% if email %}
+    <p class="font-semibold text-primary mb-4">{{ email }}</p>
+    {% endif %}
+    <p class="text-muted leading-relaxed mb-8">
+      Cliquez sur le lien dans cet e-mail pour activer votre compte.<br>
+      Le lien est valable <strong>24 heures</strong>.
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert-{{ category }} mb-6 text-left">
+          <i data-lucide="{{ 'check-circle' if category == 'success' else 'alert-circle' }}" style="width:1.25rem;height:1.25rem;flex-shrink:0;"></i>
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="rounded-xl p-4 text-sm text-muted mb-6" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+      <p class="font-semibold text-primary mb-1">Vous ne trouvez pas l'email ?</p>
+      <p>Vérifiez votre dossier <strong>spam / courrier indésirable</strong>. L'email est envoyé depuis <em>noreply@uptwou.be</em>.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('renvoyer_confirmation') }}" class="flex flex-col gap-3">
+      <input type="hidden" name="email" value="{{ email }}">
+      <button type="submit" class="btn btn-ghost w-full" style="justify-content:center;">
+        <i data-lucide="refresh-cw" style="width:1rem;height:1rem;margin-right:0.5rem;"></i>
+        Renvoyer l'e-mail de confirmation
+      </button>
+    </form>
+
+    <p class="mt-6 text-xs text-muted">
+      Déjà un compte confirmé ?
+      <a href="{{ url_for('login') }}" class="underline hover:text-primary">Connectez-vous</a>
+    </p>
+  </div>
+</main>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

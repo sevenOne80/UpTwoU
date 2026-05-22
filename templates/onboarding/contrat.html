@@ -1,0 +1,537 @@
+{% extends "onboarding/_base.html" %}
+{% block title %}Informations contractuelles{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 3 sur 6</p>
+  <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Informations contractuelles</h1>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Complétez les informations nécessaires à la gestion de votre contrat.</p>
+</div>
+
+<form method="POST" id="contrat-form" class="flex flex-col gap-6">
+  {{ form.hidden_tag('csrf_token') }}
+  {{ form.courtier_id(id="courtier_id_hidden") }}
+  {{ form.beneficiaires_json(id="beneficiaires_json_input") }}
+
+  <!-- IBAN -->
+  <div class="rounded-2xl p-6" style="background:var(--card-bg,white);border:1px solid var(--border);">
+    <h2 class="font-semibold text-primary mb-4 flex items-center gap-2">
+      <i data-lucide="landmark" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      Compte bancaire
+    </h2>
+    <div class="form-group">
+      <label class="form-label" for="iban_input">{{ form.iban.label.text }} <span style="color:hsl(0 84% 45%);">*</span></label>
+      {{ form.iban(class="form-input", placeholder="BE68 5390 0754 7034", id="iban_input", autocomplete="off", style="font-family:monospace;letter-spacing:0.05em;") }}
+      {% for e in form.iban.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+      <p class="text-xs text-muted mt-1">Les espaces sont acceptés et retirés automatiquement.</p>
+    </div>
+  </div>
+
+  <!-- Bénéficiaire(s) -->
+  <div class="rounded-2xl p-6" style="background:var(--card-bg,white);border:1px solid var(--border);">
+    <h2 class="font-semibold text-primary mb-1 flex items-center gap-2">
+      <i data-lucide="users" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      Bénéficiaire(s) en cas de décès
+    </h2>
+    <p class="text-xs text-muted mb-4">Choisissez une clause standard ou définissez vos bénéficiaires personnellement.</p>
+
+    {% for e in form.beneficiaires_json.errors %}<p class="text-xs mb-3" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+
+    <!-- Clause cards -->
+    <div class="flex flex-col gap-2" id="clause-cards">
+
+      <button type="button" class="clause-card text-left rounded-xl p-4 transition-all"
+              data-type="conjoint" data-label="Mon conjoint ou cohabitant légal"
+              style="border:2px solid var(--border);background:transparent;">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0"
+                 style="background:hsl(172 75% 22% / 0.08);">
+              <i data-lucide="heart" style="width:1rem;height:1rem;color:var(--primary);"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-primary">Mon conjoint ou cohabitant légal</p>
+              <p class="text-xs text-muted">En premier rang, en pleine propriété</p>
+            </div>
+          </div>
+          <div class="clause-check flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0 font-bold"
+               style="border:2px solid var(--border);background:white;font-size:0.6rem;color:white;visibility:hidden;">✓</div>
+        </div>
+      </button>
+
+      <button type="button" class="clause-card text-left rounded-xl p-4 transition-all"
+              data-type="enfants" data-label="Mes enfants"
+              style="border:2px solid var(--border);background:transparent;">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0"
+                 style="background:hsl(172 75% 22% / 0.08);">
+              <i data-lucide="baby" style="width:1rem;height:1rem;color:var(--primary);"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-primary">Mes enfants</p>
+              <p class="text-xs text-muted">En premier rang, parts égales entre eux, en pleine propriété</p>
+            </div>
+          </div>
+          <div class="clause-check flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0 font-bold"
+               style="border:2px solid var(--border);background:white;font-size:0.6rem;color:white;visibility:hidden;">✓</div>
+        </div>
+      </button>
+
+      <button type="button" class="clause-card text-left rounded-xl p-4 transition-all"
+              data-type="heritiers" data-label="Mes héritiers légaux selon l'ordre successoral"
+              style="border:2px solid var(--border);background:transparent;">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0"
+                 style="background:hsl(172 75% 22% / 0.08);">
+              <i data-lucide="scale" style="width:1rem;height:1rem;color:var(--primary);"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-primary">Mes héritiers légaux</p>
+              <p class="text-xs text-muted">Selon l'ordre successoral légal belge</p>
+            </div>
+          </div>
+          <div class="clause-check flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0 font-bold"
+               style="border:2px solid var(--border);background:white;font-size:0.6rem;color:white;visibility:hidden;">✓</div>
+        </div>
+      </button>
+
+      <button type="button" class="clause-card text-left rounded-xl p-4 transition-all"
+              data-type="personnalise" data-label="Personnalisé"
+              style="border:2px solid var(--border);background:transparent;">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full flex-shrink-0"
+                 style="background:hsl(172 75% 22% / 0.08);">
+              <i data-lucide="pencil" style="width:1rem;height:1rem;color:var(--primary);"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-primary">Personnalisé</p>
+              <p class="text-xs text-muted">Définissez vos bénéficiaires avec nom, prénom et pourcentage</p>
+            </div>
+          </div>
+          <div class="clause-check flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0 font-bold"
+               style="border:2px solid var(--border);background:white;font-size:0.6rem;color:white;visibility:hidden;">✓</div>
+        </div>
+      </button>
+
+    </div>
+
+    <!-- Custom beneficiaries section -->
+    <div id="custom-benef-section" class="hidden mt-5">
+      <div id="benef-rows" class="flex flex-col gap-3"></div>
+      <div class="mt-4 flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <p class="text-sm text-muted">Total :
+            <span id="total-pct" class="font-semibold">0</span>%
+          </p>
+          <p id="pct-error" class="text-xs hidden" style="color:hsl(0 84% 45%);">Le total doit être égal à 100%</p>
+        </div>
+        <button type="button" id="btn-add-benef"
+                class="text-sm font-medium flex items-center gap-1"
+                style="color:var(--primary);">
+          <i data-lucide="plus-circle" style="width:1rem;height:1rem;"></i>
+          Ajouter un bénéficiaire
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Courtier -->
+  <div class="rounded-2xl p-6" style="background:var(--card-bg,white);border:1px solid var(--border);">
+    <h2 class="font-semibold text-primary mb-1 flex items-center gap-2">
+      <i data-lucide="briefcase" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      Courtier
+      <span class="text-xs font-normal text-muted ml-1">(optionnel)</span>
+    </h2>
+    <p class="text-xs text-muted mb-4">Recherchez un courtier agréé UpTwoU par nom ou code postal.</p>
+
+    {% if courtier_actuel %}
+    <div id="courtier-selected" class="flex items-center justify-between rounded-xl p-3 mb-3"
+         style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.2);">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-bold flex-shrink-0"
+             style="background:var(--primary);">
+          {{ courtier_actuel.nom[:1] }}
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-primary">{{ courtier_actuel.nom }}</p>
+          <p class="text-xs text-muted">{{ courtier_actuel.ville }}</p>
+        </div>
+      </div>
+      <button type="button" id="btn-changer-courtier" class="text-xs text-muted underline hover:text-primary">Changer</button>
+    </div>
+    {% else %}
+    <div id="courtier-selected" class="hidden flex items-center justify-between rounded-xl p-3 mb-3"
+         style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.2);">
+      <div class="flex items-center gap-3">
+        <div id="courtier-initials" class="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-bold flex-shrink-0"
+             style="background:var(--primary);"></div>
+        <div>
+          <p id="courtier-nom" class="text-sm font-semibold text-primary"></p>
+          <p id="courtier-ville" class="text-xs text-muted"></p>
+        </div>
+      </div>
+      <button type="button" id="btn-changer-courtier" class="text-xs text-muted underline hover:text-primary">Changer</button>
+    </div>
+    {% endif %}
+
+    <div id="courtier-search-zone" class="{{ 'hidden' if courtier_actuel else '' }}">
+      <input type="text" id="courtier-search" class="form-input" placeholder="Nom, ville ou code postal…" autocomplete="off">
+      <div id="courtier-results" class="mt-2 flex flex-col gap-2"></div>
+      <p class="text-xs text-muted mt-2">Tapez au moins 2 caractères pour rechercher.</p>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <a href="{{ url_for('onboarding_profil') }}" class="btn btn-ghost text-sm flex items-center gap-2">
+      <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+      Retour
+    </a>
+    {{ form.submit(class="btn btn-primary") }}
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Bénéficiaires ─────────────────────────────────────────────────────────────
+(function () {
+  const cards          = document.querySelectorAll('.clause-card');
+  const customSection  = document.getElementById('custom-benef-section');
+  const benefRows      = document.getElementById('benef-rows');
+  const btnAdd         = document.getElementById('btn-add-benef');
+  const totalPctEl     = document.getElementById('total-pct');
+  const pctError       = document.getElementById('pct-error');
+  const hiddenJson     = document.getElementById('beneficiaires_json_input');
+  const form           = document.getElementById('contrat-form');
+
+  let selectedType  = null;
+  let selectedLabel = null;
+  let rowCount      = 0;
+  const MAX_ROWS    = 10;
+
+  // ── Clause card selection ──────────────────────────────────────────────────
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      const t = card.dataset.type;
+      const l = card.dataset.label;
+      selectClause(t, l);
+    });
+  });
+
+  function selectClause(type, label) {
+    selectedType  = type;
+    selectedLabel = label;
+
+    cards.forEach(c => {
+      const isActive = c.dataset.type === type;
+      const check    = c.querySelector('.clause-check');
+
+      if (isActive) {
+        c.style.borderColor      = 'var(--primary)';
+        c.style.background       = 'hsl(172 75% 22% / 0.05)';
+        check.style.background   = 'var(--primary)';
+        check.style.borderColor  = 'var(--primary)';
+        check.style.visibility   = 'visible';
+      } else {
+        c.style.borderColor      = 'var(--border)';
+        c.style.background       = 'transparent';
+        check.style.background   = 'white';
+        check.style.borderColor  = 'var(--border)';
+        check.style.visibility   = 'hidden';
+      }
+    });
+
+    if (type === 'personnalise') {
+      customSection.classList.remove('hidden');
+      if (rowCount === 0) addRow();
+    } else {
+      customSection.classList.add('hidden');
+    }
+    buildJson();
+  }
+
+  // ── Custom beneficiary rows ────────────────────────────────────────────────
+  function addRow(data) {
+    if (rowCount >= MAX_ROWS) return;
+    rowCount++;
+    const idx = rowCount;
+
+    const row = document.createElement('div');
+    row.className = 'benef-row rounded-xl p-4 flex flex-col gap-3';
+    row.style.cssText = 'background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);';
+    row.dataset.idx = idx;
+
+    row.innerHTML = `
+      <div class="flex items-center justify-between mb-1">
+        <p class="text-xs font-semibold text-primary uppercase tracking-wide">Bénéficiaire ${idx}</p>
+        ${idx > 1
+          ? `<button type="button" class="btn-remove-row text-xs text-muted underline hover:text-red-500">Supprimer</button>`
+          : ''}
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group mb-0">
+          <label class="form-label text-xs">Prénom <span style="color:hsl(0 84% 45%);">*</span></label>
+          <input type="text" class="form-input benef-prenom" placeholder="Marie" value="${_esc(data?.prenom || '')}">
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label text-xs">Nom <span style="color:hsl(0 84% 45%);">*</span></label>
+          <input type="text" class="form-input benef-nom" placeholder="Dupont" value="${_esc(data?.nom || '')}">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group mb-0">
+          <label class="form-label text-xs">Date de naissance</label>
+          <input type="text" class="form-input benef-ddn" placeholder="JJ/MM/AAAA" maxlength="10" value="${_esc(data?.date_naissance || '')}">
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label text-xs">Part (%) <span style="color:hsl(0 84% 45%);">*</span></label>
+          <input type="number" class="form-input benef-pct" placeholder="100" min="1" max="100"
+                 value="${data?.pourcentage ?? (rowCount === 1 ? 100 : '')}">
+        </div>
+      </div>`;
+
+    // date mask
+    const ddnInput = row.querySelector('.benef-ddn');
+    ddnInput.addEventListener('input', function () {
+      let v = this.value.replace(/\D/g, '');
+      if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+      if (v.length > 5) v = v.slice(0, 5) + '/' + v.slice(5);
+      this.value = v.slice(0, 10);
+    });
+
+    row.querySelector('.benef-pct')?.addEventListener('input', () => { updateTotal(); buildJson(); });
+    row.querySelector('.benef-prenom')?.addEventListener('input', buildJson);
+    row.querySelector('.benef-nom')?.addEventListener('input', buildJson);
+    ddnInput.addEventListener('input', buildJson);
+
+    const btnRemove = row.querySelector('.btn-remove-row');
+    if (btnRemove) {
+      btnRemove.addEventListener('click', () => {
+        row.remove();
+        rowCount--;
+        renumberRows();
+        updateTotal();
+        buildJson();
+        btnAdd.disabled = rowCount >= MAX_ROWS;
+      });
+    }
+
+    benefRows.appendChild(row);
+    btnAdd.disabled = rowCount >= MAX_ROWS;
+    updateTotal();
+    buildJson();
+  }
+
+  function renumberRows() {
+    document.querySelectorAll('.benef-row').forEach((r, i) => {
+      const label = r.querySelector('p');
+      if (label) label.textContent = `Bénéficiaire ${i + 1}`;
+    });
+    rowCount = document.querySelectorAll('.benef-row').length;
+  }
+
+  function updateTotal() {
+    let total = 0;
+    document.querySelectorAll('.benef-pct').forEach(el => {
+      total += parseInt(el.value, 10) || 0;
+    });
+    totalPctEl.textContent = total;
+    const ok = total === 100;
+    totalPctEl.style.color = ok ? 'var(--primary)' : 'hsl(0 84% 45%)';
+    pctError.classList.toggle('hidden', ok || document.querySelectorAll('.benef-pct').length === 0);
+  }
+
+  function _esc(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  btnAdd.addEventListener('click', () => addRow());
+
+  // ── Build hidden JSON ──────────────────────────────────────────────────────
+  function buildJson() {
+    if (!selectedType) { hiddenJson.value = ''; return; }
+    if (selectedType !== 'personnalise') {
+      hiddenJson.value = JSON.stringify({ type: selectedType, label: selectedLabel });
+      return;
+    }
+    const benefs = [];
+    document.querySelectorAll('.benef-row').forEach(r => {
+      benefs.push({
+        prenom:         r.querySelector('.benef-prenom')?.value.trim() || '',
+        nom:            r.querySelector('.benef-nom')?.value.trim() || '',
+        date_naissance: r.querySelector('.benef-ddn')?.value.trim() || '',
+        pourcentage:    parseInt(r.querySelector('.benef-pct')?.value, 10) || 0,
+      });
+    });
+    hiddenJson.value = JSON.stringify({ type: 'personnalise', beneficiaires: benefs });
+  }
+
+  // ── Form submit validation ─────────────────────────────────────────────────
+  form.addEventListener('submit', function (e) {
+    buildJson();
+
+    if (!selectedType) {
+      e.preventDefault();
+      // Flash an inline error on the clause section
+      const errEl = document.querySelector('.clause-error') || (() => {
+        const p = document.createElement('p');
+        p.className = 'clause-error text-xs mt-2';
+        p.style.color = 'hsl(0 84% 45%)';
+        p.textContent = 'Veuillez choisir un bénéficiaire.';
+        document.getElementById('clause-cards').after(p);
+        return p;
+      })();
+      errEl.style.display = 'block';
+      return;
+    }
+
+    if (selectedType === 'personnalise') {
+      let total = 0;
+      let missingField = false;
+      document.querySelectorAll('.benef-row').forEach(r => {
+        total += parseInt(r.querySelector('.benef-pct')?.value, 10) || 0;
+        if (!r.querySelector('.benef-prenom')?.value.trim() ||
+            !r.querySelector('.benef-nom')?.value.trim()) {
+          missingField = true;
+        }
+      });
+      if (total !== 100 || missingField) {
+        e.preventDefault();
+        updateTotal();
+        if (missingField) {
+          pctError.textContent = 'Prénom et nom sont requis pour chaque bénéficiaire.';
+          pctError.classList.remove('hidden');
+        }
+        return;
+      }
+    }
+  });
+
+  // ── Pre-fill from existing data ────────────────────────────────────────────
+  const existing = hiddenJson.value;
+  if (existing) {
+    try {
+      const d = JSON.parse(existing);
+      if (d.type) {
+        const lbl = d.label || (
+          d.type === 'conjoint'     ? 'Mon conjoint ou cohabitant légal' :
+          d.type === 'enfants'      ? 'Mes enfants en premier rang' :
+          d.type === 'heritiers'    ? 'Mes héritiers légaux selon l\'ordre successoral' :
+          'Personnalisé'
+        );
+        selectClause(d.type, lbl);
+        if (d.type === 'personnalise' && Array.isArray(d.beneficiaires)) {
+          benefRows.innerHTML = '';
+          rowCount = 0;
+          d.beneficiaires.forEach(b => addRow(b));
+        }
+      }
+    } catch (_) {}
+  }
+})();
+
+// ── Sauvegarde brouillon avant navigation ─────────────────────────────────────
+(function () {
+  document.addEventListener('click', function (e) {
+    const link = e.target.closest('a[href*="onboarding"]');
+    if (!link) return;
+    e.preventDefault();
+    const dest = link.href;
+    fetch('{{ url_for("onboarding_contrat_brouillon") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        iban:              document.getElementById('iban_input')?.value || '',
+        beneficiaires_json: document.getElementById('beneficiaires_json_input')?.value || '',
+        courtier_id:       document.getElementById('courtier_id_hidden')?.value || '',
+      }),
+    }).finally(() => { window.location.href = dest; });
+  });
+})();
+
+// ── IBAN formatter ────────────────────────────────────────────────────────────
+(function () {
+  const input = document.getElementById('iban_input');
+  if (!input) return;
+  input.addEventListener('blur', function () {
+    this.value = this.value.replace(/\s/g, '').toUpperCase()
+      .replace(/(.{4})/g, '$1 ').trim();
+  });
+})();
+
+// ── Courtier search ───────────────────────────────────────────────────────────
+(function () {
+  const searchInput  = document.getElementById('courtier-search');
+  const resultsDiv   = document.getElementById('courtier-results');
+  const selectedDiv  = document.getElementById('courtier-selected');
+  const searchZone   = document.getElementById('courtier-search-zone');
+  const hiddenId     = document.getElementById('courtier_id_hidden');
+  const btnChanger   = document.getElementById('btn-changer-courtier');
+  const nomEl        = document.getElementById('courtier-nom');
+  const villeEl      = document.getElementById('courtier-ville');
+  const initialesEl  = document.getElementById('courtier-initials');
+
+  if (!searchInput) return;
+
+  let debounceTimer;
+
+  searchInput.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    if (q.length < 2) { resultsDiv.innerHTML = ''; return; }
+    debounceTimer = setTimeout(() => fetchCourtiers(q), 280);
+  });
+
+  function fetchCourtiers(q) {
+    fetch('/api/courtiers/search?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        resultsDiv.innerHTML = '';
+        if (!data.length) {
+          resultsDiv.innerHTML = '<p class="text-xs text-muted">Aucun courtier trouvé.</p>';
+          return;
+        }
+        data.forEach(c => {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'flex items-center gap-3 w-full rounded-xl p-3 text-left transition-colors hover:opacity-80';
+          card.style.cssText = 'background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);';
+          card.innerHTML = `
+            <div class="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-bold flex-shrink-0"
+                 style="background:var(--primary);">${c.initiales}</div>
+            <div>
+              <p class="text-sm font-semibold text-primary">${c.nom}</p>
+              <p class="text-xs text-muted">${[c.code_postal, c.ville].filter(Boolean).join(' ')}</p>
+            </div>`;
+          card.addEventListener('click', () => selectCourtier(c));
+          resultsDiv.appendChild(card);
+        });
+      });
+  }
+
+  function selectCourtier(c) {
+    hiddenId.value = c.id;
+    if (nomEl) nomEl.textContent = c.nom;
+    if (villeEl) villeEl.textContent = [c.code_postal, c.ville].filter(Boolean).join(' ');
+    if (initialesEl) initialesEl.textContent = c.initiales;
+    selectedDiv.classList.remove('hidden');
+    searchZone.classList.add('hidden');
+    resultsDiv.innerHTML = '';
+    searchInput.value = '';
+  }
+
+  if (btnChanger) {
+    btnChanger.addEventListener('click', () => {
+      selectedDiv.classList.add('hidden');
+      searchZone.classList.remove('hidden');
+      hiddenId.value = '';
+      searchInput.focus();
+    });
+  }
+})();
+</script>
+{% endblock %}

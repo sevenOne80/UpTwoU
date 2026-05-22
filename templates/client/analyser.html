@@ -1,0 +1,131 @@
+{% extends "client/_base.html" %}
+{% block title %}Mettre à jour mes réserves{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h1>Mettre à jour mes réserves</h1>
+    <p>Uploadez votre dernier extrait mypension.be pour actualiser votre dossier.</p>
+  </div>
+</div>
+
+<div class="dashboard-card max-w-2xl">
+
+  <!-- Explications -->
+  <div class="grid sm:grid-cols-3 gap-3 mb-6">
+    {% for icon, title, desc in [
+      ('file-down',   'Téléchargez',  'Votre extrait annuel sur mypension.be (section "Ma pension complémentaire").'),
+      ('upload-cloud','Uploadez',     'Glissez ou sélectionnez le fichier PDF ci-dessous.'),
+      ('zap',         'Analyse IA',   'Claude extrait vos contrats et réserves en quelques secondes.'),
+    ] %}
+    <div class="flex items-start gap-3">
+      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+           style="background:hsl(172 75% 22% / 0.08);">
+        <i data-lucide="{{ icon }}" style="width:1rem;height:1rem;color:var(--primary);"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-primary">{{ title }}</p>
+        <p class="text-xs text-muted mt-0.5 leading-relaxed">{{ desc }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="height:1px;background:var(--border);margin-bottom:1.5rem;"></div>
+
+  <!-- Upload form -->
+  <form method="POST" enctype="multipart/form-data" id="upload-form">
+    {{ form.hidden_tag() }}
+
+    <div id="drop-zone"
+         class="rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer"
+         style="border:2px dashed hsl(172 75% 22% / 0.3);padding:2.5rem 1.5rem;
+                background:hsl(172 75% 22% / 0.03);transition:border-color 0.15s,background 0.15s;">
+      <div class="h-14 w-14 rounded-2xl grid place-items-center"
+           style="background:hsl(172 75% 22% / 0.1);">
+        <i data-lucide="upload-cloud" style="width:1.75rem;height:1.75rem;color:var(--primary);"></i>
+      </div>
+      <div class="text-center">
+        <p class="font-semibold text-primary text-sm">Glissez votre extrait ici</p>
+        <p class="text-xs text-muted mt-0.5">ou <span class="text-accent font-semibold underline cursor-pointer" id="browse-trigger">parcourir</span> — PDF uniquement</p>
+      </div>
+      <p id="file-name" class="text-xs font-semibold text-primary" style="display:none;"></p>
+      <input type="file" name="extrait" id="extrait-input" accept=".pdf"
+             style="display:none;" required>
+    </div>
+
+    <div class="flex items-center gap-3 mt-5">
+      <button type="submit" id="submit-btn" class="btn btn-primary" style="height:2.75rem;padding:0 1.75rem;" disabled>
+        <i data-lucide="zap" style="width:1rem;height:1rem;margin-right:0.5rem;"></i>
+        Analyser avec l'IA
+      </button>
+      <p id="loading-msg" style="display:none;" class="text-xs text-muted">
+        <i data-lucide="loader" style="width:0.875rem;height:0.875rem;display:inline;vertical-align:middle;margin-right:4px;"></i>
+        Analyse en cours, veuillez patienter…
+      </p>
+    </div>
+  </form>
+
+  <p class="text-xs text-muted mt-4">
+    <i data-lucide="lock" style="width:0.75rem;height:0.75rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+    Votre fichier est traité de façon confidentielle et n'est pas conservé au-delà de l'analyse.
+  </p>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('extrait-input');
+  const browseTrig = document.getElementById('browse-trigger');
+  const fileName   = document.getElementById('file-name');
+  const submitBtn  = document.getElementById('submit-btn');
+  const loadingMsg = document.getElementById('loading-msg');
+  const form       = document.getElementById('upload-form');
+
+  function setFile(file) {
+    if (!file || !file.name.toLowerCase().endsWith('.pdf')) return;
+    fileInput._file = file;
+    fileName.textContent = file.name;
+    fileName.style.display = '';
+    submitBtn.disabled = false;
+    dropZone.style.borderColor = 'var(--primary)';
+    dropZone.style.background  = 'hsl(172 75% 22% / 0.06)';
+  }
+
+  browseTrig.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', e => { if (e.target !== browseTrig) fileInput.click(); });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--primary)';
+    dropZone.style.background  = 'hsl(172 75% 22% / 0.06)';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = 'hsl(172 75% 22% / 0.3)';
+    dropZone.style.background  = 'hsl(172 75% 22% / 0.03)';
+  });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    setFile(e.dataTransfer.files[0]);
+  });
+
+  form.addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    loadingMsg.style.display = '';
+    // Animate loader icon
+    const loader = loadingMsg.querySelector('[data-lucide="loader"]');
+    if (loader) loader.style.animation = 'spin 1s linear infinite';
+  });
+})();
+</script>
+<style>
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+{% endblock %}

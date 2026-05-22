@@ -10,7 +10,7 @@ Usage:
 import sys
 from app import app, db
 from sqlalchemy import text, inspect
-from models import seed_assureurs
+from models import seed_assureurs, TransfertSignature, SignatureEvent, CabinetCourtage, AssureurDestinataire  # noqa: F401 — ensures tables are registered
 
 COLUMN_MIGRATIONS = [
     # (table, column, sql_type)
@@ -30,6 +30,17 @@ COLUMN_MIGRATIONS = [
     ("client",  "beneficiaire_vie",     "VARCHAR(200)"),
     ("contrat", "date_transfert",       "VARCHAR(10)"),
     ("client",  "courtier_id",          "INTEGER"),
+    ("client",  "telephone_gsm",        "VARCHAR(20)"),
+    ("user",    "email_confirmed",       "BOOLEAN DEFAULT 0"),
+    ("user",    "email_token",           "VARCHAR(64)"),
+    ("user",    "cabinet_id",            "INTEGER REFERENCES cabinet_courtage(id)"),
+    ("client",  "beneficiaires_json",    "TEXT"),
+    ("client",  "cabinet_id",           "INTEGER REFERENCES cabinet_courtage(id)"),
+    ("transfert_signature", "nouveau_contrat_id", "INTEGER REFERENCES contrat(id)"),
+    ("contrat", "assureur_dest_id", "INTEGER REFERENCES assureur_destinataire(id)"),
+    ("transfert_signature", "signing_url", "VARCHAR(500)"),
+    ("client", "est_ppe",     "BOOLEAN"),
+    ("client", "ppe_details", "VARCHAR(500)"),
 ]
 
 reset = "--reset" in sys.argv
@@ -59,8 +70,8 @@ with app.app_context():
             db.create_all()   # creates any brand-new tables
 
             # Link orphaned contracts (analyse_id IS NULL) to the client's
-            # most recent analyse. These exist for accounts created before the
-            # analyse_id column was introduced.
+            # most recent analyse. Excludes Branche 23 UpTwoU contracts
+            # (they intentionally have analyse_id=NULL to distinguish them).
             result = conn.execute(text("""
                 UPDATE contrat
                 SET analyse_id = (
@@ -70,6 +81,7 @@ with app.app_context():
                     LIMIT 1
                 )
                 WHERE analyse_id IS NULL
+                  AND (type_branche IS NULL OR type_branche != 'Branche 23')
                   AND client_id IN (SELECT DISTINCT client_id FROM analyse)
             """))
             if result.rowcount:
@@ -89,6 +101,13 @@ with app.app_context():
                 ), {"dv": row[1], "id": row[0]})
             if rows:
                 print(f"  ~ backfilled date_extrait on {len(rows)} analyse(s)")
+
+            # Confirm all pre-existing users so they can still log in after this migration.
+            result = conn.execute(text(
+                'UPDATE "user" SET email_confirmed = 1 WHERE email_confirmed IS NULL OR email_confirmed = 0'
+            ))
+            if result.rowcount:
+                print(f"  ~ confirmed {result.rowcount} pre-existing user(s)")
 
             conn.commit()
 

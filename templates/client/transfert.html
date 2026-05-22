@@ -1,46 +1,40 @@
 {% extends "client/_base.html" %}
-{% block title %}Historique de transfert de réserves{% endblock %}
+{% block title %}Transfert de réserves{% endblock %}
 
 {% block content %}
 <div class="dashboard-header">
-  <h1>Historique de transfert de réserves</h1>
-  <p>Téléchargez, signez et envoyez un formulaire par assureur cédant.</p>
-</div>
-
-<!-- Process steps -->
-<div class="dashboard-card mb-6">
-  <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-4">Comment ça marche</p>
-  <div class="grid md:grid-cols-4 gap-4">
-    {% for step in [
-      ('1', 'download', 'Télécharger', 'Téléchargez le formulaire pré-rempli pour chaque assureur.'),
-      ('2', 'pen-line', 'Compléter', 'Indiquez le nom de votre ancien employeur et signez le document.'),
-      ('3', 'send', 'Envoyer', 'Envoyez le formulaire signé directement à l\'assureur cédant.'),
-      ('4', 'clock', 'Attendre', 'L\'assureur dispose de 30 jours calendrier pour effectuer le transfert.'),
-    ] %}
-    <div class="flex items-start gap-3">
-      <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
-           style="background:hsl(172 75% 22% / 0.1);">
-        <i data-lucide="{{ step[1] }}" style="width:1rem;height:1rem;color:var(--primary);"></i>
-      </div>
-      <div>
-        <p class="text-xs font-semibold text-muted mb-0.5">Étape {{ step[0] }}</p>
-        <p class="text-sm font-semibold text-primary">{{ step[2] }}</p>
-        <p class="text-xs text-muted mt-0.5 leading-relaxed">{{ step[3] }}</p>
-      </div>
-    </div>
-    {% endfor %}
+  <div>
+    <h1>Mes transferts de réserves</h1>
+    <p>Signez électroniquement vos demandes de transfert — elles seront envoyées directement à votre assureur.</p>
   </div>
 </div>
 
-{% if contrats %}
+<!-- Onboarding banner -->
+{% if client.onboarding_step != 'complet' %}
+{% set step_labels = {'kyc': ('Vérification d\'identité', 'onboarding_kyc', 1), 'profil': ('Profil d\'investissement', 'onboarding_profil', 2), 'contrat': ('Informations contractuelles', 'onboarding_contrat', 3), 'frais': ('Acceptation des frais', 'onboarding_frais', 4)} %}
+{% set step_info = step_labels.get(client.onboarding_step, ('Continuer', 'onboarding_kyc', 1)) %}
+<div class="rounded-2xl p-5 flex items-center gap-4 mb-6" style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.30);">
+  <i data-lucide="alert-circle" style="width:1.5rem;height:1.5rem;flex-shrink:0;color:var(--accent);"></i>
+  <div class="flex-1">
+    <p class="text-sm font-semibold text-primary">Finalisez votre inscription</p>
+    <p class="text-xs text-muted mt-0.5">Étape suivante : <strong>{{ step_info[0] }}</strong> ({{ step_info[2] }}/5)</p>
+  </div>
+  <a href="{{ url_for(step_info[1]) }}" class="btn btn-primary" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;white-space:nowrap;">
+    Continuer
+    <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+  </a>
+</div>
+{% endif %}
 
-<!-- One card per dormant contract -->
+{% if dormants %}
+
 <div class="flex flex-col gap-4">
-  {% for c in contrats %}
+  {% for c in dormants %}
+  {% set ts = ts_map.get(c.id) %}
   <div class="dashboard-card">
     <div class="flex items-start justify-between gap-4 flex-wrap">
 
-      <!-- Left: contract info -->
+      <!-- Infos contrat -->
       <div class="flex items-start gap-4">
         <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0"
              style="background:hsl(172 75% 22% / 0.08);">
@@ -50,6 +44,9 @@
           <p class="font-semibold text-primary text-base">{{ c.assureur or '—' }}</p>
           {% if c.numero %}
           <p class="text-xs text-muted mt-0.5">Réf. contrat : <span class="font-mono">{{ c.numero }}</span></p>
+          {% endif %}
+          {% if ts and ts.nouveau_contrat %}
+          <p class="text-xs text-muted mt-0.5">Nouveau contrat UpTwoU : <span class="font-mono font-semibold" style="color:var(--primary);">{{ ts.reference }}</span></p>
           {% endif %}
           <div class="flex flex-wrap gap-2 mt-2">
             <span class="badge badge-blue">{{ c.type_branche or 'Type inconnu' }}</span>
@@ -64,49 +61,116 @@
               Valeur au {{ c.date_valeur }}
             </span>
             {% endif %}
+            <!-- Statut signature -->
+            {% if ts %}
+              {% if ts.statut_signature == 'signe' %}
+              <span class="badge" style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+                <i data-lucide="check-circle" style="width:0.7rem;height:0.7rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+                Signé — envoyé à l'assureur
+              </span>
+              {% elif ts.statut_signature == 'en_attente' %}
+              <span class="badge" style="background:hsl(220 90% 56% / 0.1);color:hsl(220 70% 40%);border:1px solid hsl(220 90% 56% / 0.25);">
+                <i data-lucide="clock" style="width:0.7rem;height:0.7rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+                Signature en attente
+              </span>
+              {% elif ts.statut_signature in ('expire', 'revoque') %}
+              <span class="badge" style="background:hsl(0 84% 45% / 0.1);color:hsl(0 84% 40%);border:1px solid hsl(0 84% 45% / 0.2);">
+                <i data-lucide="alert-circle" style="width:0.7rem;height:0.7rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+                {{ 'Expiré' if ts.statut_signature == 'expire' else 'Révoqué' }}
+              </span>
+              {% endif %}
+            {% endif %}
           </div>
 
-          <!-- Assureur address if available -->
           {% set ref = c.assureur_ref %}
           {% if ref %}
           <p class="text-xs text-muted mt-3 leading-relaxed">
             <i data-lucide="map-pin" style="width:0.75rem;height:0.75rem;display:inline-block;vertical-align:middle;margin-right:2px;"></i>
-            Envoyer à : {{ ref.nom_legal }} — {{ ref.adresse }}, {{ ref.code_postal }} {{ ref.ville }}
+            {{ ref.nom_legal }} — {{ ref.adresse }}, {{ ref.code_postal }} {{ ref.ville }}
             {% if ref.numero_bce %}· BCE {{ ref.numero_bce }}{% endif %}
           </p>
           {% endif %}
         </div>
       </div>
 
-      <!-- Right: download button -->
-      <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
-         class="btn btn-primary flex items-center gap-2 flex-shrink-0"
-         style="height:2.5rem;padding:0 1.25rem;">
-        <i data-lucide="download" style="width:1rem;height:1rem;"></i>
-        Télécharger l'Annexe 1
-      </a>
+      <!-- Actions -->
+      {% if not c.date_transfert %}
+      <div class="flex flex-col gap-2 flex-shrink-0 items-end">
 
-    </div>
+        {% if ts and ts.statut_signature == 'signe' %}
+        <!-- Signé : rien à faire -->
+        <span class="text-xs text-muted">Document transmis à l'assureur.</span>
 
-    <!-- What to fill manually -->
-    <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
-         style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.25);">
-      <i data-lucide="pencil" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
-      <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
-        <strong>À compléter manuellement :</strong>
-        {% if c.organisateur %}
-          vérifiez le nom de l'organisateur pré-rempli (section Organisateur),
+        {% elif ts and ts.statut_signature == 'en_attente' %}
+        <!-- En attente : continuer ou relancer -->
+        <button type="button"
+                class="btn btn-primary flex items-center gap-2"
+                style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;"
+                onclick="continuerSignature('{{ ts.reference }}', {{ c.id }})">
+          <i data-lucide="pen-line" style="width:1rem;height:1rem;"></i>
+          Continuer la signature
+        </button>
+        <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
+           class="text-xs text-muted underline hover:text-primary">Télécharger le PDF</a>
+
         {% else %}
-          le nom et le numéro BCE de votre ancien employeur (section Organisateur),
+        <!-- Pas encore initié ou expiré/révoqué -->
+        <button type="button"
+                class="btn btn-primary flex items-center gap-2"
+                style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;"
+                onclick="ouvrirChoixSignature({{ c.id }})">
+          <i data-lucide="pen-line" style="width:1rem;height:1rem;"></i>
+          Signer électroniquement
+        </button>
+        <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
+           class="text-xs text-muted underline hover:text-primary">Télécharger le PDF</a>
         {% endif %}
-        la date de départ et votre signature.
-      </p>
+
+      </div>
+      {% endif %}
+
     </div>
+
+    <!-- Panneau choix méthode de signature (caché par défaut) -->
+    <div id="sign-panel-{{ c.id }}" class="hidden mt-4 rounded-xl p-4"
+         style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.15);">
+      <p class="text-sm font-semibold text-primary mb-3">Choisissez votre méthode d'identification :</p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button type="button"
+                class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
+                style="background:white;border:2px solid var(--primary);"
+                onclick="lancerSignature({{ c.id }}, true)">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
+               style="background:hsl(172 75% 22% / 0.1);">
+            <i data-lucide="smartphone" style="width:1.25rem;height:1.25rem;color:var(--primary);"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-primary">itsme®</p>
+            <p class="text-xs text-muted">Identification via votre app itsme</p>
+          </div>
+        </button>
+        <button type="button"
+                class="flex-1 flex items-center gap-3 rounded-xl p-3 text-left transition-all hover:opacity-90"
+                style="background:white;border:2px solid var(--border);"
+                onclick="lancerSignature({{ c.id }}, false)">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0"
+               style="background:hsl(0 0% 96%);">
+            <i data-lucide="mail" style="width:1.25rem;height:1.25rem;color:#666;"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-primary">Code par email</p>
+            <p class="text-xs text-muted">Un code OTP vous sera envoyé par email</p>
+          </div>
+        </button>
+      </div>
+      <p id="sign-error-{{ c.id }}" class="text-xs mt-3 hidden" style="color:hsl(0 84% 45%);"></p>
+    </div>
+
   </div>
   {% endfor %}
 </div>
 
-<!-- Legal note -->
+<!-- Note légale -->
 <div class="mt-6 flex items-start gap-3 rounded-2xl p-4"
      style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
   <i data-lucide="info" style="width:1rem;height:1rem;flex-shrink:0;margin-top:2px;color:var(--primary);"></i>
@@ -121,23 +185,137 @@
 
 {% else %}
 
-<!-- No dormant contracts -->
 <div class="dashboard-card text-center py-12">
   <div class="mx-auto h-16 w-16 rounded-2xl grid place-items-center mb-4"
        style="background:hsl(172 75% 22% / 0.08);">
-    <i data-lucide="file-x" style="width:2rem;height:2rem;color:var(--primary);opacity:0.4;"></i>
+    <i data-lucide="check-circle" style="width:2rem;height:2rem;color:var(--primary);opacity:0.4;"></i>
   </div>
-  <p class="font-semibold text-primary">Aucun contrat dormant détecté</p>
+  <p class="font-semibold text-primary">Aucun transfert en cours</p>
   <p class="text-sm text-muted mt-2 max-w-sm mx-auto">
-    Les formulaires de transfert sont générés uniquement pour les contrats
-    dont le statut est "dormant". Uploadez un extrait mypension.be complet
-    pour que l'IA identifie vos contrats transférables.
+    Tous vos contrats sont déjà actifs chez UpTwoU, ou aucun contrat dormant n'a été détecté.
   </p>
-  <a href="{{ url_for('analyser') }}" class="btn btn-primary mt-6 inline-flex items-center gap-2">
+  <a href="{{ url_for('client_analyser') }}" class="btn btn-primary mt-6 inline-flex items-center gap-2">
     <i data-lucide="upload-cloud" style="width:1rem;height:1rem;"></i>
     Analyser un nouvel extrait
   </a>
 </div>
 
 {% endif %}
+
+<!-- Historique -->
+{% set tous_dormants = client.contrats_dormants %}
+{% if tous_dormants %}
+<div class="dashboard-card mt-6">
+  <div class="flex items-center gap-3 mb-4">
+    <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
+         style="background:hsl(35 90% 45% / 0.1);">
+      <i data-lucide="clock" style="width:1rem;height:1rem;color:hsl(35 90% 40%);"></i>
+    </div>
+    <p class="font-semibold text-primary text-sm">Historique de transfert</p>
+  </div>
+  <div class="flex flex-col">
+    {% for d in tous_dormants %}
+    <div class="flex items-start justify-between gap-4 flex-wrap py-3 hist-row">
+      <div class="flex items-start gap-3">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.07);">
+          <i data-lucide="building-2" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-sm">{{ d.assureur or '—' }}</p>
+          {% if d.numero %}<p class="text-xs text-muted mt-0.5">Réf. : <span class="font-mono">{{ d.numero }}</span></p>{% endif %}
+          {% if d.organisateur %}<p class="text-xs text-muted mt-0.5"><i data-lucide="briefcase" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>{{ d.organisateur }}</p>{% endif %}
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            {% if d.reserve %}<span class="badge" style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">{{ d.reserve }} €</span>{% endif %}
+            {% if d.date_valeur %}<span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">au {{ d.date_valeur }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="flex-shrink-0 text-right">
+        {% set d_ts = ts_map.get(d.id) %}
+        {% if d_ts and d_ts.statut_signature == 'signe' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
+          <i data-lucide="check-circle" style="width:0.75rem;height:0.75rem;"></i>
+          Signé et transmis
+        </span>
+        {% elif d_ts and d_ts.statut_signature == 'en_attente' %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(220 90% 56% / 0.1);color:hsl(220 70% 40%);border:1px solid hsl(220 90% 56% / 0.25);">
+          <i data-lucide="clock" style="width:0.75rem;height:0.75rem;"></i>
+          En attente de signature
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style="background:hsl(35 90% 45% / 0.1);color:hsl(35 90% 30%);border:1px solid hsl(35 90% 45% / 0.25);">
+          <i data-lucide="clock" style="width:0.75rem;height:0.75rem;"></i>
+          En attente
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .hist-row + .hist-row { border-top: 1px solid var(--border); }
+</style>
+<script>
+function ouvrirChoixSignature(contratId) {
+  document.querySelectorAll('[id^="sign-panel-"]').forEach(p => p.classList.add('hidden'));
+  document.getElementById('sign-panel-' + contratId).classList.remove('hidden');
+}
+
+async function lancerSignature(contratId, useItsme) {
+  const errEl = document.getElementById('sign-error-' + contratId);
+  errEl.classList.add('hidden');
+  errEl.textContent = '';
+
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="text-sm">Initialisation…</span>';
+
+  try {
+    const resp = await fetch('/signature/initier', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json',
+                 'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || '' },
+      body: JSON.stringify({ contrat_id: contratId, use_itsme: useItsme }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      throw new Error(data.description || data.error || 'Erreur serveur');
+    }
+    if (data.signing_url) {
+      window.location.href = data.signing_url;
+    } else {
+      errEl.textContent = 'Lien de signature non disponible — veuillez réessayer.';
+      errEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  } catch (e) {
+    errEl.textContent = e.message || 'Une erreur est survenue.';
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+async function continuerSignature(reference, contratId) {
+  const resp = await fetch('/signature/statut/' + reference);
+  const data = await resp.json();
+  if (data.signing_url) {
+    window.location.href = data.signing_url;
+  } else {
+    alert('Le lien de signature n\'est plus disponible. Veuillez relancer la procédure.');
+  }
+}
+</script>
 {% endblock %}

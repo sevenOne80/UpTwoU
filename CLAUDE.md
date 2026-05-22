@@ -31,12 +31,18 @@ Copy `.env` and set:
 | `NOUVEL_ASSUREUR_NOM/BCE/IBAN/REF` | UpTwoU's B23 insurer details used in Annexe 1 PDFs |
 | `ITSME_CLIENT_ID`, `ITSME_PRIVATE_KEY` | Optional — enables itsme OIDC login |
 | `ITSME_ENV` | `sandbox` (default) or `production` |
+| `CONNECTIVE_BASE_URL` | Connective API base URL (default: `https://api.connective.eu/esig`) |
+| `CONNECTIVE_API_KEY` | Connective API key for eSignature |
+| `CONNECTIVE_SENDER` | Sender email shown to signataires |
+| `CONNECTIVE_WEBHOOK_SECRET` | HMAC secret to verify Connective webhook calls |
+| `APP_BASE_URL` | Public URL of the app, used to build the webhook callback URL |
+| `SIGNED_DOCS_FOLDER` | Folder where signed PDFs and audit trails are stored (default: `signed_docs/`) |
 
 ## Architecture
 
 ### Single-file Flask app
 
-All routes, business logic, and AI calls live in `app.py`. There is no blueprint layer.
+All routes, business logic, and AI calls live in `app.py`. The Connective eSignature flow is the exception: it lives in `routes/signature.py` (Blueprint) + `services/connective_service.py`.
 
 **User roles**: `client` and `courtier`. Role guards are plain decorators (`@client_required`, `@courtier_required`) applied after `@login_required`. Both roles share the same `User` + `Client` model pair — courtiers also get a `Client` profile row (used to store their name, city, phone for the broker-search API).
 

@@ -3,355 +3,369 @@
 
 {% block content %}
 <div class="dashboard-header">
-  <h1>Mes contrats</h1>
-  <p>Contrats actifs chez UpTwoU.</p>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1>Bonjour, {{ client.prenom }}</h1>
+      <p>Ci-dessous, tes contrats chez UpTwoU.</p>
+    </div>
+  </div>
 </div>
 
-<!-- ── Courtier en charge ──────────────────────────────────────────────────── -->
 {% set courtier_user = client.courtier %}
-{% set courtier_nom = (courtier_user.client_profile.prenom ~ ' ' ~ courtier_user.client_profile.nom) if courtier_user and courtier_user.client_profile else 'UpTwoU' %}
-{% set courtier_initiales = (courtier_user.client_profile.prenom[0] ~ courtier_user.client_profile.nom[0]) | upper if courtier_user and courtier_user.client_profile else 'U2' %}
-{% set courtier_email = courtier_user.email if courtier_user else 'contact@uptwou.be' %}
-
+{% set cabinet = client.cabinet %}
+{% if courtier_user and courtier_user.client_profile %}
+  {% set courtier_nom = courtier_user.client_profile.prenom ~ ' ' ~ courtier_user.client_profile.nom %}
+  {% set courtier_initiales = (courtier_user.client_profile.prenom[0] ~ courtier_user.client_profile.nom[0]) | upper %}
+  {% set courtier_email = courtier_user.email %}
+{% elif cabinet %}
+  {% set courtier_nom = cabinet.nom %}
+  {% set courtier_initiales = cabinet.nom[:2] | upper %}
+  {% set courtier_email = cabinet.email or 'contact@uptwou.be' %}
+{% else %}
+  {% set courtier_nom = 'UpTwoU' %}
+  {% set courtier_initiales = 'U2' %}
+  {% set courtier_email = 'contact@uptwou.be' %}
+{% endif %}
 
 {% if client.contrats_actifs %}
-
-
-<div class="grid gap-5">
+<div class="grid gap-6">
   {% for c in client.contrats_actifs %}
   {% set is_b21 = c.type_branche == 'Branche 21' %}
   {% set is_b23 = c.type_branche == 'Branche 23' %}
+  {% set is_uptwou = is_b23 and c.analyse_id is none %}
   {% set branch_color = 'hsl(213 80% 50%)' if is_b21 else ('hsl(172 75% 28%)' if is_b23 else 'hsl(260 60% 55%)') %}
   {% set branch_bg    = 'hsl(213 80% 50% / 0.08)' if is_b21 else ('hsl(172 75% 28% / 0.08)' if is_b23 else 'hsl(260 60% 55% / 0.08)') %}
   {% set profil = client.profil_risque %}
-  {% set pc = 'hsl(213 80% 50%)' if profil == 'prudent' else ('hsl(172 75% 28%)' if profil in ('equilibre','dynamique') else 'hsl(35 90% 45%)') %}
+  {% set ts_list = ts_by_contrat.get(c.id, []) %}
+  {% set ts_statuts = ts_statuts_by_contrat.get(c.id, []) %}
 
-  <div class="dashboard-card" style="border-top:3px solid {{ branch_color }};padding-top:1.25rem;">
+  {# ── Calcul du statut ───────────────────────────────────────────────── #}
+  {% set ns = namespace(
+    st_bg='hsl(0 0% 96%)',
+    st_border='var(--border)',
+    st_color='var(--muted-foreground)',
+    st_icon='clock',
+    st_label='En attente de signature',
+    st_desc='Complétez votre dossier pour lancer le transfert de vos réserves.',
+    tl_step=0
+  ) %}
+  {% if c.statut == 'liquide' %}
+    {% set ns.st_bg     = 'hsl(0 84% 45% / 0.07)' %}
+    {% set ns.st_border = 'hsl(0 84% 45% / 0.25)' %}
+    {% set ns.st_color  = 'hsl(0 72% 38%)' %}
+    {% set ns.st_icon   = 'x-circle' %}
+    {% set ns.st_label  = 'Contrat liquidé' %}
+    {% set ns.st_desc   = 'Ce contrat a été clôturé et les avoirs ont été liquidés.' %}
+    {% set ns.tl_step   = 5 %}
+  {% elif c.statut == 'reserves_recues' %}
+    {% set ns.st_bg     = 'hsl(142 76% 36% / 0.07)' %}
+    {% set ns.st_border = 'hsl(142 76% 36% / 0.3)' %}
+    {% set ns.st_color  = 'hsl(142 60% 28%)' %}
+    {% set ns.st_icon   = 'check-circle-2' %}
+    {% set ns.st_label  = 'Réserves reçues' %}
+    {% set ns.st_desc   = 'Vos réserves ont été transférées et sont investies chez UpTwoU.' %}
+    {% set ns.tl_step   = 4 %}
+  {% elif c.statut == 'partiellement_recu' %}
+    {% set ns.st_bg     = 'hsl(35 95% 55% / 0.07)' %}
+    {% set ns.st_border = 'hsl(35 95% 55% / 0.3)' %}
+    {% set ns.st_color  = 'hsl(35 85% 30%)' %}
+    {% set ns.st_icon   = 'layers' %}
+    {% set ns.st_label  = 'Transfert partiellement reçus' %}
+    {% set ns.st_desc   = 'Une partie de vos réserves est arrivée — les autres sont en cours de traitement.' %}
+    {% set ns.tl_step   = 3 %}
+  {% elif 'signe' in ts_statuts or 'non_initie' in ts_statuts %}
+    {% set ns.st_bg     = 'hsl(35 95% 55% / 0.07)' %}
+    {% set ns.st_border = 'hsl(35 95% 55% / 0.3)' %}
+    {% set ns.st_color  = 'hsl(35 85% 30%)' %}
+    {% set ns.st_icon   = 'hourglass' %}
+    {% set ns.st_label  = 'Transfert en cours' %}
+    {% set ns.st_desc   = 'Demande de transfert envoyée à votre assureur — délai légal de 30 jours calendrier.' %}
+    {% set ns.tl_step   = 2 %}
+  {% elif 'en_attente' in ts_statuts %}
+    {% set ns.st_bg     = 'hsl(220 90% 56% / 0.07)' %}
+    {% set ns.st_border = 'hsl(220 90% 56% / 0.25)' %}
+    {% set ns.st_color  = 'hsl(220 70% 38%)' %}
+    {% set ns.st_icon   = 'pen-line' %}
+    {% set ns.st_label  = 'Signature en cours' %}
+    {% set ns.st_desc   = 'Veuillez compléter la signature électronique pour transmettre votre demande.' %}
+    {% set ns.tl_step   = 1 %}
+  {% elif ts_list and ('expire' in ts_statuts or 'revoque' in ts_statuts) %}
+    {% set ns.st_bg     = 'hsl(0 84% 45% / 0.07)' %}
+    {% set ns.st_border = 'hsl(0 84% 45% / 0.25)' %}
+    {% set ns.st_color  = 'hsl(0 72% 38%)' %}
+    {% set ns.st_icon   = 'alert-circle' %}
+    {% set ns.st_label  = 'Signature ' ~ ('expirée' if 'expire' in ts_statuts else 'révoquée') %}
+    {% set ns.st_desc   = 'Relancez la procédure de signature depuis la page de synthèse.' %}
+    {% set ns.tl_step   = 0 %}
+  {% endif %}
 
-    <!-- Header: insurer + branch badge -->
-    <div class="flex items-start justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <div class="h-12 w-12 rounded-xl grid place-items-center flex-shrink-0"
+  <div class="dashboard-card">
+
+    {# ── En-tête compact ────────────────────────────────────────────────── #}
+    <div class="flex items-center justify-between gap-3 px-5 pt-2 pb-4">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
              style="background:{{ branch_bg }};">
-          <i data-lucide="building-2" style="width:1.25rem;height:1.25rem;color:{{ branch_color }};"></i>
+          <i data-lucide="building-2" style="width:1.125rem;height:1.125rem;color:{{ branch_color }};"></i>
         </div>
         <div>
-          <p class="font-semibold text-primary text-lg">{{ c.assureur or 'Assureur inconnu' }}</p>
+          <p class="font-semibold text-primary">{{ 'Contrat de pension extra-légal individuel' if is_uptwou else (c.assureur or 'Assureur inconnu') }}</p>
           {% if c.numero %}
-          <span class="inline-flex items-center gap-1 text-xs text-muted mt-0.5 font-mono tracking-wide">
-            <i data-lucide="hash" style="width:0.75rem;height:0.75rem;"></i>{{ c.numero }}
-          </span>
+          <span class="text-xs text-muted font-mono tracking-wide">{{ c.numero }}</span>
           {% endif %}
         </div>
       </div>
-      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
             style="background:{{ branch_bg }};color:{{ branch_color }};border:1px solid {{ branch_color }}/30;">
         <i data-lucide="{{ 'shield-check' if is_b21 else ('trending-up' if is_b23 else 'layers') }}"
-           style="width:0.75rem;height:0.75rem;"></i>
+           style="width:0.7rem;height:0.7rem;"></i>
         {{ c.type_branche or 'Type inconnu' }}
       </span>
     </div>
 
-    <!-- ── Première rangée : 3 infos clés (style stat-card) ─────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+    {# ── Bandeau statut hero (UpTwoU uniquement) ────────────────────────── #}
+    {% if is_uptwou %}
+    <div class="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-3"
+         style="background:{{ ns.st_bg }};border:1px solid {{ ns.st_border }};">
+      <i data-lucide="{{ ns.st_icon }}"
+         style="width:1.125rem;height:1.125rem;flex-shrink:0;margin-top:1px;color:{{ ns.st_color }};"></i>
+      <div>
+        <p class="font-semibold text-sm" style="color:{{ ns.st_color }};">{{ ns.st_label }}</p>
+        <p class="text-xs mt-0.5 leading-relaxed" style="color:{{ ns.st_color }};opacity:0.8;">{{ ns.st_desc }}</p>
+      </div>
+    </div>
 
-      <!-- Réserve totale -->
-      <div class="stat-card">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0 branch-icon-bg {{ 'branch-b21' if is_b21 else ('branch-b23' if is_b23 else 'branch-other') }}">
-            <i data-lucide="wallet" class="branch-icon-color {{ 'branch-b21' if is_b21 else ('branch-b23' if is_b23 else 'branch-other') }}"
-               style="width:1.125rem;height:1.125rem;"></i>
+    {# ── Timeline (uniquement si pas liquidé) ───────────────────────────── #}
+    {% if ns.tl_step != 5 %}
+    <div class="mx-4 mb-5 px-1">
+      <div class="flex items-start gap-0">
+
+        {# Étape 1 : Signature #}
+        {% set s1_done = ns.tl_step >= 2 %}
+        {% set s1_active = ns.tl_step == 1 %}
+        <div class="flex flex-col items-center flex-shrink-0" style="width:5rem;">
+          <div class="h-8 w-8 rounded-full grid place-items-center font-bold text-xs"
+               style="{% if s1_done %}background:hsl(142 76% 36%);color:white;{% elif s1_active %}background:hsl(220 90% 56%);color:white;{% else %}background:hsl(0 0% 90%);color:hsl(0 0% 55%);{% endif %}">
+            {% if s1_done %}<i data-lucide="check" style="width:0.875rem;height:0.875rem;"></i>
+            {% elif s1_active %}<i data-lucide="pen-line" style="width:0.875rem;height:0.875rem;"></i>
+            {% else %}1{% endif %}
           </div>
-          <p class="text-xs uppercase tracking-widest font-semibold text-muted">Réserve totale</p>
+          <p class="text-xs text-center mt-1.5 leading-tight font-medium"
+             style="color:{% if s1_done or s1_active %}var(--primary){% else %}var(--muted-foreground){% endif %};">
+            Signature
+          </p>
         </div>
-        <p class="font-display text-3xl font-bold text-primary">{{ c.reserve or '—' }} €</p>
-        <p class="text-xs text-muted mt-1">
-          {% if c.date_valeur %}Valorisé le {{ c.date_valeur }}{% else %}Dernière valorisation{% endif %}
+
+        {# Connecteur 1→2 #}
+        <div class="flex-1 h-px mt-4"
+             style="background:{% if ns.tl_step >= 2 %}hsl(142 76% 36%){% else %}hsl(0 0% 85%){% endif %};"></div>
+
+        {# Étape 2 : Transfert #}
+        {% set s2_done = ns.tl_step >= 4 %}
+        {% set s2_active = ns.tl_step == 2 or ns.tl_step == 3 %}
+        <div class="flex flex-col items-center flex-shrink-0" style="width:6rem;">
+          <div class="h-8 w-8 rounded-full grid place-items-center font-bold text-xs"
+               style="{% if s2_done %}background:hsl(142 76% 36%);color:white;{% elif s2_active %}background:hsl(35 95% 55%);color:white;{% else %}background:hsl(0 0% 90%);color:hsl(0 0% 55%);{% endif %}">
+            {% if s2_done %}<i data-lucide="check" style="width:0.875rem;height:0.875rem;"></i>
+            {% elif s2_active %}<i data-lucide="hourglass" style="width:0.875rem;height:0.875rem;"></i>
+            {% else %}2{% endif %}
+          </div>
+          <p class="text-xs text-center mt-1.5 leading-tight font-medium"
+             style="color:{% if s2_done or s2_active %}var(--primary){% else %}var(--muted-foreground){% endif %};">
+            Transfert<br>en cours
+          </p>
+        </div>
+
+        {# Connecteur 2→3 #}
+        <div class="flex-1 h-px mt-4"
+             style="background:{% if ns.tl_step >= 4 %}hsl(142 76% 36%){% else %}hsl(0 0% 85%){% endif %};"></div>
+
+        {# Étape 3 : Réserves reçues #}
+        {% set s3_done = ns.tl_step >= 4 %}
+        <div class="flex flex-col items-center flex-shrink-0" style="width:5rem;">
+          <div class="h-8 w-8 rounded-full grid place-items-center font-bold text-xs"
+               style="{% if s3_done %}background:hsl(142 76% 36%);color:white;{% else %}background:hsl(0 0% 90%);color:hsl(0 0% 55%);{% endif %}">
+            {% if s3_done %}<i data-lucide="check" style="width:0.875rem;height:0.875rem;"></i>
+            {% else %}3{% endif %}
+          </div>
+          <p class="text-xs text-center mt-1.5 leading-tight font-medium"
+             style="color:{% if s3_done %}var(--primary){% else %}var(--muted-foreground){% endif %};">
+            Réserves<br>reçues
+          </p>
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{# end is_uptwou #}
+
+    {# ── 3 chiffres clés ────────────────────────────────────────────────── #}
+    <div class="grid grid-cols-3 gap-px mx-4 mb-4 rounded-xl overflow-hidden"
+         style="border:1px solid var(--border);">
+
+      <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);">
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Réserve</p>
+        <p class="font-display text-xl font-bold text-primary">{{ c.reserve or '—' }}{% if c.reserve %} €{% endif %}</p>
+        <p class="text-xs text-muted mt-0.5">
+          {% if c.date_valeur %}au {{ c.date_valeur }}{% else %}non valorisé{% endif %}
         </p>
-        <p class="flex items-center text-xs text-muted mt-0.5">
-          <i data-lucide="building-2" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
-          Organisme de pension : {{ nouvel_assureur_nom }}
-        </p>
-        <p class="flex items-center text-xs text-muted mt-0.5">
-          <i data-lucide="briefcase" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
-          Gestionnaire de fonds : Wealtheon
-        </p>
+        <p class="text-xs text-muted mt-0.5">Organisme de pension : {{ c.assureur_dest.nom if c.assureur_dest else c.assureur or 'UpTwoU' }}</p>
       </div>
 
-      <!-- Profil -->
-      <div class="stat-card flex flex-col">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
-               style="background:hsl(260 60% 55% / 0.1);">
-            <i data-lucide="sliders-horizontal" style="width:1.125rem;height:1.125rem;color:hsl(260 60% 45%);"></i>
-          </div>
-          <p class="text-xs uppercase tracking-widest font-semibold text-muted">Profil</p>
-        </div>
+      <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);border-left:1px solid var(--border);border-right:1px solid var(--border);">
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Profil</p>
         {% if profil %}
-        <p class="font-display text-3xl font-bold text-primary capitalize">{{ profil }}</p>
-        <p class="text-xs text-muted mt-1">{{ c.type_branche or '—' }}</p>
+        <p class="font-display text-xl font-bold text-primary capitalize">{{ profil }}</p>
         {% else %}
-        <p class="font-display text-2xl font-bold text-muted">Non défini</p>
-        <p class="text-xs text-muted mt-1">{{ c.type_branche or '—' }}</p>
+        <p class="font-display text-xl font-bold text-muted">—</p>
         {% endif %}
-        <div class="mt-auto pt-4 flex justify-end">
-          <button onclick="document.getElementById('modal-profil').showModal()"
-                  class="btn flex items-center gap-1.5"
-                  style="height:2.25rem;padding:0 1rem;font-size:0.8125rem;
-                         background:hsl(260 60% 45%);color:white;border:none;border-radius:0.625rem;
-                         font-weight:600;cursor:pointer;">
-            <i data-lucide="sliders-horizontal" style="width:0.875rem;height:0.875rem;"></i>
-            Modifier le profil
-          </button>
-        </div>
+        <p class="text-xs text-muted mt-0.5">Gestionnaire : Wealtheon</p>
+        <a href="{{ url_for('client_profil') }}" class="text-xs font-semibold mt-1 inline-flex items-center gap-1"
+           style="color:var(--primary);text-decoration:none;">
+          <i data-lucide="brush" style="width:0.7rem;height:0.7rem;"></i>
+          Modifier
+        </a>
       </div>
 
-      <!-- Date terme -->
-      <div class="stat-card">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
-               style="background:hsl(340 75% 50% / 0.1);">
-            <i data-lucide="hourglass" style="width:1.125rem;height:1.125rem;color:hsl(340 75% 45%);"></i>
-          </div>
-          <p class="text-xs uppercase tracking-widest font-semibold text-muted">Date terme</p>
-        </div>
-        <p class="font-display text-3xl font-bold text-primary">{{ c.date_terme or '—' }}</p>
-        <p class="text-xs text-muted mt-1">Échéance du contrat</p>
+      <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);">
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Retraite</p>
+        <p class="font-display text-xl font-bold text-primary">{{ c.date_terme or '—' }}</p>
+        <p class="text-xs text-muted mt-0.5">échéance du contrat</p>
       </div>
 
     </div>
 
-    <!-- ── Historique de transfert (dépliable) ──────────────────────── -->
-    {% set dormants = client.contrats_dormants %}
-    <details class="mt-3 rounded-xl overflow-hidden"
-             style="border:1px solid var(--border); background:hsl(0 0% 97%);">
-      <summary class="flex items-center justify-between gap-2 px-4 py-3 cursor-pointer select-none list-none"
-               style="outline:none;">
-        <span class="flex items-center gap-2">
-          <i data-lucide="clock" style="width:0.875rem;height:0.875rem;color:hsl(35 90% 45%);flex-shrink:0;"></i>
-          <span class="text-xs uppercase tracking-widest font-semibold text-muted">Historique de transfert</span>
-          {% if dormants %}
-          <span class="inline-flex items-center text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                style="background:hsl(35 90% 45% / 0.1);color:hsl(35 90% 35%);">{{ dormants | length }}</span>
+    {# ── Bénéficiaires + Conseiller ─────────────────────────────────────── #}
+    <div class="grid sm:grid-cols-2 gap-px mx-4 mb-4 rounded-xl overflow-hidden"
+         style="border:1px solid var(--border);">
+
+      {# Bénéficiaires #}
+      <div class="px-4 py-3" style="background:hsl(172 75% 22% / 0.03);">
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-2">Bénéficiaires</p>
+        <div class="flex flex-col gap-1.5">
+          <div>
+            <p class="text-xs text-muted leading-none mb-1">À l'échéance</p>
+            <span class="inline-flex items-center gap-1 text-sm font-medium px-2 py-0.5 rounded-full"
+                  style="background:hsl(172 75% 22% / 0.08);color:var(--primary);">
+              <i data-lucide="user-check" style="width:0.7rem;height:0.7rem;"></i>
+              {{ client.prenom }} {{ client.nom }}
+            </span>
+          </div>
+          {% if client.beneficiaire_1 or client.beneficiaire_2 %}
+          <div class="mt-1">
+            <p class="text-xs text-muted leading-none mb-1">En cas de décès</p>
+            <div class="flex flex-col gap-1">
+              {% if client.beneficiaire_1 %}
+              <span class="inline-flex items-center gap-1 text-sm font-medium px-2 py-0.5 rounded-full w-fit"
+                    style="background:hsl(340 75% 50% / 0.07);color:hsl(340 75% 35%);">
+                <i data-lucide="user" style="width:0.7rem;height:0.7rem;"></i>
+                {{ client.beneficiaire_1 }}
+              </span>
+              {% endif %}
+              {% if client.beneficiaire_2 %}
+              <span class="inline-flex items-center gap-1 text-sm font-medium px-2 py-0.5 rounded-full w-fit"
+                    style="background:hsl(340 75% 50% / 0.07);color:hsl(340 75% 35%);">
+                <i data-lucide="user" style="width:0.7rem;height:0.7rem;"></i>
+                {{ client.beneficiaire_2 }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <p class="text-xs text-muted italic">Aucun bénéficiaire désigné</p>
           {% endif %}
-        </span>
-        <i data-lucide="chevron-down" class="hist-chevron"
-           style="width:0.875rem;height:0.875rem;color:var(--muted-foreground);transition:transform 0.2s;flex-shrink:0;"></i>
-      </summary>
-
-      <div style="border-top:1px solid var(--border);">
-        {% if dormants %}
-        <div class="flex flex-col">
-          {% for d in dormants %}
-          <div class="flex items-start justify-between gap-4 flex-wrap px-4 py-3 hist-row">
-
-            <!-- Icone + infos contrat -->
-            <div class="flex items-start gap-3">
-              <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
-                   style="background:hsl(172 75% 22% / 0.08);">
-                <i data-lucide="building-2" style="width:1rem;height:1rem;color:var(--primary);"></i>
-              </div>
-              <div>
-                <p class="font-semibold text-primary text-sm">{{ d.assureur or '—' }}</p>
-                {% if d.numero %}
-                <p class="text-xs text-muted mt-0.5">
-                  Réf. contrat : <span class="font-mono">{{ d.numero }}</span>
-                </p>
-                {% endif %}
-                {% if d.organisateur %}
-                <p class="text-xs text-muted mt-0.5">
-                  <i data-lucide="briefcase" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
-                  {{ d.organisateur }}
-                </p>
-                {% endif %}
-                <div class="flex flex-wrap gap-1.5 mt-2">
-                  <span class="badge badge-blue">{{ d.type_branche or 'Inconnu' }}</span>
-                  <span class="badge badge-green">Dormant</span>
-                  {% if d.reserve %}
-                  <span class="badge"
-                        style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">
-                    {{ d.reserve }} €
-                  </span>
-                  {% endif %}
-                  {% if d.date_valeur %}
-                  <span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">
-                    Valeur au {{ d.date_valeur }}
-                  </span>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-
-            <!-- Date de transfert si disponible -->
-            {% if d.date_transfert %}
-            <div class="flex-shrink-0 text-right">
-              <p class="text-xs text-muted">Transféré le</p>
-              <p class="text-sm font-semibold text-primary">{{ d.date_transfert }}</p>
-            </div>
-            {% endif %}
-
-          </div>
-          {% endfor %}
         </div>
-        {% else %}
-        <p class="text-sm text-muted text-center py-4 px-4">Aucun transfert enregistré.</p>
-        {% endif %}
-      </div>
-    </details>
-
-    <!-- Beneficiaries -->
-    <div class="mt-4 pt-4" style="border-top:1px solid var(--border);">
-      <div class="grid sm:grid-cols-2 gap-4">
-        <div>
-          <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-2">Bénéficiaire à la date terme</p>
-          <span class="inline-flex items-center gap-1.5 text-sm font-medium px-2.5 py-1 rounded-full"
-                style="background:hsl(172 75% 22% / 0.07);color:var(--primary);">
-            <i data-lucide="user-check" style="width:0.875rem;height:0.875rem;"></i>
-            {{ client.prenom }} {{ client.nom }}
-          </span>
-        </div>
-        {% if client.beneficiaire_1 or client.beneficiaire_2 %}
-        <div>
-          <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-2">Bénéficiaire(s) en cas de décès avant le terme</p>
-          <div class="flex flex-col gap-1.5">
-            {% if client.beneficiaire_1 %}
-            <span class="inline-flex items-center gap-1.5 text-sm font-medium px-2.5 py-1 rounded-full w-fit"
-                  style="background:hsl(340 75% 50% / 0.07);color:hsl(340 75% 35%);">
-              <i data-lucide="user" style="width:0.75rem;height:0.75rem;"></i>
-              {{ client.beneficiaire_1 }}
-            </span>
-            {% endif %}
-            {% if client.beneficiaire_2 %}
-            <span class="inline-flex items-center gap-1.5 text-sm font-medium px-2.5 py-1 rounded-full w-fit"
-                  style="background:hsl(340 75% 50% / 0.07);color:hsl(340 75% 35%);">
-              <i data-lucide="user" style="width:0.75rem;height:0.75rem;"></i>
-              {{ client.beneficiaire_2 }}
-            </span>
-            {% endif %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
-      <!-- Bouton bénéficiaires -->
-      <div class="flex justify-end mt-3">
         <button onclick="document.getElementById('modal-benef').showModal()"
-                class="btn flex items-center gap-1.5"
-                style="height:2.25rem;padding:0 1rem;font-size:0.8125rem;
-                       background:hsl(340 75% 45%);color:white;border:none;border-radius:0.625rem;
-                       font-weight:600;cursor:pointer;">
-          <i data-lucide="users" style="width:0.875rem;height:0.875rem;"></i>
+                class="mt-3 text-xs font-semibold flex items-center gap-1"
+                style="background:none;border:none;cursor:pointer;padding:0;color:var(--primary);">
+          <i data-lucide="pencil" style="width:0.7rem;height:0.7rem;"></i>
           Modifier les bénéficiaires
         </button>
       </div>
-    </div>
 
-    <!-- Frais -->
-    <div class="mt-4 pt-4" style="border-top:1px solid var(--border);">
-      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Structure de frais</p>
-      <div class="grid grid-cols-3 gap-2 mb-3">
-        <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
-          <p class="text-xs text-muted mb-1">Entrée</p>
-          <p class="font-display text-xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
-          <p class="text-xs text-muted mt-0.5">frais de transfert</p>
-        </div>
-        <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
-          <p class="text-xs text-muted mb-1">Gestion</p>
-          <p class="font-display text-xl font-bold text-primary">1,90 %</p>
-          <p class="text-xs text-muted mt-0.5">par an sur l'encours</p>
-        </div>
-        <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
-          <p class="text-xs text-muted mb-1">Sortie</p>
-          <p class="font-display text-xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
-          <p class="text-xs text-muted mt-0.5">frais de transfert</p>
-        </div>
-      </div>
-      <p class="text-xs text-muted leading-relaxed"
-         style="background:hsl(35 95% 55% / 0.06);border:1px solid hsl(35 95% 55% / 0.2);border-radius:0.625rem;padding:0.625rem 0.875rem;">
-        <i data-lucide="info" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:3px;color:hsl(35 90% 40%);"></i>
-        Ces frais s'appliquent quel que soit le profil de gestion choisi. Les performances passées ne préjugent pas des performances futures.
-      </p>
-    </div>
-
-    <!-- Documents -->
-    <div class="mt-4 pt-4" style="border-top:1px solid var(--border);">
-      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Documents</p>
-      <div class="grid sm:grid-cols-2 gap-3">
-
-        <!-- Extrait de compte -->
-        <div class="flex items-center justify-between gap-4 rounded-xl p-3"
-             style="background:hsl(0 0% 97%);border:1px solid var(--border);">
-          <div class="flex items-center gap-3">
-            <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
-                 style="background:hsl(172 75% 22% / 0.08);">
-              <i data-lucide="file-text" style="width:1rem;height:1rem;color:var(--primary);"></i>
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-primary">Mon contrat</p>
-              <p class="text-xs text-muted mt-0.5">{{ today.strftime('%d/%m/%Y') }}</p>
-            </div>
+      {# Conseiller #}
+      <div class="px-4 py-3 sm:border-l" style="background:hsl(172 75% 22% / 0.03);border-color:var(--border);">
+        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-2">Votre conseiller</p>
+        <div class="flex items-center gap-2.5 mb-3">
+          <div class="h-9 w-9 rounded-full grid place-items-center flex-shrink-0 font-bold text-white text-xs"
+               style="background:linear-gradient(135deg,hsl(172 75% 22%),hsl(172 60% 38%));">
+            {{ courtier_initiales }}
           </div>
-          {% if client.latest_analyse and client.latest_analyse.filename %}
-          <a href="{{ url_for('client_extrait') }}"
-             class="btn flex items-center gap-1.5 flex-shrink-0"
-             style="height:2rem;padding:0 0.875rem;font-size:0.8125rem;
-                    background:var(--primary);color:white;border:none;border-radius:0.625rem;
-                    font-weight:600;text-decoration:none;">
-            <i data-lucide="download" style="width:0.8rem;height:0.8rem;"></i>
-            Télécharger
-          </a>
-          {% else %}
-          <span class="text-xs text-muted italic">Non disponible</span>
-          {% endif %}
-        </div>
-
-        <!-- Conditions générales -->
-        <div class="flex items-center justify-between gap-4 rounded-xl p-3"
-             style="background:hsl(0 0% 97%);border:1px solid var(--border);">
-          <div class="flex items-center gap-3">
-            <div class="h-9 w-9 rounded-xl grid place-items-center flex-shrink-0"
-                 style="background:hsl(35 90% 45% / 0.1);">
-              <i data-lucide="scroll-text" style="width:1rem;height:1rem;color:hsl(35 90% 40%);"></i>
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-primary">Conditions générales</p>
-              <p class="text-xs text-muted mt-0.5">Convention de gestion UpTwoU</p>
-            </div>
+          <div>
+            <p class="font-semibold text-sm text-primary leading-none">{{ courtier_nom }}</p>
+            <p class="text-xs text-muted mt-0.5">{{ courtier_email }}</p>
           </div>
-          <a href="{{ url_for('static', filename='docs/conditions-generales.pdf') }}"
-             target="_blank"
-             class="btn flex items-center gap-1.5 flex-shrink-0"
-             style="height:2rem;padding:0 0.875rem;font-size:0.8125rem;
-                    background:hsl(35 90% 40%);color:white;border:none;border-radius:0.625rem;
-                    font-weight:600;text-decoration:none;">
-            <i data-lucide="external-link" style="width:0.8rem;height:0.8rem;"></i>
-            Consulter
-          </a>
         </div>
-
+        <button onclick="document.getElementById('modal-courtier').showModal()"
+                class="text-xs font-semibold flex items-center gap-1"
+                style="background:none;border:none;cursor:pointer;padding:0;color:var(--primary);">
+          <i data-lucide="refresh-cw" style="width:0.7rem;height:0.7rem;"></i>
+          Changer de conseiller
+        </button>
       </div>
+
     </div>
 
-    <!-- Conseiller -->
-    <div class="mt-4 pt-4 flex items-center justify-between gap-3 flex-wrap" style="border-top:1px solid var(--border);">
-      <div class="flex items-center gap-2.5">
-        <div class="h-9 w-9 rounded-full grid place-items-center flex-shrink-0 font-bold text-white text-xs"
-             style="background:linear-gradient(135deg,hsl(172 75% 22%),hsl(172 60% 38%));">
-          {{ courtier_initiales }}
-        </div>
-        <div>
-          <p class="text-xs text-muted leading-none mb-0.5">Votre conseiller</p>
-          <p class="text-sm font-semibold text-primary leading-none">{{ courtier_nom }}</p>
-        </div>
-      </div>
-      <button onclick="document.getElementById('modal-courtier').showModal()"
-              class="btn flex items-center gap-1.5"
-              style="height:2.25rem;padding:0 1rem;font-size:0.8125rem;
-                     background:hsl(172 75% 22% / 0.09);color:var(--primary);
-                     border:1.5px solid hsl(172 75% 22% / 0.25);border-radius:0.625rem;
-                     font-weight:600;cursor:pointer;">
-        <i data-lucide="refresh-cw" style="width:0.875rem;height:0.875rem;"></i>
-        Changer de conseiller
+    {# ── Accordéon : Frais & Documents ─────────────────────────────────── #}
+    <div class="mx-4 mb-4 rounded-xl overflow-hidden" style="border:1px solid var(--border);">
+      <button type="button"
+              onclick="toggleDetails(this)"
+              class="w-full flex items-center justify-between px-4 py-3 text-left"
+              style="background:hsl(0 0% 97%);border:none;cursor:pointer;">
+        <span class="text-xs font-semibold uppercase tracking-widest text-muted flex items-center gap-2">
+          <i data-lucide="info" style="width:0.875rem;height:0.875rem;"></i>
+          Frais &amp; Documents
+        </span>
+        <i data-lucide="chevron-down" class="accordion-chevron"
+           style="width:0.875rem;height:0.875rem;color:var(--muted-foreground);transition:transform 0.2s;"></i>
       </button>
+
+      <div class="accordion-body" style="display:none;">
+        <div style="border-top:1px solid var(--border);">
+
+          {# Frais #}
+          <div class="px-4 pt-4 pb-3">
+            <div class="grid grid-cols-3 gap-2 mb-2">
+              <div class="rounded-lg p-2.5 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.15);">
+                <p class="text-xs text-muted mb-0.5">Entrée</p>
+                <p class="font-bold text-base" style="color:hsl(142 60% 28%);">0 %</p>
+                <p class="text-xs text-muted" style="font-size:0.65rem;">transfert</p>
+              </div>
+              <div class="rounded-lg p-2.5 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
+                <p class="text-xs text-muted mb-0.5">Gestion</p>
+                <p class="font-bold text-base text-primary">1,95 %</p>
+                <p class="text-xs text-muted" style="font-size:0.65rem;">par an</p>
+              </div>
+              <div class="rounded-lg p-2.5 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.15);">
+                <p class="text-xs text-muted mb-0.5">Sortie</p>
+                <p class="font-bold text-base" style="color:hsl(142 60% 28%);">0 %</p>
+                <p class="text-xs text-muted" style="font-size:0.65rem;">transfert</p>
+              </div>
+            </div>
+          </div>
+
+          {# Documents #}
+          <div class="px-4 pb-4 pt-1 flex flex-col sm:flex-row gap-2">
+            {% if client.latest_analyse and client.latest_analyse.filename %}
+            <a href="{{ url_for('client_extrait') }}"
+               target="_blank"
+               class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+               style="background:hsl(172 75% 22% / 0.07);color:var(--primary);text-decoration:none;border:1px solid hsl(172 75% 22% / 0.15);">
+              <i data-lucide="file-text" style="width:0.875rem;height:0.875rem;"></i>
+              Mon contrat
+            </a>
+            {% endif %}
+            <a href="{{ url_for('static', filename='docs/conditions-generales.pdf') }}"
+               target="_blank"
+               class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
+               style="background:hsl(35 90% 45% / 0.07);color:hsl(35 80% 30%);text-decoration:none;border:1px solid hsl(35 90% 45% / 0.2);">
+              <i data-lucide="scroll-text" style="width:0.875rem;height:0.875rem;"></i>
+              Conditions générales
+            </a>
+          </div>
+
+        </div>
+      </div>
     </div>
 
   </div>
@@ -370,10 +384,7 @@
 {% endif %}
 
 <!-- ── MODAL : Profil de risque ──────────────────────────────────────── -->
-<dialog id="modal-profil" style="
-  border:none; border-radius:1rem; padding:0; width:min(480px,92vw);
-  box-shadow:0 20px 60px hsl(0 0% 0% / 0.18);
-">
+<dialog id="modal-profil" style="border:none;border-radius:1rem;padding:0;width:min(480px,92vw);box-shadow:0 20px 60px hsl(0 0% 0% / 0.18);">
   <div style="padding:1.75rem;">
     <div class="flex items-center justify-between mb-5">
       <h2 class="font-display text-xl font-semibold text-primary">Profil de risque</h2>
@@ -382,15 +393,13 @@
         <i data-lucide="x" style="width:1.25rem;height:1.25rem;"></i>
       </button>
     </div>
-
     <form method="post" action="{{ url_for('client_modifier_profil') }}">
       <div class="flex flex-col gap-3 mb-6">
-
         {% for slug, label, desc, color in [
-          ('prudent',    'Prudent',    'Capital garanti, rendement stable. Idéal pour un horizon court ou une faible tolérance au risque.',           'hsl(213 80% 50%)'),
-          ('equilibre',  'Équilibré',  'Mix actions / obligations. Croissance modérée avec une volatilité limitée.',                                    'hsl(172 75% 28%)'),
-          ('dynamique',  'Dynamique',  'Majorité en actions mondiales. Potentiel de croissance élevé sur le long terme.',                               'hsl(172 65% 35%)'),
-          ('conviction', 'Conviction', 'Portefeuille concentré à haute conviction. Volatilité élevée, rendement potentiel maximal.',                    'hsl(35 90% 45%)'),
+          ('prudent',    'Prudent',    'Capital garanti, rendement stable. Idéal pour un horizon court ou une faible tolérance au risque.',        'hsl(213 80% 50%)'),
+          ('equilibre',  'Équilibré',  'Mix actions / obligations. Croissance modérée avec une volatilité limitée.',                               'hsl(172 75% 28%)'),
+          ('dynamique',  'Dynamique',  'Majorité en actions mondiales. Potentiel de croissance élevé sur le long terme.',                          'hsl(172 65% 35%)'),
+          ('conviction', 'Conviction', 'Portefeuille concentré à haute conviction. Volatilité élevée, rendement potentiel maximal.',               'hsl(35 90% 45%)'),
         ] %}
         <label class="profil-option" style="cursor:pointer;">
           <input type="radio" name="profil_risque" value="{{ slug }}"
@@ -400,8 +409,7 @@
                style="border:2px solid {% if client.profil_risque == slug %}{{ color }}{% else %}var(--border){% endif %};
                       background:{% if client.profil_risque == slug %}hsl(172 75% 22% / 0.06){% else %}white{% endif %};">
             <div class="h-9 w-9 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
-                 style="background:{{ color }};opacity:0.15;" id="profil-icon-{{ slug }}">
-            </div>
+                 style="background:{{ color }};opacity:0.15;"></div>
             <div style="flex:1;">
               <p class="font-semibold text-sm" style="color:{{ color }};">{{ label }}</p>
               <p class="text-xs text-muted mt-0.5 leading-relaxed">{{ desc }}</p>
@@ -416,9 +424,7 @@
           </div>
         </label>
         {% endfor %}
-
       </div>
-
       <div class="flex gap-3 justify-end">
         <button type="button" onclick="document.getElementById('modal-profil').close()"
                 class="btn" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;background:hsl(0 0% 96%);color:var(--muted-foreground);border:1px solid var(--border);">
@@ -435,10 +441,7 @@
 </dialog>
 
 <!-- ── MODAL : Bénéficiaires en cas de décès ────────────────────────── -->
-<dialog id="modal-benef" style="
-  border:none; border-radius:1rem; padding:0; width:min(480px,92vw);
-  box-shadow:0 20px 60px hsl(0 0% 0% / 0.18);
-">
+<dialog id="modal-benef" style="border:none;border-radius:1rem;padding:0;width:min(480px,92vw);box-shadow:0 20px 60px hsl(0 0% 0% / 0.18);">
   <div style="padding:1.75rem;">
     <div class="flex items-center justify-between mb-5">
       <h2 class="font-display text-xl font-semibold text-primary">Bénéficiaires en cas de décès</h2>
@@ -447,16 +450,13 @@
         <i data-lucide="x" style="width:1.25rem;height:1.25rem;"></i>
       </button>
     </div>
-
     <form method="post" action="{{ url_for('client_modifier_beneficiaires') }}">
       <div class="flex flex-col gap-4 mb-6">
-
         <div class="rounded-xl p-3 text-xs leading-relaxed"
              style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.25);color:hsl(35 90% 30%);">
           <i data-lucide="info" style="width:0.75rem;height:0.75rem;display:inline-block;vertical-align:middle;margin-right:4px;"></i>
           Les bénéficiaires désignés recevront le capital en cas de décès avant le terme du contrat.
         </div>
-
         <div>
           <label class="block text-xs font-semibold text-primary mb-1.5" for="benef1">
             1<sup>er</sup> bénéficiaire
@@ -467,7 +467,6 @@
                  style="width:100%;padding:0.625rem 0.875rem;border:1px solid var(--border);border-radius:0.625rem;
                         font-size:0.9375rem;font-family:inherit;outline:none;transition:border-color 0.15s;">
         </div>
-
         <div>
           <label class="block text-xs font-semibold text-primary mb-1.5" for="benef2">
             2<sup>e</sup> bénéficiaire <span class="font-normal text-muted">(optionnel)</span>
@@ -478,9 +477,7 @@
                  style="width:100%;padding:0.625rem 0.875rem;border:1px solid var(--border);border-radius:0.625rem;
                         font-size:0.9375rem;font-family:inherit;outline:none;transition:border-color 0.15s;">
         </div>
-
       </div>
-
       <div class="flex gap-3 justify-end">
         <button type="button" onclick="document.getElementById('modal-benef').close()"
                 class="btn" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;background:hsl(0 0% 96%);color:var(--muted-foreground);border:1px solid var(--border);">
@@ -497,10 +494,7 @@
 </dialog>
 
 <!-- ── MODAL : Changer de conseiller ────────────────────────────────── -->
-<dialog id="modal-courtier" style="
-  border:none; border-radius:1rem; padding:0; width:min(540px,92vw);
-  box-shadow:0 20px 60px hsl(0 0% 0% / 0.18);
-">
+<dialog id="modal-courtier" style="border:none;border-radius:1rem;padding:0;width:min(540px,92vw);box-shadow:0 20px 60px hsl(0 0% 0% / 0.18);">
   <div style="padding:1.75rem;">
     <div class="flex items-center justify-between mb-5">
       <h2 class="font-display text-xl font-semibold text-primary">Changer de conseiller</h2>
@@ -509,8 +503,6 @@
         <i data-lucide="x" style="width:1.25rem;height:1.25rem;"></i>
       </button>
     </div>
-
-    <!-- Conseiller actuel -->
     <div class="flex items-center gap-3 rounded-xl p-3 mb-5"
          style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
       <div class="h-9 w-9 rounded-full grid place-items-center font-bold text-white text-xs flex-shrink-0"
@@ -522,11 +514,8 @@
         <p class="font-semibold text-primary text-sm">{{ courtier_nom }}</p>
       </div>
     </div>
-
     <form id="form-courtier" method="post" action="{{ url_for('client_demande_changement_courtier') }}">
       <input type="hidden" name="courtier_id" id="courtier-id-input">
-
-      <!-- Search -->
       <div class="mb-3">
         <label class="block text-xs font-semibold text-primary mb-1.5">
           Rechercher un nouveau conseiller
@@ -539,46 +528,37 @@
                  placeholder="Nom, prénom ou code postal…"
                  style="width:100%;padding:0.625rem 0.875rem 0.625rem 2.25rem;
                         border:1px solid var(--border);border-radius:0.625rem;
-                        font-size:0.9375rem;font-family:inherit;outline:none;
-                        transition:border-color 0.15s;">
+                        font-size:0.9375rem;font-family:inherit;outline:none;transition:border-color 0.15s;">
         </div>
         <p id="courtier-search-hint" class="text-xs text-muted mt-1.5">Tapez au moins 2 caractères pour rechercher.</p>
       </div>
-
-      <!-- Results -->
       <div id="courtier-results" class="flex flex-col gap-2 mb-4" style="max-height:220px;overflow-y:auto;"></div>
-
-      <!-- Selected preview -->
       <div id="courtier-selected-preview" class="hidden rounded-xl p-3 mb-4"
            style="background:hsl(172 75% 22% / 0.07);border:1px solid hsl(172 75% 22% / 0.2);">
         <p class="text-xs text-muted mb-1">Nouveau conseiller sélectionné</p>
         <p id="courtier-selected-name" class="font-semibold text-primary text-sm"></p>
         <p id="courtier-selected-loc" class="text-xs text-muted"></p>
       </div>
-
-      <!-- Optional message -->
-      <div class="mb-5">
-        <label class="block text-xs font-semibold text-primary mb-1.5" for="courtier-message">
-          Message <span class="font-normal text-muted">(optionnel)</span>
-        </label>
-        <textarea id="courtier-message" name="message" rows="2"
-                  placeholder="Ex. Je préfère un conseiller proche de chez moi…"
-                  style="width:100%;padding:0.625rem 0.875rem;border:1px solid var(--border);
-                         border-radius:0.625rem;font-size:0.875rem;font-family:inherit;
-                         outline:none;resize:none;transition:border-color 0.15s;"></textarea>
-      </div>
-
-      <div class="flex gap-3 justify-end">
-        <button type="button" onclick="document.getElementById('modal-courtier').close()"
-                class="btn" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;background:hsl(0 0% 96%);color:var(--muted-foreground);border:1px solid var(--border);">
-          Annuler
+      <div class="flex flex-wrap gap-3 justify-between items-center">
+        <button type="button" id="courtier-remove-btn"
+                onclick="retirerConseiller()"
+                class="text-xs flex items-center gap-1.5"
+                style="background:none;border:none;cursor:pointer;padding:0;color:hsl(0 60% 45%);">
+          <i data-lucide="user-x" style="width:0.8rem;height:0.8rem;"></i>
+          Continuer sans conseiller
         </button>
-        <button id="courtier-submit-btn" type="submit" disabled
-                class="btn btn-primary flex items-center gap-2"
-                style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;opacity:0.45;cursor:not-allowed;">
-          <i data-lucide="user-check" style="width:0.875rem;height:0.875rem;"></i>
-          Confirmer le changement
-        </button>
+        <div class="flex gap-3">
+          <button type="button" onclick="document.getElementById('modal-courtier').close()"
+                  class="btn" style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;background:hsl(0 0% 96%);color:var(--muted-foreground);border:1px solid var(--border);">
+            Annuler
+          </button>
+          <button id="courtier-submit-btn" type="submit" disabled
+                  class="btn btn-primary flex items-center gap-2"
+                  style="height:2.5rem;padding:0 1.25rem;font-size:0.875rem;opacity:0.45;cursor:not-allowed;">
+            <i data-lucide="user-check" style="width:0.875rem;height:0.875rem;"></i>
+            Confirmer le changement
+          </button>
+        </div>
       </div>
     </form>
   </div>
@@ -592,42 +572,34 @@
   dialog[open] { animation: dialog-in 0.18s ease; }
   @keyframes dialog-in { from { opacity:0; transform:scale(0.96) translateY(8px); } to { opacity:1; transform:none; } }
 
-  details[open] .hist-chevron { transform: rotate(180deg); }
-  details > summary::-webkit-details-marker { display:none; }
-  details > summary { transition: background 0.15s; }
-  details > summary:hover { background: hsl(0 0% 94%); }
-  .hist-row + .hist-row { border-top: 1px solid var(--border); }
-
-  .branch-icon-bg.branch-b21  { background: hsl(213 80% 50% / 0.1); }
-  .branch-icon-bg.branch-b23  { background: hsl(172 75% 28% / 0.1); }
-  .branch-icon-bg.branch-other { background: hsl(260 60% 55% / 0.1); }
-  .branch-icon-color.branch-b21  { color: hsl(213 80% 50%); }
-  .branch-icon-color.branch-b23  { color: hsl(172 75% 28%); }
-  .branch-icon-color.branch-other { color: hsl(260 60% 55%); }
-
-  /* Profil radio highlight on click */
   .profil-option input:checked ~ .profil-card {
     border-color: var(--primary) !important;
     background: hsl(172 75% 22% / 0.06) !important;
   }
-  .field-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px hsl(172 75% 22% / 0.12); }
 </style>
 <script>
-  /* Close dialog on backdrop click */
   document.querySelectorAll('dialog').forEach(d => {
     d.addEventListener('click', e => { if (e.target === d) d.close(); });
   });
 
+  function toggleDetails(btn) {
+    const body = btn.nextElementSibling;
+    const chevron = btn.querySelector('.accordion-chevron');
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    chevron.style.transform = open ? '' : 'rotate(180deg)';
+  }
+
   /* Courtier search */
   let courtierDebounce = null;
-  const searchInput   = document.getElementById('courtier-search');
-  const resultsBox    = document.getElementById('courtier-results');
-  const hint          = document.getElementById('courtier-search-hint');
-  const hiddenId      = document.getElementById('courtier-id-input');
-  const preview       = document.getElementById('courtier-selected-preview');
-  const previewName   = document.getElementById('courtier-selected-name');
-  const previewLoc    = document.getElementById('courtier-selected-loc');
-  const submitBtn     = document.getElementById('courtier-submit-btn');
+  const searchInput = document.getElementById('courtier-search');
+  const resultsBox  = document.getElementById('courtier-results');
+  const hint        = document.getElementById('courtier-search-hint');
+  const hiddenId    = document.getElementById('courtier-id-input');
+  const preview     = document.getElementById('courtier-selected-preview');
+  const previewName = document.getElementById('courtier-selected-name');
+  const previewLoc  = document.getElementById('courtier-selected-loc');
+  const submitBtn   = document.getElementById('courtier-submit-btn');
 
   function selectCourtier(id, nom, email, cp, ville) {
     hiddenId.value = id;
@@ -644,10 +616,7 @@
 
   function renderResults(list) {
     resultsBox.innerHTML = '';
-    if (!list.length) {
-      hint.textContent = 'Aucun résultat. Essayez un autre terme.';
-      return;
-    }
+    if (!list.length) { hint.textContent = 'Aucun résultat. Essayez un autre terme.'; return; }
     hint.textContent = '';
     list.forEach(c => {
       const loc = [c.code_postal, c.ville].filter(Boolean).join(' ');
@@ -688,6 +657,12 @@
     }, 280);
   });
 
+  function retirerConseiller() {
+    if (!confirm('Êtes-vous sûr de vouloir retirer votre conseiller ?')) return;
+    hiddenId.value = 'none';
+    document.getElementById('form-courtier').submit();
+  }
+
   document.getElementById('modal-courtier').addEventListener('close', () => {
     searchInput.value = '';
     resultsBox.innerHTML = '';
@@ -699,7 +674,6 @@
     submitBtn.style.cursor  = 'not-allowed';
   });
 
-  /* Highlight selected profil card */
   document.querySelectorAll('.profil-radio').forEach(radio => {
     radio.addEventListener('change', () => {
       document.querySelectorAll('.profil-card').forEach(card => {

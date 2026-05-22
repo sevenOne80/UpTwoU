@@ -2,16 +2,26 @@ import os
 import re
 import json
 import base64
+import secrets
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders as email_encoders
 import pdfplumber
 import anthropic
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory
+from pathlib import Path
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, send_from_directory, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, User, Client, Contrat, Analyse, AssureurRef, ContactMessage, seed_assureurs
+from models import db, User, Client, Contrat, Analyse, ContactMessage, ProfilChangeLog, CabinetCourtage, TransfertSignature, SignatureEvent, seed_assureurs
+from pdf_utils import generer_annexe1, NOUVEL_NOM
+from services.connective_service import initiate_batch_transfer_signature
+from routes.signature import signature_bp
 import itsme_auth
-from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, QuestionnaireForm
+from forms import LoginForm, RegisterForm, DonneesForm, ProfilForm, CourtierRegisterForm, OnboardingKYCForm, OnboardingContratForm, QuestionnaireForm, EmptyForm
 
 try:
     from dotenv import load_dotenv
@@ -40,6 +50,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+app.register_blueprint(signature_bp)
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -47,6 +58,186 @@ login_manager.login_message = 'Veuillez vous connecter pour accéder à cette pa
 login_manager.login_message_category = 'error'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+def _parse_reserve(val) -> float:
+    """Parse a reserve string (e.g. '12 345,67' or '12345.67') to float."""
+    if not val:
+        return 0.0
+    s = str(val).strip().replace('€', '').replace('\xa0', '').replace(' ', '')
+    if ',' in s and '.' in s:
+        s = s.replace('.', '').replace(',', '.')
+    elif ',' in s:
+        parts = s.split(',')
+        if len(parts[-1]) == 3 and parts[-1].isdigit():
+            s = s.replace(',', '')
+        else:
+            s = s.replace(',', '.')
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+# ── Email helper ───────────────────────────────────────────────────────────────
+def _send_verification_email(user_email: str, token: str):
+    verify_url = url_for('verifier_email', token=token, _external=True)
+    mail_server = os.getenv('MAIL_SERVER')
+    if not mail_server:
+        app.logger.info("DEV — lien de vérification email : %s", verify_url)
+        return
+
+    html_body = f"""
+    <html><body style="font-family:sans-serif;color:#1a1a1a;max-width:560px;margin:auto;padding:32px;">
+      <img src="https://app.uptwoU.be/static/img/uptwou-logo.svg" height="36" alt="UpTwoU" style="margin-bottom:24px;">
+      <h2 style="color:#0d5c4e;font-size:22px;margin-bottom:8px;">Confirmez votre adresse e-mail</h2>
+      <p style="color:#555;line-height:1.6;">
+        Merci de vous être inscrit sur UpTwoU. Cliquez sur le bouton ci-dessous pour
+        activer votre compte et accéder à votre espace personnel.
+      </p>
+      <a href="{verify_url}"
+         style="display:inline-block;margin:24px 0;padding:14px 32px;background:#0d5c4e;
+                color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">
+        Confirmer mon adresse e-mail
+      </a>
+      <p style="color:#888;font-size:13px;">
+        Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.
+      </p>
+      <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+      <p style="color:#aaa;font-size:12px;">UpTwoU — Rue Belliard 40, 1040 Bruxelles</p>
+    </body></html>
+    """
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Confirmez votre adresse e-mail — UpTwoU'
+    msg['From'] = os.getenv('MAIL_FROM', 'noreply@uptwou.be')
+    msg['To'] = user_email
+    msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+    try:
+        with smtplib.SMTP(mail_server, int(os.getenv('MAIL_PORT', 587))) as server:
+            server.starttls()
+            username = os.getenv('MAIL_USERNAME')
+            password = os.getenv('MAIL_PASSWORD')
+            if username and password:
+                server.login(username, password)
+            server.send_message(msg)
+        app.logger.info("Email de vérification envoyé à %s", user_email)
+    except Exception:
+        app.logger.exception("Échec de l'envoi de l'email de vérification à %s", user_email)
+
+
+def _attach_file(msg: MIMEMultipart, filepath: str, filename: str):
+    """Attach a file to a MIMEMultipart message."""
+    try:
+        with open(filepath, 'rb') as f:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(f.read())
+        email_encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment', filename=filename)
+        msg.attach(part)
+        return True
+    except OSError:
+        return False
+
+
+def _send_kyc_mismatch_emails(client, user_email: str):
+    """
+    Send mypension PDF + ID card to support, and a waiting confirmation to the client.
+    Falls back to logging if MAIL_SERVER is not configured.
+    """
+    support = 'support@uptwou.be'
+    mail_from = os.getenv('MAIL_FROM', 'noreply@uptwou.be')
+    nom_complet = f"{client.prenom or ''} {client.nom or ''}".strip() or user_email
+
+    # ── Email 1 : alerte support ─────────────────────────────────────────────
+    msg_support = MIMEMultipart()
+    msg_support['Subject'] = f"Vérification manuelle KYC — {nom_complet}"
+    msg_support['From'] = mail_from
+    msg_support['To'] = support
+
+    body_support = f"""
+    <html><body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:auto;padding:32px;">
+      <h2 style="color:#c0392b;">Vérification manuelle KYC requise</h2>
+      <p>Le numéro national extrait de la carte d'identité ne correspond pas
+         à celui de l'extrait mypension.be pour le client suivant :</p>
+      <table style="border-collapse:collapse;width:100%;margin:16px 0;">
+        <tr><td style="padding:6px 12px;background:#f5f5f5;font-weight:600;">Nom</td>
+            <td style="padding:6px 12px;">{nom_complet}</td></tr>
+        <tr><td style="padding:6px 12px;background:#f5f5f5;font-weight:600;">Email</td>
+            <td style="padding:6px 12px;">{user_email}</td></tr>
+        <tr><td style="padding:6px 12px;background:#f5f5f5;font-weight:600;">NISS mypension</td>
+            <td style="padding:6px 12px;">{client.niss or '—'}</td></tr>
+        <tr><td style="padding:6px 12px;background:#f5f5f5;font-weight:600;">Client ID</td>
+            <td style="padding:6px 12px;">{client.id}</td></tr>
+      </table>
+      <p>Les documents sont joints à cet email. Après vérification, activez manuellement
+         le compte via l'interface admin et contactez le client.</p>
+    </body></html>
+    """
+    msg_support.attach(MIMEText(body_support, 'html', 'utf-8'))
+
+    # Pièces jointes
+    upload_dir = UPLOAD_FOLDER
+    if client.latest_analyse and client.latest_analyse.filename:
+        _attach_file(
+            msg_support,
+            os.path.join(upload_dir, client.latest_analyse.filename),
+            f"mypension_{nom_complet.replace(' ', '_')}.pdf",
+        )
+    if client.kyc_document:
+        _attach_file(
+            msg_support,
+            os.path.join(upload_dir, client.kyc_document),
+            f"carte_identite_{nom_complet.replace(' ', '_')}.pdf",
+        )
+
+    # ── Email 2 : confirmation client ────────────────────────────────────────
+    msg_client = MIMEMultipart('alternative')
+    msg_client['Subject'] = 'Votre dossier est en cours de vérification — UpTwoU'
+    msg_client['From'] = mail_from
+    msg_client['To'] = user_email
+
+    body_client = f"""
+    <html><body style="font-family:sans-serif;color:#1a1a1a;max-width:560px;margin:auto;padding:32px;">
+      <img src="https://app.uptwoU.be/static/img/uptwou-logo.svg" height="36" alt="UpTwoU" style="margin-bottom:24px;">
+      <h2 style="color:#0d5c4e;font-size:22px;margin-bottom:8px;">Votre dossier est en cours de vérification</h2>
+      <p style="color:#555;line-height:1.6;">
+        Bonjour {client.prenom or ''},<br><br>
+        Nous avons bien reçu vos documents et notre équipe va les examiner dans les plus brefs délais.
+      </p>
+      <p style="color:#555;line-height:1.6;">
+        Vous recevrez un email dès que votre identité aura été confirmée,
+        afin de poursuivre votre inscription sur UpTwoU.
+      </p>
+      <p style="color:#555;line-height:1.6;">
+        Pour toute question, contactez-nous à
+        <a href="mailto:support@uptwou.be" style="color:#0d5c4e;">support@uptwou.be</a>.
+      </p>
+      <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+      <p style="color:#aaa;font-size:12px;">UpTwoU — Rue Belliard 40, 1040 Bruxelles</p>
+    </body></html>
+    """
+    msg_client.attach(MIMEText(body_client, 'html', 'utf-8'))
+
+    # ── Envoi ────────────────────────────────────────────────────────────────
+    mail_server = os.getenv('MAIL_SERVER')
+    if not mail_server:
+        app.logger.info("DEV — KYC mismatch pour %s (client_id=%s)", user_email, client.id)
+        return
+
+    try:
+        with smtplib.SMTP(mail_server, int(os.getenv('MAIL_PORT', 587))) as server:
+            server.starttls()
+            username = os.getenv('MAIL_USERNAME')
+            password = os.getenv('MAIL_PASSWORD')
+            if username and password:
+                server.login(username, password)
+            server.send_message(msg_support)
+            server.send_message(msg_client)
+        app.logger.info("Emails KYC mismatch envoyés — client %s", client.id)
+    except Exception:
+        app.logger.exception("Échec envoi emails KYC mismatch — client %s", client.id)
 
 
 @login_manager.user_loader
@@ -138,21 +329,41 @@ def score_to_profil(score):
             return p
     return 'equilibre'
 
+def _log_profil_change(client, nouveau_profil, choisi_par, score=None):
+    """Record a profile change and flag it as pending delivery to Wealtheon + insurer."""
+    entry = ProfilChangeLog(
+        client_id=client.id,
+        profil_ancien=client.profil_risque,
+        profil_nouveau=nouveau_profil,
+        choisi_par=choisi_par,
+        score_questionnaire=score,
+    )
+    db.session.add(entry)
+
+
 ALLOWED_KYC_EXT = {'jpg', 'jpeg', 'png', 'pdf'}
 
-KYC_PROMPT = """Analyse cette pièce d'identité et extrais les données au format JSON uniquement, sans texte avant ni après :
+KYC_PROMPT = """Analyse cette pièce d'identité belge et extrais les données au format JSON uniquement, sans texte avant ni après.
+
+Règles importantes :
+- "adresse" = rue et numéro UNIQUEMENT (ex: "Rue de la Loi 42")
+- "code_postal" = code postal 4 chiffres UNIQUEMENT (ex: "1040")
+- "ville" = localité UNIQUEMENT (ex: "Bruxelles")
+- Ne mélange pas ces trois champs : si l'adresse imprimée est "Rue de la Loi 42, 1040 Bruxelles", décompose-la correctement
+- Pour le NISS belge : verso de la carte, format XX.XX.XX-XXX.XX
+- Si une valeur est absente, utilise null
+
 {
   "nom": "NOM EN MAJUSCULES",
   "prenom": "Prénom(s)",
   "date_naissance": "JJ/MM/AAAA",
   "niss": "XX.XX.XX-XXX.XX ou null",
-  "adresse": "rue et numéro ou null",
-  "code_postal": "code postal ou null",
-  "ville": "localité ou null",
+  "adresse": "rue et numéro uniquement ou null",
+  "code_postal": "4 chiffres ou null",
+  "ville": "localité uniquement ou null",
   "pays": "pays ou Belgique",
   "sexe": "F ou M ou null"
-}
-Pour le NISS belge (numéro national) : il apparaît au verso de la carte d'identité belge au format XX.XX.XX-XXX.XX. Si absent, utilise null."""
+}"""
 
 def analyse_piece_identite(filepath):
     """Analyse an ID card (image or PDF) with Claude vision. Returns dict."""
@@ -176,10 +387,37 @@ def analyse_piece_identite(filepath):
             if block.type == "text":
                 raw = re.sub(r'^```json\s*', '', block.text.strip())
                 raw = re.sub(r'\s*```$', '', raw)
-                return json.loads(raw)
+                data = json.loads(raw)
+                return _split_adresse(data)
     except Exception:
         pass
     return {}
+
+
+def _split_adresse(data: dict) -> dict:
+    """
+    Fallback: if Claude returned the full address in the 'adresse' field
+    (e.g. "Rue de la Loi 42, 1040 Bruxelles"), extract postal code and city.
+    Only fills missing fields — never overwrites values Claude already separated.
+    """
+    adresse = data.get('adresse') or ''
+    if not adresse:
+        return data
+    if data.get('code_postal') and data.get('ville'):
+        return data
+
+    # Look for a 4-digit Belgian postal code inside the address string
+    m = re.search(r'\b(\d{4})\s+([A-Za-zÀ-ÿ\- ]+)$', adresse)
+    if m:
+        cp, ville = m.group(1), m.group(2).strip()
+        rue = adresse[:m.start()].strip().rstrip(',').strip()
+        if not data.get('code_postal'):
+            data['code_postal'] = cp
+        if not data.get('ville'):
+            data['ville'] = ville
+        if rue:
+            data['adresse'] = rue
+    return data
 
 
 # ── Claude analysis ────────────────────────────────────────────────────────────
@@ -271,7 +509,7 @@ Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte av
 {{
   "eligible": true, false, ou "a_verifier",
   "titre": une des trois valeurs ci-dessous,
-  "resume": "Phrase synthétique en 1-2 phrases sur la situation de l'assuré.",
+  "resume": "Message personnalisé s'adressant directement à la personne. Commence par 'Cher Monsieur [prénom] [nom],' ou 'Chère Madame [prénom] [nom],' selon le sexe extrait, puis utilise 'vous' tout au long. Ex : 'Cher Monsieur Jean Dupont, vous disposez d'une réserve totale de ...'",
   "details": [
     "Point clé 1 — réserves trouvées, montants, assureurs",
     "Point clé 2 — statut des plans (dormant/actif) et conditions confirmées ou à vérifier"
@@ -296,7 +534,8 @@ Analyse ce document et réponds UNIQUEMENT au format JSON suivant, sans texte av
     "prenom": "prénom extrait de la section 0 ou null",
     "nom": "nom extrait de la section 0 ou null",
     "niss": "numéro NISS format XX.XX.XX-XXX.XX ou null",
-    "adresse": "adresse complète ou null"
+    "adresse": "adresse complète ou null",
+    "sexe": "M si masculin, F si féminin — déduit du NISS (chiffres 7-9 impairs = M, pairs = F) ou du prénom si NISS absent. null si indéterminable."
   }}
 }}
 
@@ -544,9 +783,18 @@ def register():
         db.session.add(client_profile)
         db.session.flush()
 
+        analyse_record = Analyse(
+            client_id=client_profile.id,
+            filename=session.get('analyse_filename', ''),
+            resultat_json=analyse_json
+        )
+        db.session.add(analyse_record)
+        db.session.flush()
+
         for c in analyse.get('contrats', []):
             db.session.add(Contrat(
                 client_id=client_profile.id,
+                analyse_id=analyse_record.id,
                 assureur=c.get('assureur'),
                 numero=c.get('numero'),
                 type_branche=c.get('type_branche'),
@@ -557,18 +805,48 @@ def register():
                 organisateur_bce=c.get('organisateur_bce'),
             ))
 
-        db.session.add(Analyse(
-            client_id=client_profile.id,
-            filename=session.get('analyse_filename', ''),
-            resultat_json=analyse_json
-        ))
-
+        token = secrets.token_urlsafe(32)
+        user.email_token = token
+        user.email_confirmed = False
         db.session.commit()
-        login_user(user)
-        flash("Compte créé. Complétez votre dossier KYC.", "success")
-        return redirect(url_for('onboarding_kyc'))
+
+        _send_verification_email(user.email, token)
+        return redirect(url_for('email_en_attente', email=user.email))
 
     return render_template("register.html", form=form, analyse=analyse)
+
+
+@app.route("/email-en-attente")
+def email_en_attente():
+    email = request.args.get('email', '')
+    return render_template("email_en_attente.html", email=email)
+
+
+@app.route("/verifier-email/<token>")
+def verifier_email(token):
+    user = User.query.filter_by(email_token=token).first()
+    if not user:
+        flash("Ce lien de confirmation est invalide ou a déjà été utilisé.", "error")
+        return redirect(url_for('login'))
+    user.email_confirmed = True
+    user.email_token = None
+    db.session.commit()
+    login_user(user)
+    flash("Votre adresse e-mail est confirmée. Bienvenue sur UpTwoU !", "success")
+    return redirect(url_for('onboarding_kyc'))
+
+
+@app.route("/renvoyer-confirmation", methods=["POST"])
+def renvoyer_confirmation():
+    email = request.form.get('email', '').strip()
+    user = User.query.filter_by(email=email).first()
+    if user and not user.email_confirmed:
+        token = secrets.token_urlsafe(32)
+        user.email_token = token
+        db.session.commit()
+        _send_verification_email(email, token)
+    flash("Si un compte non confirmé existe pour cette adresse, un nouvel email vient d'être envoyé.", "success")
+    return redirect(url_for('email_en_attente', email=email))
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -581,6 +859,8 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
+            if not user.email_confirmed:
+                return redirect(url_for('email_en_attente', email=user.email))
             login_user(user)
             next_page = request.args.get('next')
             if not next_page:
@@ -690,22 +970,31 @@ def auth_itsme_callback():
 @login_required
 @client_required
 def client_dashboard():
-    client = current_user.client_profile
-    analyses = sorted(client.analyses, key=lambda a: a.created_at, reverse=True)
-    return render_template("client/dashboard.html", client=client, analyses=analyses)
+    return redirect(url_for('client_contrats'))
 
 
 @app.route("/client/contrats")
 @login_required
 @client_required
 def client_contrats():
-    courtiers = User.query.filter_by(role='courtier').all()
-    nouvel_assureur_nom = os.environ.get('NOUVEL_ASSUREUR_NOM', 'OneLife SA')
     from datetime import date
+    client = current_user.client_profile
+    actifs = client.contrats_actifs
+    new_ids = [c.id for c in actifs]
+    ts_rows = TransfertSignature.query.filter(
+        TransfertSignature.nouveau_contrat_id.in_(new_ids)
+    ).all() if new_ids else []
+    ts_by_contrat = {}
+    for ts in ts_rows:
+        ts_by_contrat.setdefault(ts.nouveau_contrat_id, []).append(ts)
+    ts_statuts_by_contrat = {
+        cid: {t.statut_signature for t in lst}
+        for cid, lst in ts_by_contrat.items()
+    }
     return render_template("client/contrats.html",
-                           client=current_user.client_profile,
-                           courtiers=courtiers,
-                           nouvel_assureur_nom=nouvel_assureur_nom,
+                           client=client,
+                           ts_by_contrat=ts_by_contrat,
+                           ts_statuts_by_contrat=ts_statuts_by_contrat,
                            today=date.today())
 
 
@@ -716,24 +1005,18 @@ def api_courtiers_search():
     q = request.args.get('q', '').strip().lower()
     if len(q) < 2:
         return jsonify([])
-    courtiers = User.query.filter_by(role='courtier').all()
+    cabinets = [c for c in CabinetCourtage.query.all() if c.actif and str(c.actif).lower() not in ('0', 'false', '')]
     results = []
-    for u in courtiers:
-        cp = u.client_profile
-        if not cp:
-            continue
-        haystack = ' '.join(filter(None, [
-            cp.prenom, cp.nom, cp.code_postal, cp.ville
-        ])).lower()
+    for cab in cabinets:
+        haystack = ' '.join(filter(None, [cab.nom, cab.code_postal])).lower()
         if q in haystack:
+            nom = cab.nom or ''
             results.append({
-                'id': u.id,
-                'nom': f"{cp.prenom or ''} {cp.nom or ''}".strip(),
-                'email': u.email,
-                'telephone': cp.telephone or '',
-                'code_postal': cp.code_postal or '',
-                'ville': cp.ville or '',
-                'initiales': ((cp.prenom or ' ')[0] + (cp.nom or ' ')[0]).upper(),
+                'id': cab.id,
+                'nom': nom,
+                'code_postal': cab.code_postal or '',
+                'ville': cab.ville or '',
+                'initiales': (nom[:2]).upper() if nom else '??',
             })
     return jsonify(results)
 
@@ -746,37 +1029,51 @@ def client_demande_changement_courtier():
     nouveau_courtier_id = request.form.get("courtier_id", "").strip()
     message_text = request.form.get("message", "").strip()
 
-    if not nouveau_courtier_id:
-        flash("Veuillez sélectionner un conseiller.", "error")
-        return redirect(url_for("client_contrats"))
-
-    nouveau = User.query.filter_by(id=int(nouveau_courtier_id), role='courtier').first()
-    if not nouveau:
-        flash("Conseiller introuvable.", "error")
-        return redirect(url_for("client_contrats"))
-
     ancien_nom = None
     if client.courtier and client.courtier.client_profile:
         cp = client.courtier.client_profile
         ancien_nom = f"{cp.prenom} {cp.nom}"
+    elif client.cabinet:
+        ancien_nom = client.cabinet.nom
 
-    client.courtier_id = nouveau.id
-    if message_text or ancien_nom:
-        nouveau_cp = nouveau.client_profile
-        nouveau_nom = f"{nouveau_cp.prenom} {nouveau_cp.nom}" if nouveau_cp else nouveau.email
-        note = f"Changement de conseiller : {ancien_nom or '(aucun)'} → {nouveau_nom}."
+    # Suppression du conseiller
+    if nouveau_courtier_id == "none":
+        client.courtier_id = None
+        client.cabinet_id = None
+        note = f"Suppression du conseiller : {ancien_nom or '(aucun)'}."
         if message_text:
             note += f"\nMessage client : {message_text}"
         db.session.add(ContactMessage(
             nom=f"{client.prenom} {client.nom}",
             email=current_user.email,
-            sujet="Changement de conseiller",
+            sujet="Suppression de conseiller",
             message=note,
         ))
-    db.session.commit()
+        db.session.commit()
+        flash("Votre conseiller a été retiré.", "success")
+        return redirect(url_for("client_contrats"))
 
-    nouveau_cp = nouveau.client_profile
-    nouveau_nom = f"{nouveau_cp.prenom} {nouveau_cp.nom}" if nouveau_cp else nouveau.email
+    if not nouveau_courtier_id:
+        flash("Veuillez sélectionner un conseiller.", "error")
+        return redirect(url_for("client_contrats"))
+
+    cabinet = CabinetCourtage.query.get(int(nouveau_courtier_id))
+    if not cabinet:
+        flash("Conseiller introuvable.", "error")
+        return redirect(url_for("client_contrats"))
+
+    client.cabinet_id = cabinet.id
+    client.courtier_id = None  # reset individual courtier — cabinet takes over
+
+    nouveau_nom = cabinet.nom
+    note = f"Changement de conseiller : {ancien_nom or '(aucun)'} → {nouveau_nom}."
+    db.session.add(ContactMessage(
+        nom=f"{client.prenom} {client.nom}",
+        email=current_user.email,
+        sujet="Changement de conseiller",
+        message=note,
+    ))
+    db.session.commit()
     flash(f"Votre conseiller a été mis à jour : {nouveau_nom}.", "success")
     return redirect(url_for("client_contrats"))
 
@@ -788,9 +1085,10 @@ def client_modifier_profil():
     client = current_user.client_profile
     profil = request.form.get("profil_risque", "").strip()
     if profil in ("prudent", "equilibre", "dynamique", "conviction"):
+        _log_profil_change(client, profil, "client")
         client.profil_risque = profil
         client.profil_choisi_par = "client"
-        client.profil_date = datetime.utcnow()
+        client.profil_date = datetime.now(timezone.utc)
         db.session.commit()
         flash("Profil de risque mis à jour.", "success")
     else:
@@ -849,7 +1147,90 @@ def gestion_publique():
 @login_required
 @client_required
 def client_gestion():
-    return render_template("client/gestion.html", client=current_user.client_profile)
+    client = current_user.client_profile
+    today = date.today()
+
+    def _parse_reserve(s):
+        if not s:
+            return 0.0
+        s = str(s).strip().replace('€', '').replace('\xa0', '').replace(' ', '')
+        if ',' in s and '.' in s:
+            if s.rfind(',') > s.rfind('.'):
+                s = s.replace('.', '').replace(',', '.')
+            else:
+                s = s.replace(',', '')
+        elif ',' in s:
+            s = s.replace(',', '.')
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+
+    def _parse_date_fr(s):
+        if not s:
+            return None
+        parts = s.split('/')
+        if len(parts) == 3:
+            try:
+                return date(int(parts[2]), int(parts[1]), int(parts[0]))
+            except (ValueError, IndexError):
+                pass
+        return None
+
+    def _add_month(d):
+        m, y = d.month + 1, d.year
+        if m > 12:
+            m, y = 1, y + 1
+        day = min(d.day, 28)
+        return date(y, m, day)
+
+    reserve_actuelle = sum(_parse_reserve(c.reserve) for c in client.contrats_actifs)
+
+    date_terme = None
+    for c in client.contrats_actifs:
+        dt = _parse_date_fr(c.date_terme)
+        if dt and (date_terme is None or dt < date_terme):
+            date_terme = dt
+
+    pension_dt = None
+    if client.niss:
+        bd = birthdate_from_niss(client.niss)
+        if bd:
+            pension_dt = pension_date_for(bd)
+
+    end_date = date_terme or pension_dt
+    if end_date is None or end_date <= today:
+        end_date = date(today.year + 20, today.month, today.day)
+
+    injections = []
+    for c in client.contrats:
+        inj = _parse_date_fr(c.date_transfert)
+        if inj:
+            injections.append({'date': inj.isoformat(), 'label': c.assureur or 'Injection'})
+
+    RETURN_RATES = {'prudent': 0.035, 'equilibre': 0.05, 'dynamique': 0.07, 'conviction': 0.09}
+    rate = RETURN_RATES.get(client.profil_risque, 0.05)
+    monthly_rate = (1 + rate) ** (1 / 12) - 1
+
+    proj_dates, proj_values = [], []
+    if reserve_actuelle > 0:
+        cur, val = today, reserve_actuelle
+        while cur <= end_date:
+            proj_dates.append(cur.isoformat())
+            proj_values.append(round(val, 2))
+            cur = _add_month(cur)
+            val *= (1 + monthly_rate)
+
+    chart_data = json.dumps({
+        'dates': proj_dates,
+        'values': proj_values,
+        'injections': injections,
+        'date_terme': date_terme.isoformat() if date_terme else None,
+        'pension_date': pension_dt.isoformat() if pension_dt else None,
+        'reserve_actuelle': reserve_actuelle,
+    })
+
+    return render_template("client/gestion.html", client=client, chart_data=chart_data)
 
 
 @app.route("/client/profil", methods=["GET", "POST"])
@@ -862,14 +1243,60 @@ def client_profil():
         form.profil.data = client.profil_risque
 
     if form.validate_on_submit():
+        _log_profil_change(client, form.profil.data, 'client')
         client.profil_risque = form.profil.data
         client.profil_choisi_par = 'client'
-        client.profil_date = datetime.utcnow()
+        client.profil_date = datetime.now(timezone.utc)
         db.session.commit()
         flash("Profil d'investissement mis à jour.", "success")
         return redirect(url_for('client_profil'))
 
     return render_template("client/profil.html", client=client, form=form)
+
+
+@app.route("/client/questionnaire", methods=["GET", "POST"])
+@login_required
+@client_required
+def client_questionnaire():
+    client = current_user.client_profile
+
+    q1_prefill = q1_label = None
+    if client.niss:
+        bd = birthdate_from_niss(client.niss)
+        if bd:
+            rem = remaining_to_pension(bd)
+            if rem is None:
+                q1_prefill, q1_label = '0', 'Moins de 5 ans'
+            else:
+                total_months = rem[0] * 12 + rem[1]
+                if total_months < 60:
+                    q1_prefill, q1_label = '0', 'Moins de 5 ans'
+                elif total_months < 120:
+                    q1_prefill, q1_label = '1', '5 à 10 ans'
+                elif total_months < 240:
+                    q1_prefill, q1_label = '2', '10 à 20 ans'
+                else:
+                    q1_prefill, q1_label = '3', 'Plus de 20 ans'
+
+    form = QuestionnaireForm()
+    if form.validate_on_submit():
+        q1_val = q1_prefill if q1_prefill is not None else form.q1.data
+        score = int(q1_val) + sum(int(getattr(form, f'q{i}').data) for i in range(2, 7))
+        profil = score_to_profil(score)
+        _log_profil_change(client, profil, 'client', score=score)
+        client.profil_risque = profil
+        client.profil_choisi_par = 'client'
+        client.profil_date = datetime.now(timezone.utc)
+        client.questionnaire_score = score
+        db.session.commit()
+        flash(f"Profil <strong class='capitalize'>{profil}</strong> déterminé par le questionnaire.", "success")
+        return redirect(url_for('client_profil'))
+
+    if q1_prefill is not None:
+        form.q1.data = q1_prefill
+
+    return render_template("client/questionnaire.html", client=client, form=form,
+                           q1_prefill=q1_prefill, q1_label=q1_label)
 
 
 @app.route("/client/donnees", methods=["GET", "POST"])
@@ -879,8 +1306,15 @@ def client_donnees():
     client = current_user.client_profile
     form = DonneesForm(obj=client)
 
+    standard_pays = [c[0] for c in form.pays.choices]
+    if request.method == 'GET' and client.pays and client.pays not in standard_pays:
+        form.pays.data = 'Autre'
+        form.pays_libre.data = client.pays
+
     if form.validate_on_submit():
         form.populate_obj(client)
+        if form.pays.data == 'Autre':
+            client.pays = form.pays_libre.data.strip() or 'Autre'
         db.session.commit()
         flash("Vos données ont été mises à jour.", "success")
         return redirect(url_for('client_donnees'))
@@ -900,7 +1334,7 @@ def client_extrait():
         flash("Aucun extrait disponible.", "error")
         return redirect(url_for('client_contrats'))
     return send_from_directory(app.config['UPLOAD_FOLDER'], analyse.filename,
-                               as_attachment=True)
+                               as_attachment=False)
 
 
 @app.route("/client/transfert")
@@ -908,8 +1342,13 @@ def client_extrait():
 @client_required
 def client_transfert():
     client = current_user.client_profile
+    dormants = client.contrats_dormants
+    ts_map = {}
+    for c in dormants:
+        sigs = sorted(c.transfert_signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
+        ts_map[c.id] = sigs[0] if sigs else None
     return render_template("client/transfert.html", client=client,
-                           contrats=client.contrats_dormants)
+                           dormants=dormants, ts_map=ts_map)
 
 
 @app.route("/client/transfert/<int:contrat_id>/pdf")
@@ -930,24 +1369,6 @@ def client_transfert_pdf(contrat_id):
 
 
 # ── Onboarding routes ─────────────────────────────────────────────────────────
-
-def _onboarding_guard(required_step):
-    """Decorator factory: redirect if client hasn't reached required onboarding step."""
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            client = current_user.client_profile
-            step_order = ['kyc', 'profil', 'frais', 'complet']
-            current = client.onboarding_step
-            required_idx = step_order.index(required_step)
-            current_idx = step_order.index(current) if current in step_order else 0
-            if current_idx < required_idx:
-                targets = {'kyc': 'onboarding_kyc', 'profil': 'onboarding_profil',
-                           'frais': 'onboarding_frais'}
-                return redirect(url_for(targets.get(current, 'onboarding_kyc')))
-            return f(*args, **kwargs)
-        return wrapper
-    return decorator
 
 
 @app.route("/onboarding/kyc", methods=["GET", "POST"])
@@ -982,6 +1403,19 @@ def onboarding_kyc():
 
         # ── Phase 2 : form confirmation ───────────────────────────────────
         if action == 'confirm' and form.validate_on_submit():
+            niss_mypension = re.sub(r'\D', '', client.niss or '')
+            niss_carte = re.sub(r'\D', '', form.niss.data or '')
+            if niss_mypension and niss_carte and niss_mypension != niss_carte:
+                if app.debug:
+                    flash(
+                        f"[DEV] NISS mismatch — mypension : {niss_mypension} / carte : {niss_carte}. "
+                        "Validation forcée en mode développement.",
+                        "error"
+                    )
+                else:
+                    _send_kyc_mismatch_emails(client, current_user.email)
+                    return redirect(url_for('kyc_en_verification'))
+
             client.nom = form.nom.data
             client.prenom = form.prenom.data
             client.date_naissance = form.date_naissance.data
@@ -991,6 +1425,8 @@ def onboarding_kyc():
             client.code_postal = form.code_postal.data
             client.ville = form.ville.data
             client.pays = form.pays.data
+            client.est_ppe = (form.est_ppe.data == 'oui')
+            client.ppe_details = form.ppe_details.data.strip() if client.est_ppe else None
             client.kyc_verifie = True
             db.session.commit()
             session.pop('kyc_data', None)
@@ -1000,18 +1436,44 @@ def onboarding_kyc():
     if request.method == 'GET':
         form.nom.data          = kyc_data.get('nom') or client.nom or ''
         form.prenom.data       = kyc_data.get('prenom') or client.prenom or ''
-        form.date_naissance.data = kyc_data.get('date_naissance') or client.date_naissance or ''
-        form.sexe.data         = kyc_data.get('sexe') or client.sexe or ''
-        form.niss.data         = kyc_data.get('niss') or client.niss or ''
-        form.adresse.data      = kyc_data.get('adresse') or client.adresse or ''
-        form.code_postal.data  = kyc_data.get('code_postal') or client.code_postal or ''
-        form.ville.data        = kyc_data.get('ville') or client.ville or ''
-        form.pays.data         = kyc_data.get('pays') or client.pays or 'Belgique'
+        niss_val = kyc_data.get('niss') or client.niss or ''
+        form.niss.data = niss_val
+        # Derive sex from NISS digits 7-9 (birth order): odd = M, even = F
+        sexe_val = kyc_data.get('sexe') or client.sexe or ''
+        if not sexe_val and niss_val:
+            digits = re.sub(r'\D', '', niss_val)
+            if len(digits) == 11:
+                sexe_val = 'M' if int(digits[6:9]) % 2 == 1 else 'F'
+        form.sexe.data = sexe_val
+        # Derive date of birth from NISS if not already extracted
+        ddn = kyc_data.get('date_naissance') or client.date_naissance or ''
+        if not ddn and niss_val:
+            bd = birthdate_from_niss(niss_val)
+            if bd:
+                ddn = bd.strftime('%d/%m/%Y')
+        form.date_naissance.data = ddn
+        # On first visit: only Claude extraction (adresse voulue vide par défaut).
+        # On return (kyc already confirmed): also pre-fill from DB.
+        db_adresse = client.adresse if client.kyc_verifie else ''
+        form.adresse.data     = kyc_data.get('adresse') or db_adresse or ''
+        form.code_postal.data = kyc_data.get('code_postal') or (client.code_postal if client.kyc_verifie else '') or ''
+        form.ville.data       = kyc_data.get('ville') or (client.ville if client.kyc_verifie else '') or ''
+        form.pays.data        = kyc_data.get('pays') or (client.pays if client.kyc_verifie else '') or 'Belgique'
+        if client.est_ppe is not None:
+            form.est_ppe.data    = 'oui' if client.est_ppe else 'non'
+            form.ppe_details.data = client.ppe_details or ''
 
     has_document = bool(client.kyc_document)
     return render_template("onboarding/kyc.html", form=form,
                            kyc_data=kyc_data, has_document=has_document,
-                           current_step=1)
+                           current_step=1, prev_url=None)
+
+
+@app.route("/onboarding/kyc-en-verification")
+@login_required
+@client_required
+def kyc_en_verification():
+    return render_template("onboarding/kyc_en_verification.html")
 
 
 @app.route("/onboarding/profil", methods=["GET", "POST"])
@@ -1025,14 +1487,16 @@ def onboarding_profil():
     if request.method == 'POST':
         profil = request.form.get('profil')
         if profil in ('prudent', 'equilibre', 'dynamique', 'conviction'):
+            _log_profil_change(client, profil, 'client')
             client.profil_risque = profil
             client.profil_choisi_par = 'client'
-            client.profil_date = datetime.utcnow()
+            client.profil_date = datetime.now(timezone.utc)
             db.session.commit()
-            return redirect(url_for('onboarding_frais'))
+            return redirect(url_for('onboarding_contrat'))
 
     return render_template("onboarding/profil.html", current_step=2,
-                           profil_actuel=client.profil_risque)
+                           profil_actuel=client.profil_risque,
+                           prev_url=url_for('onboarding_kyc'))
 
 
 @app.route("/onboarding/questionnaire", methods=["GET", "POST"])
@@ -1069,18 +1533,104 @@ def onboarding_questionnaire():
         q1_val = q1_prefill if q1_prefill is not None else form.q1.data
         score = int(q1_val) + sum(int(getattr(form, f'q{i}').data) for i in range(2, 7))
         profil = score_to_profil(score)
+        _log_profil_change(client, profil, 'client', score=score)
         client.profil_risque = profil
         client.profil_choisi_par = 'client'
-        client.profil_date = datetime.utcnow()
+        client.profil_date = datetime.now(timezone.utc)
         client.questionnaire_score = score
         db.session.commit()
-        return redirect(url_for('onboarding_frais'))
+        return redirect(url_for('onboarding_contrat'))
 
     if q1_prefill is not None:
         form.q1.data = q1_prefill
 
     return render_template("onboarding/questionnaire.html", form=form, current_step=2,
                            q1_prefill=q1_prefill, q1_label=q1_label)
+
+
+@app.route("/onboarding/contrat/brouillon", methods=["POST"])
+@login_required
+@client_required
+def onboarding_contrat_brouillon():
+    data = request.get_json(force=True, silent=True) or {}
+    session['contrat_draft'] = {
+        'iban':              data.get('iban', ''),
+        'beneficiaires_json': data.get('beneficiaires_json', ''),
+        'courtier_id':       data.get('courtier_id', ''),
+    }
+    return ('', 204)
+
+
+@app.route("/onboarding/contrat", methods=["GET", "POST"])
+@login_required
+@client_required
+def onboarding_contrat():
+    client = current_user.client_profile
+    if not client.kyc_verifie:
+        return redirect(url_for('onboarding_kyc'))
+    if not client.profil_risque:
+        return redirect(url_for('onboarding_profil'))
+
+    form = OnboardingContratForm()
+
+    contrat_draft = session.get('contrat_draft', {})
+
+    if form.validate_on_submit():
+        client.iban = form.iban.data.strip().replace(' ', '').upper()
+
+        # Parse and store beneficiary JSON
+        try:
+            benef_data = json.loads(form.beneficiaires_json.data)
+        except (json.JSONDecodeError, TypeError):
+            benef_data = {}
+        client.beneficiaires_json = json.dumps(benef_data, ensure_ascii=False)
+
+        # Derive compat fields beneficiaire_1 / beneficiaire_2
+        if benef_data.get('type') != 'personnalise':
+            client.beneficiaire_1 = benef_data.get('label', '')
+            client.beneficiaire_2 = None
+        else:
+            benefs = benef_data.get('beneficiaires', [])
+            def _fmt(b):
+                return f"{b.get('prenom','')} {b.get('nom','')} ({b.get('pourcentage','')}%)".strip()
+            client.beneficiaire_1 = _fmt(benefs[0]) if len(benefs) > 0 else None
+            client.beneficiaire_2 = _fmt(benefs[1]) if len(benefs) > 1 else None
+
+        cabinet_id = form.courtier_id.data
+        if cabinet_id and str(cabinet_id).isdigit():
+            cab = CabinetCourtage.query.get(int(cabinet_id))
+            if cab:
+                client.cabinet_id = cab.id
+        db.session.commit()
+        session.pop('contrat_draft', None)
+        return redirect(url_for('onboarding_frais'))
+
+    if request.method == 'GET':
+        form.iban.data = client.iban or contrat_draft.get('iban', '')
+        form.beneficiaires_json.data = (
+            client.beneficiaires_json
+            or contrat_draft.get('beneficiaires_json', '')
+        )
+        if contrat_draft.get('courtier_id'):
+            form.courtier_id.data = contrat_draft['courtier_id']
+
+    courtier_actuel = None
+    cab_id = client.cabinet_id or (
+        int(contrat_draft['courtier_id'])
+        if contrat_draft.get('courtier_id') and str(contrat_draft['courtier_id']).isdigit()
+        else None
+    )
+    if cab_id:
+        cab = CabinetCourtage.query.get(cab_id)
+        if cab:
+            courtier_actuel = {
+                'id': cab.id,
+                'nom': cab.nom or '',
+                'ville': cab.ville or '',
+            }
+
+    return render_template("onboarding/contrat.html", form=form,
+                           courtier_actuel=courtier_actuel, current_step=3)
 
 
 @app.route("/onboarding/frais", methods=["GET", "POST"])
@@ -1092,13 +1642,215 @@ def onboarding_frais():
         return redirect(url_for('onboarding_kyc'))
     if not client.profil_risque:
         return redirect(url_for('onboarding_profil'))
+    if not client.iban:
+        return redirect(url_for('onboarding_contrat'))
 
     if request.method == 'POST' and request.form.get('frais_ok') == '1':
         client.frais_acceptes = True
         db.session.commit()
-        return redirect(url_for('onboarding_synthese'))
+        return redirect(url_for('onboarding_transfert'))
 
-    return render_template("onboarding/frais.html", current_step=3, client=client)
+    return render_template("onboarding/frais.html", current_step=4, client=client)
+
+
+@app.route("/onboarding/transfert", methods=["GET", "POST"])
+@login_required
+@client_required
+def onboarding_transfert():
+    client = current_user.client_profile
+    if not client.kyc_verifie:
+        return redirect(url_for('onboarding_kyc'))
+    if not client.profil_risque:
+        return redirect(url_for('onboarding_profil'))
+    if not client.iban:
+        return redirect(url_for('onboarding_contrat'))
+    if not client.frais_acceptes:
+        return redirect(url_for('onboarding_frais'))
+
+    dormants = client.contrats_dormants
+
+    if request.method == 'POST':
+        # ── Test bypass: skip validation and Connective ────────────────────────
+        if request.form.get('skip_test') == '1':
+            b23_contrat = next(
+                (c for c in client.contrats
+                 if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
+                None
+            )
+            ts_count = TransfertSignature.query.count()
+            year = datetime.now(timezone.utc).year
+            for c in dormants:
+                if TransfertSignature.query.filter_by(contrat_id=c.id).first():
+                    continue
+                ts_count += 1
+                ts_ref = f"UTU-{year}-{ts_count:05d}"
+                if not b23_contrat:
+                    b23_contrat = Contrat(
+                        client_id=client.id, assureur=NOUVEL_NOM,
+                        numero=ts_ref, type_branche='Branche 23', statut='actif',
+                    )
+                    db.session.add(b23_contrat)
+                    db.session.flush()
+                db.session.add(TransfertSignature(
+                    reference=ts_ref, contrat_id=c.id,
+                    statut_signature='non_initie', nouveau_contrat_id=b23_contrat.id,
+                ))
+            db.session.commit()
+            return redirect(url_for('onboarding_synthese'))
+
+        selected_ids = [int(i) for i in request.form.getlist('contrat_ids') if i.isdigit()]
+        dormants_by_id = {c.id: c for c in dormants}
+        selected = [dormants_by_id[i] for i in selected_ids if i in dormants_by_id]
+
+        if not selected:
+            flash("Sélectionnez au moins un contrat à transférer.", "error")
+            return redirect(url_for('onboarding_transfert'))
+
+        total = sum(_parse_reserve(c.reserve) for c in selected)
+        if total < 10_000:
+            flash(
+                f"Le total des réserves sélectionnées ({total:,.0f} €) est inférieur à 10 000 € "
+                "— le transfert ne peut pas être initié.",
+                "error"
+            )
+            return redirect(url_for('onboarding_transfert'))
+
+        b23_contrat = next(
+            (c for c in client.contrats
+             if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
+            None
+        )
+        ts_count = TransfertSignature.query.count()
+        year = datetime.now(timezone.utc).year
+        ts_list = []
+        transfers = []
+        folder = Path(app.root_path) / 'transfer_pdfs'
+        folder.mkdir(parents=True, exist_ok=True)
+
+        for c in selected:
+            existing = TransfertSignature.query.filter_by(contrat_id=c.id).first()
+            if existing and existing.statut_signature == 'signe':
+                continue  # already signed — skip
+            ts = existing
+            if not ts:
+                ts_count += 1
+                ts_ref = f"UTU-{year}-{ts_count:05d}"
+                if not b23_contrat:
+                    b23_contrat = Contrat(
+                        client_id=client.id,
+                        assureur=NOUVEL_NOM,
+                        numero=ts_ref,
+                        type_branche='Branche 23',
+                        statut='actif',
+                    )
+                    db.session.add(b23_contrat)
+                    db.session.flush()
+                ts = TransfertSignature(
+                    reference=ts_ref,
+                    contrat_id=c.id,
+                    statut_signature='non_initie',
+                    nouveau_contrat_id=b23_contrat.id,
+                )
+                db.session.add(ts)
+                db.session.flush()
+            ts_list.append(ts)
+            b23_num = ts.nouveau_contrat.numero if ts.nouveau_contrat else ts.reference
+            dest = ts.nouveau_contrat.assureur_dest if ts.nouveau_contrat else None
+            pdf_bytes = generer_annexe1(client, c, nouveau_contrat_ref=b23_num, dest=dest)
+            pdf_path = folder / f"{ts.reference}.pdf"
+            pdf_path.write_bytes(pdf_bytes)
+            transfers.append((ts.reference, pdf_path))
+
+        db.session.commit()
+
+        if not transfers:
+            return redirect(url_for('onboarding_synthese'))
+
+        use_itsme = request.form.get('use_itsme', '1') == '1'
+        affilie = {
+            "prenom": client.prenom or "",
+            "nom": client.nom or "",
+            "email": client.user.email,
+            "niss": client.niss or "",
+            "langue": "fr",
+        }
+        try:
+            result = initiate_batch_transfer_signature(
+                affilie=affilie,
+                transfers=transfers,
+                use_itsme=use_itsme,
+            )
+            signing_url = result["signing_url"]
+            package_id  = result["package_id"]
+            doc_ids     = result["document_ids"]
+
+            for i, ts in enumerate(ts_list):
+                ts.connective_package_id  = package_id
+                ts.connective_document_id = doc_ids[i] if i < len(doc_ids) else None
+                ts.statut_signature       = "en_attente"
+                ts.signing_url            = signing_url
+            db.session.commit()
+
+            evt = SignatureEvent(
+                transfert_id=ts_list[0].id,
+                event_type="signature_batch_initiee",
+                package_id=package_id,
+                details=json.dumps({"email": affilie["email"], "nb_contrats": len(ts_list)}),
+            )
+            db.session.add(evt)
+            db.session.commit()
+
+        except Exception:
+            app.logger.exception("Erreur initiation signature batch onboarding")
+            flash("Erreur lors de l'initiation de la signature électronique. Veuillez réessayer.", "error")
+
+        return redirect(url_for('onboarding_transfert'))
+
+    # ── GET ────────────────────────────────────────────────────────────────────
+    ts_all = [ts for c in dormants for ts in c.transfert_signatures]
+    phase = 'selection'
+    signing_url = None
+
+    if ts_all:
+        statuts = [ts.statut_signature for ts in ts_all]
+        if all(s == 'signe' for s in statuts):
+            phase = 'signed'
+        elif any(s == 'en_attente' for s in statuts):
+            phase = 'signing'
+            ts_with_url = next((ts for ts in ts_all if ts.signing_url), None)
+            signing_url = ts_with_url.signing_url if ts_with_url else None
+
+    ts_map = {}
+    for c in dormants:
+        sigs = sorted(c.transfert_signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
+        ts_map[c.id] = sigs[0] if sigs else None
+
+    reserves = {c.id: _parse_reserve(c.reserve) for c in dormants}
+
+    return render_template("onboarding/transfert.html", client=client,
+                           dormants=dormants, ts_map=ts_map,
+                           phase=phase, signing_url=signing_url,
+                           reserves=reserves, current_step=5)
+
+
+@app.route("/onboarding/contrat/<int:contrat_id>/pdf")
+@login_required
+@client_required
+def onboarding_annexe1_pdf(contrat_id):
+    """Generate and serve the Annexe 1 PDF for a given dormant contract (inline)."""
+    from flask import Response
+    client = current_user.client_profile
+    contrat = db.session.get(Contrat, contrat_id)
+    if not contrat or contrat.client_id != client.id:
+        abort(404)
+    ts = TransfertSignature.query.filter_by(contrat_id=contrat_id).first()
+    b23_num = ts.nouveau_contrat.numero if ts and ts.nouveau_contrat else None
+    dest = ts.nouveau_contrat.assureur_dest if ts and ts.nouveau_contrat else None
+    pdf_bytes = generer_annexe1(client, contrat, nouveau_contrat_ref=b23_num, dest=dest)
+    return Response(
+        pdf_bytes, mimetype='application/pdf',
+        headers={'Content-Disposition': f'inline; filename="annexe1_{contrat_id}.pdf"'},
+    )
 
 
 @app.route("/onboarding/synthese")
@@ -1110,11 +1862,140 @@ def onboarding_synthese():
         return redirect(url_for('onboarding_kyc'))
     if not client.profil_risque:
         return redirect(url_for('onboarding_profil'))
+    if not client.iban:
+        return redirect(url_for('onboarding_contrat'))
     if not client.frais_acceptes:
         return redirect(url_for('onboarding_frais'))
     dormants = client.contrats_dormants
+    if dormants and not any(
+        TransfertSignature.query.filter_by(contrat_id=c.id).first() for c in dormants
+    ):
+        return redirect(url_for('onboarding_transfert'))
+    ts_map = {}
+    for c in dormants:
+        sigs = sorted(c.transfert_signatures, key=lambda x: x.cree_le or datetime.min, reverse=True)
+        ts_map[c.id] = sigs[0] if sigs else None
+
+    # Only show contracts actually selected in step 5 (have a TS record)
+    contrats_selectionnes = [c for c in dormants if ts_map.get(c.id)]
+
+    b23_contrat = next(
+        (c for c in client.contrats
+         if c.statut == 'actif' and c.analyse_id is None and c.type_branche == 'Branche 23'),
+        None
+    )
+    uptwou_refs = [b23_contrat.numero] if b23_contrat else []
+
+    non_null_ts = [ts for ts in ts_map.values() if ts]
+    if dormants and non_null_ts and all(ts.statut_signature == 'signe' for ts in non_null_ts) and len(non_null_ts) == len(dormants):
+        batch_state = 'signe'
+    elif any(ts.statut_signature == 'en_attente' for ts in non_null_ts):
+        batch_state = 'en_attente'
+    else:
+        batch_state = 'not_started'
+
+    signing_url = None
+    if batch_state == 'en_attente':
+        ts_with_url = next((ts for ts in non_null_ts if ts.signing_url), None)
+        signing_url = ts_with_url.signing_url if ts_with_url else None
+
+    total_reserves = sum(_parse_reserve(c.reserve) for c in contrats_selectionnes)
+
     return render_template("onboarding/synthese.html", client=client,
-                           contrats=dormants, current_step=4)
+                           contrats=contrats_selectionnes, ts_map=ts_map,
+                           uptwou_refs=uptwou_refs,
+                           batch_state=batch_state,
+                           signing_url=signing_url,
+                           total_reserves=total_reserves,
+                           current_step=6)
+
+
+@app.route("/client/analyser", methods=["GET", "POST"])
+@login_required
+@client_required
+def client_analyser():
+    if request.method == "POST":
+        file = request.files.get("extrait")
+        if not file or file.filename == "":
+            flash("Veuillez sélectionner un fichier PDF.", "error")
+            return redirect(url_for("client_analyser"))
+        if not allowed_file(file.filename):
+            flash("Format invalide — fichier PDF uniquement.", "error")
+            return redirect(url_for("client_analyser"))
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        try:
+            texte = extract_pdf_text(filepath)
+            if not texte.strip():
+                flash("Le PDF semble vide ou illisible.", "error")
+                return redirect(url_for("client_analyser"))
+
+            json_brut = analyse_avec_claude(texte)
+            resultat = json.loads(json_brut)
+
+            if 'contrats' in resultat:
+                exclus = [c for c in resultat['contrats'] if is_assureur_exclu(c.get('assureur'))]
+                resultat['contrats'] = [c for c in resultat['contrats'] if not is_assureur_exclu(c.get('assureur'))]
+                if exclus:
+                    resultat.setdefault('details', []).append(
+                        f"{len(exclus)} contrat(s) Vitis Life / Onelife exclus (déjà en gestion Branche 23)."
+                    )
+
+            niss = (resultat.get('personne') or {}).get('niss')
+            if niss:
+                bd = birthdate_from_niss(niss)
+                if bd:
+                    rem = remaining_to_pension(bd)
+                    age_legale = 66 if _add_years(bd, 66) < date(2030, 1, 1) else 67
+                    if rem is None:
+                        resultat['eligible'] = False
+                        resultat.setdefault('raisons_refus', []).append(
+                            f"Âge légal de la pension ({age_legale} ans) atteint ou dépassé."
+                        )
+                    else:
+                        years, months = rem
+                        total_months = years * 12 + months
+                        duree = f"{years} an{'s' if years > 1 else ''} et {months} mois"
+                        if total_months < 24:
+                            resultat['eligible'] = False
+                            resultat.setdefault('raisons_refus', []).append(
+                                f"Horizon insuffisant : {duree} avant la pension (minimum 2 ans requis)."
+                            )
+                        else:
+                            resultat.setdefault('details', []).append(
+                                f"Horizon de placement : {duree} avant l'âge légal ({age_legale} ans)."
+                            )
+
+            json_brut = json.dumps(resultat, ensure_ascii=False)
+            session['analyse_json'] = json_brut
+            session['analyse_filename'] = filename
+            return redirect(url_for('client_analyse_resultat'))
+
+        except json.JSONDecodeError:
+            flash("L'analyse n'a pas pu être interprétée. Veuillez réessayer.", "error")
+        except anthropic.APIError as e:
+            flash(f"Erreur IA : {e}", "error")
+        except Exception as e:
+            flash(f"Erreur inattendue : {e}", "error")
+        return redirect(url_for("client_analyser"))
+
+    return render_template("client/analyser.html", client=current_user.client_profile, form=EmptyForm())
+
+
+@app.route("/client/analyse-resultat")
+@login_required
+@client_required
+def client_analyse_resultat():
+    analyse_json = session.get('analyse_json')
+    if not analyse_json:
+        flash("Aucune analyse disponible.", "error")
+        return redirect(url_for('client_analyser'))
+    resultat = json.loads(analyse_json)
+    return render_template("client/analyse_resultat.html",
+                           client=current_user.client_profile, r=resultat, form=EmptyForm())
 
 
 @app.route("/client/maj-analyse", methods=["POST"])
@@ -1165,8 +2046,8 @@ def client_maj_analyse():
     db.session.commit()
     session.pop('analyse_json', None)
     session.pop('analyse_filename', None)
-    flash("Votre dossier a été mis à jour.", "success")
-    return redirect(url_for('onboarding_synthese'))
+    flash("Votre dossier a été mis à jour avec les données du nouvel extrait.", "success")
+    return redirect(url_for('client_transfert'))
 
 
 # ── Admin / Courtier routes ────────────────────────────────────────────────────
@@ -1195,9 +2076,10 @@ def admin_set_profil(client_id):
     client = Client.query.get_or_404(client_id)
     profil = request.form.get('profil')
     if profil in ('prudent', 'equilibre', 'dynamique'):
+        _log_profil_change(client, profil, 'courtier')
         client.profil_risque = profil
         client.profil_choisi_par = 'courtier'
-        client.profil_date = datetime.utcnow()
+        client.profil_date = datetime.now(timezone.utc)
         db.session.commit()
         flash(f"Profil mis à jour pour {client.prenom} {client.nom}.", "success")
     return redirect(url_for('admin_client_detail', client_id=client_id))
@@ -1243,6 +2125,62 @@ app.jinja_env.filters['fromjson'] = json.loads
 with app.app_context():
     db.create_all()
     seed_assureurs(app)
+
+# ── Dev helpers (debug only) ───────────────────────────────────────────────────
+@app.route("/dev/fake-analyse")
+def dev_fake_analyse():
+    if not app.debug:
+        abort(404)
+
+    fake = {
+        "eligible": True,
+        "titre": "Oui, un transfert vers la Branche 23 est possible",
+        "resume": (
+            "Vous disposez de 2 contrats de pension complémentaire dormants "
+            "transférables vers la Branche 23. Durée restante avant la pension légale (67 ans) : "
+            "environ 21 ans — compatible avec un investissement en Branche 23."
+        ),
+        "montant_total": "18 450,00 €",
+        "nb_contrats": 2,
+        "details": [
+            "Horizon de placement : ≈ 21 ans avant l'âge légal de la pension (67 ans) — compatible avec un investissement en Branche 23.",
+            "Les réserves combinées dépassent le seuil minimum de 10 000 € requis pour le transfert.",
+            "Statut salarié confirmé pour les deux contrats."
+        ],
+        "personne": {
+            "prenom": "Thomas",
+            "nom":    "Dumont",
+            "niss":   "80031524705",
+            "adresse": "Rue de la Loi 42, 1040 Bruxelles"
+        },
+        "contrats": [
+            {
+                "assureur":         "AG Insurance",
+                "numero":           "056-1234567-89",
+                "type_branche":     "Branche 21",
+                "statut":           "dormant",
+                "reserve":          12750.00,
+                "date_valeur":      "31/12/2024",
+                "organisateur":     "Acme SA",
+                "organisateur_bce": "0412.345.678"
+            },
+            {
+                "assureur":         "Ethias",
+                "numero":           "ETH-9876543",
+                "type_branche":     "Branche 21",
+                "statut":           "dormant",
+                "reserve":          5700.00,
+                "date_valeur":      "31/12/2024",
+                "organisateur":     "Beta NV",
+                "organisateur_bce": "0456.789.012"
+            }
+        ]
+    }
+
+    session['analyse_json'] = json.dumps(fake, ensure_ascii=False)
+    session['analyse_filename'] = 'fake_mypension.pdf'
+    return redirect(url_for('register'))
+
 
 if __name__ == "__main__":
     app.run(debug=True)

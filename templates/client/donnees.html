@@ -7,6 +7,24 @@
   <p>Ces informations sont nécessaires pour finaliser votre dossier de transfert.</p>
 </div>
 
+{% if not client.adresse or not client.iban or not client.beneficiaire_1 or (not client.telephone and not client.telephone_gsm) %}
+<div class="flex items-start gap-3 rounded-2xl p-4 mb-6 max-w-2xl"
+     style="background:hsl(35 95% 55% / 0.08);border:1px solid hsl(35 95% 55% / 0.30);">
+  <i data-lucide="alert-circle" style="width:1.125rem;height:1.125rem;flex-shrink:0;margin-top:1px;color:var(--accent);"></i>
+  <div>
+    <p class="text-sm font-semibold" style="color:hsl(35 90% 30%);">Informations manquantes</p>
+    <p class="text-xs leading-relaxed mt-0.5" style="color:hsl(35 90% 35%);">
+      {% set missing = [] %}
+      {% if not client.adresse %}{% set _ = missing.append('adresse') %}{% endif %}
+      {% if not client.telephone and not client.telephone_gsm %}{% set _ = missing.append('téléphone') %}{% endif %}
+      {% if not client.iban %}{% set _ = missing.append('IBAN') %}{% endif %}
+      {% if not client.beneficiaire_1 %}{% set _ = missing.append('bénéficiaire en cas de décès') %}{% endif %}
+      Veuillez compléter les champs suivants pour finaliser votre dossier: <strong>{{ missing | join(', ') }}</strong>.
+    </p>
+  </div>
+</div>
+{% endif %}
+
 <div class="dashboard-card max-w-2xl">
   <form method="POST" class="flex flex-col gap-5">
     {{ form.hidden_tag() }}
@@ -26,6 +44,43 @@
           {% for e in form.nom.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
         </div>
       </div>
+
+      {% if client.date_naissance or client.niss %}
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        {% if client.date_naissance %}
+        <div class="form-group">
+          <label class="form-label flex items-center gap-1.5">
+            Date de naissance
+            <span class="inline-flex items-center gap-1 text-xs font-normal rounded-full px-2 py-0.5"
+                  style="background:hsl(172 75% 22% / 0.07);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.15);">
+              <i data-lucide="lock" style="width:0.65rem;height:0.65rem;"></i> Non modifiable
+            </span>
+          </label>
+          <div class="form-input flex items-center" style="background:hsl(172 75% 22% / 0.04);color:var(--primary);cursor:default;">
+            {{ client.date_naissance }}
+          </div>
+        </div>
+        {% endif %}
+        {% if client.niss %}
+        <div class="form-group">
+          <label class="form-label flex items-center gap-1.5">
+            Numéro national (NISS)
+            <span class="inline-flex items-center gap-1 text-xs font-normal rounded-full px-2 py-0.5"
+                  style="background:hsl(172 75% 22% / 0.07);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.15);">
+              <i data-lucide="lock" style="width:0.65rem;height:0.65rem;"></i> Non modifiable
+            </span>
+          </label>
+          <div class="form-input flex items-center font-mono" style="background:hsl(172 75% 22% / 0.04);color:var(--primary);cursor:default;">
+            {{ client.niss }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <p class="text-xs text-muted mt-2">
+        <i data-lucide="info" style="width:0.75rem;height:0.75rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+        Ces données ont été extraites de votre extrait mypension.be et ne peuvent pas être modifiées.
+      </p>
+      {% endif %}
     </div>
 
     <div style="height:1px;background:var(--border);"></div>
@@ -49,8 +104,26 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">{{ form.telephone.label.text }}</label>
-          {{ form.telephone(class="form-input", placeholder="+32 4 xx xx xx xx") }}
+          <label class="form-label">{{ form.pays.label.text }}</label>
+          {{ form.pays(class="form-input", id="pays-select") }}
+        </div>
+        <div class="form-group" id="pays-libre-group" style="display:none;">
+          <label class="form-label">{{ form.pays_libre.label.text }}</label>
+          {{ form.pays_libre(class="form-input", placeholder="ex. Canada, Maroc, États-Unis…") }}
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label">{{ form.telephone.label.text }}</label>
+            {{ form.telephone(class="form-input", placeholder="+32 2 xxx xx xx") }}
+            {% for e in form.telephone.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              {{ form.telephone_gsm.label.text }}
+              <span class="text-xs font-normal text-muted">(obligatoire si pas de fixe)</span>
+            </label>
+            {{ form.telephone_gsm(class="form-input", placeholder="+32 4xx xx xx xx") }}
+          </div>
         </div>
       </div>
     </div>
@@ -62,25 +135,12 @@
       <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Données bancaires</p>
       <div class="form-group">
         <label class="form-label">{{ form.iban.label.text }}</label>
-        {{ form.iban(class="form-input", placeholder="BE68 5390 0754 7034") }}
-        <p class="text-xs text-muted mt-1">Utilisé pour le virement de vos réserves lors du transfert.</p>
-      </div>
-    </div>
-
-    <div style="height:1px;background:var(--border);"></div>
-
-    <!-- Beneficiaries -->
-    <div>
-      <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Bénéficiaires en cas de décès</p>
-      <div class="flex flex-col gap-4">
-        <div class="form-group">
-          <label class="form-label">{{ form.beneficiaire_1.label.text }}</label>
-          {{ form.beneficiaire_1(class="form-input", placeholder="ex. Marie Dupont — épouse") }}
+        <div class="relative">
+          {{ form.iban(class="form-input", placeholder="BE68 5390 0754 7034", id="iban-input", autocomplete="off", style="padding-right:2.5rem;") }}
+          <span id="iban-icon" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);display:none;"></span>
         </div>
-        <div class="form-group">
-          <label class="form-label">{{ form.beneficiaire_2.label.text }}</label>
-          {{ form.beneficiaire_2(class="form-input", placeholder="ex. Louis Dupont — fils") }}
-        </div>
+        <p id="iban-feedback" class="text-xs mt-1" style="display:none;"></p>
+        {% for e in form.iban.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
       </div>
     </div>
 
@@ -97,4 +157,65 @@
 
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // Pays libre toggle
+  const sel = document.getElementById('pays-select');
+  const grp = document.getElementById('pays-libre-group');
+  function togglePays() { grp.style.display = sel.value === 'Autre' ? '' : 'none'; }
+  sel.addEventListener('change', togglePays);
+  togglePays();
+
+  // IBAN real-time validation (MOD-97)
+  const ibanInput = document.getElementById('iban-input');
+  const ibanIcon = document.getElementById('iban-icon');
+  const ibanFeedback = document.getElementById('iban-feedback');
+
+  function validateIBAN(raw) {
+    const iban = raw.replace(/\s/g, '').toUpperCase();
+    if (!iban) return null;
+    if (iban.length < 15 || iban.length > 34) return 'Longueur incorrecte.';
+    if (!/^[A-Z]{2}\d{2}/.test(iban)) return 'Format incorrect (ex. BE68 5390 0754 7034).';
+    const rearranged = iban.slice(4) + iban.slice(0, 4);
+    const numeric = rearranged.split('').map(c => isNaN(c) ? (c.charCodeAt(0) - 55).toString() : c).join('');
+    // MOD-97 on large integer via chunked division
+    let remainder = 0;
+    for (const digit of numeric) remainder = (remainder * 10 + parseInt(digit)) % 97;
+    return remainder === 1 ? 'valid' : 'Numéro de contrôle incorrect.';
+  }
+
+  function formatIBAN(val) {
+    return val.replace(/\s/g, '').toUpperCase().replace(/(.{4})/g, '$1 ').trim();
+  }
+
+  ibanInput.addEventListener('input', function () {
+    // Auto-format with spaces every 4 chars
+    const pos = this.selectionStart;
+    const raw = this.value.replace(/\s/g, '');
+    const formatted = formatIBAN(raw);
+    this.value = formatted;
+
+    const result = validateIBAN(this.value);
+    if (result === null) {
+      ibanIcon.style.display = 'none';
+      ibanFeedback.style.display = 'none';
+    } else if (result === 'valid') {
+      ibanIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(142 76% 36%)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+      ibanIcon.style.display = '';
+      ibanFeedback.style.display = 'none';
+    } else {
+      ibanIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 84% 45%)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      ibanIcon.style.display = '';
+      ibanFeedback.textContent = result;
+      ibanFeedback.style.cssText = 'display:block;color:hsl(0 84% 45%);font-size:0.75rem;margin-top:0.25rem;';
+    }
+  });
+
+  // Trigger on load if pre-filled
+  if (ibanInput.value) ibanInput.dispatchEvent(new Event('input'));
+})();
+</script>
 {% endblock %}

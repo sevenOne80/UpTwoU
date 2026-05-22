@@ -30,13 +30,29 @@
 
 {% block content %}
 <div class="mb-8">
-  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 4</p>
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 2 sur 6</p>
   <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Votre profil d'investissement</h1>
   <p class="mt-2 text-muted text-sm leading-relaxed">Choisissez le profil qui correspond le mieux à vos objectifs et à votre tolérance au risque.</p>
 </div>
 
+<!-- Questionnaire CTA — mis en avant -->
+<a href="{{ url_for('onboarding_questionnaire') }}"
+   class="flex items-center gap-4 rounded-2xl p-5 mb-5 transition-all hover:shadow-md"
+   style="background:hsl(35 95% 55% / 0.10);border:2px solid hsl(35 95% 55% / 0.45);text-decoration:none;">
+  <div class="flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0"
+       style="background:hsl(35 95% 55% / 0.18);">
+    <i data-lucide="clipboard-list" style="width:1.375rem;height:1.375rem;color:hsl(35 90% 35%);"></i>
+  </div>
+  <div class="flex-1 min-w-0">
+    <p class="font-semibold text-sm" style="color:hsl(35 90% 28%);">Vous hésitez ? Faites le test !</p>
+    <p class="text-xs mt-0.5" style="color:hsl(35 80% 38%);">Répondez à 6 questions pour découvrir votre profil optimal — 2 minutes chrono.</p>
+  </div>
+  <i data-lucide="arrow-right" style="width:1.125rem;height:1.125rem;color:hsl(35 90% 35%);flex-shrink:0;"></i>
+</a>
+
 <div class="rounded-2xl p-6" style="background:white;border:1px solid var(--border);">
-  <div class="flex flex-col gap-3 mb-6">
+  <p class="text-xs font-semibold uppercase tracking-widest text-muted mb-4">Ou choisissez directement</p>
+  <div class="flex flex-col gap-3">
 
     <!-- Prudent -->
     <form method="POST">
@@ -48,7 +64,7 @@
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-primary">Prudent</p>
           <p class="text-xs text-muted mt-0.5">Capital préservé en priorité · rendement stable · risque faible</p>
-          <p class="text-xs font-semibold mt-1" style="color:hsl(172 75% 28%);">~2–3 % /an · Frais 0,75 % /an</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(172 75% 28%);">~2–3 % /an</p>
         </div>
         <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
       </button>
@@ -64,7 +80,7 @@
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-primary">Équilibré</p>
           <p class="text-xs text-muted mt-0.5">Mix actions / obligations · volatilité modérée · rendement régulier</p>
-          <p class="text-xs font-semibold mt-1" style="color:hsl(35 90% 32%);">~4–6 % /an · Frais 0,90 % /an</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(35 90% 32%);">~4–6 % /an</p>
         </div>
         <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
       </button>
@@ -80,7 +96,7 @@
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-primary">Dynamique</p>
           <p class="text-xs text-muted mt-0.5">Orienté actions · croissance long terme · volatilité acceptée</p>
-          <p class="text-xs font-semibold mt-1" style="color:hsl(142 60% 28%);">~6–9 % /an · Frais 1,00 % /an</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(142 60% 28%);">~6–9 % /an</p>
         </div>
         <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
       </button>
@@ -96,20 +112,24 @@
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-primary">Conviction</p>
           <p class="text-xs text-muted mt-0.5">Portefeuille concentré · forte volatilité · rendement maximal</p>
-          <p class="text-xs font-semibold mt-1" style="color:hsl(270 50% 35%);">~9–12 % /an · Frais 1,10 % /an</p>
+          <p class="text-xs font-semibold mt-1" style="color:hsl(270 50% 35%);">~9–12 % /an</p>
         </div>
         <i data-lucide="chevron-right" style="width:1rem;height:1rem;color:hsl(172 30% 55%);flex-shrink:0;"></i>
       </button>
     </form>
 
   </div>
+</div>
 
-  <div class="border-t pt-5" style="border-color:var(--border);">
-    <p class="text-sm text-muted mb-3">Vous hésitez ? Répondez à 6 questions pour découvrir votre profil optimal.</p>
-    <a href="{{ url_for('onboarding_questionnaire') }}" class="btn btn-ghost text-sm">
-      <i data-lucide="help-circle" style="width:1rem;height:1rem;"></i>
-      Faire le questionnaire de profil
-    </a>
-  </div>
+<div class="mt-4 flex items-start gap-3 rounded-2xl p-4"
+     style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.30);">
+  <i data-lucide="triangle-alert" style="width:1rem;height:1rem;flex-shrink:0;margin-top:1px;color:hsl(35 90% 38%);"></i>
+  <p class="text-xs leading-relaxed" style="color:hsl(35 85% 28%);">
+    <strong>Avertissement sur les performances :</strong>
+    Les rendements indiqués sont des estimations indicatives basées sur des données historiques.
+    Les performances passées ne préjugent pas des performances futures.
+    La valeur de votre investissement peut évoluer à la hausse comme à la baisse.
+    Vous pouvez récupérer un montant inférieur à celui investi.
+  </p>
 </div>
 {% endblock %}

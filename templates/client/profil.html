@@ -88,6 +88,30 @@
       Enregistrer mon profil
     </button>
   </form>
+
+  <div style="height:1px;background:var(--border);margin:1.75rem 0;"></div>
+
+  <div class="flex items-start gap-4">
+    <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+         style="background:hsl(35 95% 55% / 0.1);">
+      <i data-lucide="help-circle" style="width:1.125rem;height:1.125rem;color:var(--accent);"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-semibold text-primary text-sm">Vous n'êtes pas sûr de votre profil ?</p>
+      <p class="text-xs text-muted mt-0.5 leading-relaxed">
+        Répondez à notre questionnaire MiFID (6 questions) pour que nous déterminions automatiquement le profil le plus adapté à votre situation et à votre tolérance au risque.
+      </p>
+      <a href="{{ url_for('client_questionnaire') }}"
+         class="btn mt-3 inline-flex items-center gap-2"
+         style="height:2.25rem;padding:0 1.125rem;font-size:0.8125rem;
+                background:hsl(35 95% 55% / 0.1);color:hsl(35 90% 30%);
+                border:1px solid hsl(35 95% 55% / 0.35);border-radius:0.625rem;
+                font-weight:600;text-decoration:none;">
+        <i data-lucide="clipboard-list" style="width:0.875rem;height:0.875rem;"></i>
+        Passer le questionnaire
+      </a>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

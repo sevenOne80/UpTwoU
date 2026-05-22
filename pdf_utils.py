@@ -7,7 +7,7 @@ import os
 from fpdf import FPDF
 
 # UpTwoU's receiving B23 insurer — configure via .env
-NOUVEL_NOM  = os.environ.get('NOUVEL_ASSUREUR_NOM',  'À compléter par UpTwoU')
+NOUVEL_NOM  = os.environ.get('NOUVEL_ASSUREUR_NOM',  'Contrat de pension extra-légal individuel')
 NOUVEL_BCE  = os.environ.get('NOUVEL_ASSUREUR_BCE',  '')
 NOUVEL_IBAN = os.environ.get('NOUVEL_ASSUREUR_IBAN', '')
 NOUVEL_REF  = os.environ.get('NOUVEL_ASSUREUR_REF',  '')
@@ -24,8 +24,15 @@ def _v(val, default=''):
     return str(val).strip() if val else default
 
 
-def generer_annexe1(client, contrat):
-    """Return PDF bytes for one Annexe 1 transfer request form."""
+def generer_annexe1(client, contrat, nouveau_contrat_ref=None, dest=None):
+    """Return PDF bytes for one Annexe 1 transfer request form.
+
+    dest: optional AssureurDestinataire instance — overrides global NOUVEL_* constants.
+    """
+    nom_dest  = dest.nom  if dest else NOUVEL_NOM
+    bce_dest  = dest.bce  if dest else NOUVEL_BCE
+    iban_dest = dest.iban if dest else NOUVEL_IBAN
+    ref_pdf   = nouveau_contrat_ref or (dest.ref if dest else None) or NOUVEL_REF
 
     # Resolve ceding insurer reference
     ref     = contrat.assureur_ref
@@ -144,10 +151,10 @@ def generer_annexe1(client, contrat):
     # ── ORGANISME DE PENSION ───────────────────────────────────────────────
     sec_header('ORGANISME DE PENSION')
     subheader3('Precedent', 'Nouveau (UpTwoU)')
-    row3('Nom',                  contrat.assureur, NOUVEL_NOM)
-    row3('Numero de reference',  contrat.numero,   NOUVEL_REF)
-    row3('Numero BCE',           bce_ced,          NOUVEL_BCE)
-    row3("Numero de compte",     "pas d'application", NOUVEL_IBAN)
+    row3('Nom',                  contrat.assureur, nom_dest)
+    row3('Numero de reference',  contrat.numero,   ref_pdf)
+    row3('Numero BCE',           bce_ced,          bce_dest)
+    row3("Numero de compte",     "pas d'application", iban_dest)
     pdf.ln(6)
 
     # ── ORGANISATEUR ───────────────────────────────────────────────────────

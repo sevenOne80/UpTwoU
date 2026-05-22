@@ -29,7 +29,14 @@
       "Bash(python -c \"from app import app; print\\([r.rule for r in app.url_map.iter_rules\\(\\) if 'gestion' in r.rule]\\)\")",
       "Bash(python -c ' *)",
       "Bash(python -c \"from app import app; print\\('OK'\\)\")",
-      "WebFetch(domain:www.itsme-id.com)"
+      "WebFetch(domain:www.itsme-id.com)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c 'from app import app, db; *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Thibaut\\\\www\\\\UpTwoU\\\\tools\\\\UpTwoU_Connective_Integration\" -Recurse -File)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(python -c \"import os; from dotenv import load_dotenv; load_dotenv\\(\\); k = os.getenv\\('ANTHROPIC_API_KEY',''\\); print\\('Présente:', bool\\(k\\), '| Longueur:', len\\(k\\), '| Début:', k[:15] if k else 'vide'\\)\")",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Thibaut\\\\www\\\\UpTwoU\" -Recurse -Force | ForEach-Object { $_.FullName })"
     ]
   }
 }

@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="mb-8">
-  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 1 sur 4</p>
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 1 sur 6</p>
   <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Vérification d'identité</h1>
   <p class="mt-2 text-muted text-sm leading-relaxed">Uploadez votre carte d'identité. Nos IA extrairont automatiquement vos données, que vous pourrez ensuite vérifier et compléter.</p>
 </div>
@@ -72,7 +72,7 @@
     <div class="grid grid-cols-2 gap-3">
       <div class="form-group">
         <label class="form-label">{{ form.date_naissance.label.text }}</label>
-        {{ form.date_naissance(class="form-input", placeholder="01/01/1970") }}
+        {{ form.date_naissance(class="form-input", placeholder="JJ/MM/AAAA", id="date_naissance", maxlength="10", autocomplete="off") }}
         {% for e in form.date_naissance.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
       </div>
       <div class="form-group">
@@ -113,9 +113,115 @@
       {% for e in form.pays.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
     </div>
 
+    <!-- Déclaration PPE -->
+    <div class="rounded-xl p-4 mt-2" style="background:hsla(220,30%,97%,1);border:1px solid hsla(220,20%,88%,1);">
+      <div class="flex items-start gap-2 mb-3">
+        <i data-lucide="shield-alert" style="width:1rem;height:1rem;flex-shrink:0;margin-top:1px;color:hsl(220,60%,45%);"></i>
+        <div>
+          <p class="text-sm font-semibold text-primary">Personne politiquement exposée (PPE)</p>
+          <p class="text-xs text-muted mt-0.5 leading-relaxed">
+            Êtes-vous, ou l'un de vos proches (conjoint, enfants, parents), une PPE ? — c'est-à-dire une personne
+            exerçant ou ayant exercé une fonction publique importante : chef d'État, parlementaire, magistrat,
+            dirigeant d'entreprise publique, ambassadeur, haut responsable militaire, etc.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mb-3">
+        {% for val, label in form.est_ppe.choices %}
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="est_ppe" value="{{ val }}"
+                 {% if form.est_ppe.data == val %}checked{% endif %}
+                 class="ppe-radio h-4 w-4 flex-shrink-0" style="accent-color:var(--primary);">
+          <span class="text-sm font-semibold text-primary">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% for e in form.est_ppe.errors %}
+      <p class="text-xs mb-2" style="color:hsl(0,84%,45%);">{{ e }}</p>
+      {% endfor %}
+
+      <div id="ppe-details-box" class="{{ '' if form.est_ppe.data == 'oui' else 'hidden' }}">
+        <label class="form-label text-xs">Précisez la fonction ou le lien de parenté</label>
+        {{ form.ppe_details(class="form-input mt-1", placeholder="Ex : Mon père est député fédéral") }}
+      </div>
+    </div>
+
     <div class="flex justify-end mt-2">
       {{ form.submit(class="btn btn-primary") }}
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const input = document.getElementById('date_naissance');
+  if (!input) return;
+
+  input.addEventListener('input', function () {
+    let digits = this.value.replace(/\D/g, '').slice(0, 8);
+    let result = '';
+    if (digits.length > 4) {
+      result = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+    } else if (digits.length > 2) {
+      result = digits.slice(0, 2) + '/' + digits.slice(2);
+    } else {
+      result = digits;
+    }
+    this.value = result;
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Backspace' && this.value.endsWith('/')) {
+      e.preventDefault();
+      this.value = this.value.slice(0, -1);
+    }
+  });
+})();
+
+// ── PPE : affichage conditionnel du champ détails ───────────────────────────
+(function () {
+  const radios  = document.querySelectorAll('.ppe-radio');
+  const box     = document.getElementById('ppe-details-box');
+  if (!box) return;
+  radios.forEach(r => r.addEventListener('change', function () {
+    box.classList.toggle('hidden', this.value !== 'oui');
+  }));
+})();
+
+// ── Date de naissance depuis le NISS ─────────────────────────────────────────
+(function () {
+  const nissInput = document.querySelector('input[name="niss"]');
+  const ddnInput  = document.getElementById('date_naissance');
+  if (!nissInput || !ddnInput) return;
+
+  nissInput.addEventListener('input', function () {
+    const digits = this.value.replace(/\D/g, '');
+
+    // Date de naissance (6 premiers chiffres suffisent)
+    if (digits.length >= 6) {
+      let yy = parseInt(digits.slice(0, 2), 10);
+      let mm = parseInt(digits.slice(2, 4), 10);
+      const dd = parseInt(digits.slice(4, 6), 10);
+      if (mm > 20) mm -= 20; // nés après 2000
+      const currentYY = new Date().getFullYear() % 100;
+      const fullYear = yy > currentYY ? 1900 + yy : 2000 + yy;
+      if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 && !ddnInput.value) {
+        ddnInput.value = String(dd).padStart(2, '0') + '/' + String(mm).padStart(2, '0') + '/' + fullYear;
+      }
+    }
+
+    // Sexe (chiffres 7-9 : impair = homme, pair = femme)
+    if (digits.length === 11) {
+      const sexeSelect = document.querySelector('select[name="sexe"]');
+      if (sexeSelect && !sexeSelect.value) {
+        const ordre = parseInt(digits.slice(6, 9), 10);
+        sexeSelect.value = ordre % 2 === 1 ? 'M' : 'F';
+      }
+    }
+  });
+})();
+</script>
 {% endblock %}

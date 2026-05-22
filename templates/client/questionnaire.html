@@ -1,0 +1,146 @@
+{% extends "client/_base.html" %}
+{% block title %}Questionnaire de profil{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h1>Questionnaire de profil</h1>
+    <p>Répondez à ces 6 questions pour déterminer votre profil d'investissement.</p>
+  </div>
+</div>
+
+<div class="max-w-2xl">
+  <form method="POST">
+    {{ form.hidden_tag() }}
+
+    <!-- Q1 : horizon -->
+    <div class="q-block" {% if q1_prefill %}style="opacity:0.75;"{% endif %}>
+      <p class="q-title">1. Quel est votre horizon de placement pour ces réserves ?</p>
+      {% if q1_prefill %}
+      <input type="hidden" name="q1" value="{{ q1_prefill }}">
+      <div class="q-options">
+        {% for subfield in form.q1 %}
+        <label class="q-pill {% if subfield.checked %}selected{% endif %}"
+               style="pointer-events:none;{% if subfield.checked %}border-color:var(--primary);background:hsl(172 75% 22% / 0.07);{% endif %}">
+          <span class="pill-dot" {% if subfield.checked %}style="background:var(--primary);border-color:var(--primary);"{% endif %}></span>
+          <span>{{ subfield.label.text }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="text-xs mt-2" style="color:hsl(172 75% 35%);">
+        <i data-lucide="info" style="width:0.75rem;height:0.75rem;display:inline;vertical-align:middle;"></i>
+        Calculé automatiquement depuis votre numéro national — réponse : <strong>{{ q1_label }}</strong>.
+      </p>
+      {% else %}
+      <div class="q-options">
+        {% for subfield in form.q1 %}
+        <label class="q-pill {% if subfield.checked %}selected{% endif %}">
+          {{ subfield }}
+          <span class="pill-dot"></span>
+          <span>{{ subfield.label.text }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% for e in form.q1.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+    </div>
+
+    <!-- Q2–Q6 -->
+    {% set questions = [
+      (form.q2, 'Si votre portefeuille perd 20 % en 3 mois, que faites-vous ?'),
+      (form.q3, 'Quel est votre objectif principal ?'),
+      (form.q4, 'Ces réserves représentent quelle part de votre patrimoine total ?'),
+      (form.q5, 'Quelle est votre expérience en placements financiers ?'),
+      (form.q6, 'Face à une perte de 30 % sur 6 mois, vous...'),
+    ] %}
+    {% for field, label in questions %}
+    <div class="q-block">
+      <p class="q-title">{{ loop.index + 1 }}. {{ label }}</p>
+      <div class="q-options">
+        {% for subfield in field %}
+        <label class="q-pill {% if subfield.checked %}selected{% endif %}">
+          {{ subfield }}
+          <span class="pill-dot"></span>
+          <span>{{ subfield.label.text }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% for e in field.errors %}<p class="text-xs mt-1" style="color:hsl(0 84% 45%);">{{ e }}</p>{% endfor %}
+    </div>
+    {% endfor %}
+
+    <div class="flex items-center justify-between mt-2">
+      <a href="{{ url_for('client_profil') }}" class="btn btn-ghost text-sm">
+        <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+        Retour
+      </a>
+      <button type="submit" class="btn btn-primary" style="height:2.75rem;padding:0 1.75rem;">
+        <i data-lucide="check" style="width:1rem;height:1rem;margin-right:0.5rem;"></i>
+        Valider le questionnaire
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .q-block {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .q-title {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+  }
+  .q-options { display: flex; flex-direction: column; gap: 0.5rem; }
+  .q-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.625rem;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 0.875rem;
+    color: hsl(172 30% 28%);
+    background: transparent;
+    user-select: none;
+  }
+  .q-pill:hover { border-color: hsl(172 75% 35%); background: hsl(172 75% 22% / 0.04); }
+  .q-pill input[type="radio"] { display: none; }
+  .q-pill.selected {
+    border-color: var(--primary);
+    background: hsl(172 75% 22% / 0.07);
+    color: hsl(172 75% 18%);
+    font-weight: 600;
+  }
+  .pill-dot {
+    width: 1rem; height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid hsl(172 30% 65%);
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .q-pill.selected .pill-dot { background: var(--primary); border-color: var(--primary); }
+</style>
+<script>
+  document.querySelectorAll('.q-pill').forEach(label => {
+    const radio = label.querySelector('input[type="radio"]');
+    if (!radio) return;
+    if (radio.checked) label.classList.add('selected');
+    label.addEventListener('click', () => {
+      document.querySelectorAll(`input[name="${radio.name}"]`).forEach(r => {
+        r.closest('.q-pill').classList.remove('selected');
+      });
+      label.classList.add('selected');
+    });
+  });
+</script>
+{% endblock %}

@@ -18,22 +18,18 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <a href="{{ url_for('client_dashboard') }}" class="sidebar-brand">
+    <a href="{{ url_for('client_contrats') }}" class="sidebar-brand">
       <img src="{{ url_for('static', filename='img/uptwou-logo.svg') }}" alt="logo">
       <span class="sidebar-brand-text">Up<span>Two</span>U</span>
     </a>
 
     <span class="sidebar-section">Mon espace</span>
-    <a href="{{ url_for('client_dashboard') }}"
-       class="sidebar-link {% if request.endpoint == 'client_dashboard' %}active{% endif %}">
-      <i data-lucide="layout-dashboard"></i> Tableau de bord
-    </a>
     <a href="{{ url_for('client_contrats') }}"
        class="sidebar-link {% if request.endpoint == 'client_contrats' %}active{% endif %}">
       <i data-lucide="file-text"></i> Mes contrats
     </a>
     <a href="{{ url_for('client_transfert') }}"
-       class="sidebar-link {% if request.endpoint in ('client_transfert', 'client_transfert_pdf') %}active{% endif %}">
+       class="sidebar-link {% if request.endpoint in ('client_dashboard', 'client_transfert', 'client_transfert_pdf') %}active{% endif %}">
       <i data-lucide="send"></i> Transfert de réserves</a>
     <a href="{{ url_for('client_gestion') }}"
        class="sidebar-link {% if request.endpoint == 'client_gestion' %}active{% endif %}">
@@ -50,9 +46,6 @@
 
     <div class="sidebar-spacer"></div>
 
-    <a href="{{ url_for('analyser') }}" class="sidebar-link">
-      <i data-lucide="upload-cloud"></i> Nouvelle analyse
-    </a>
     <a href="{{ url_for('logout') }}" class="sidebar-link">
       <i data-lucide="log-out"></i> Déconnexion
     </a>

@@ -3,37 +3,37 @@
 
 {% block content %}
 <div class="mb-8">
-  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 4 sur 4</p>
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 6 sur 6</p>
   <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Votre dossier est prêt</h1>
-  <p class="mt-2 text-muted text-sm leading-relaxed">Téléchargez, imprimez et signez vos formulaires de transfert pour chaque contrat.</p>
+  <p class="mt-2 text-muted text-sm leading-relaxed">Vérifiez le récapitulatif ci-dessous avant de confirmer l'envoi de vos demandes de transfert.</p>
 </div>
 
-<!-- Client summary -->
-<div class="rounded-2xl p-6 mb-6" style="background:white;border:1px solid var(--border);">
+<!-- Résumé nouvelle police -->
+<div class="rounded-2xl p-6 mb-5" style="background:white;border:1px solid var(--border);">
   <h2 class="font-semibold text-primary mb-4 flex items-center gap-2">
-    <i data-lucide="user" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
-    Résumé de votre profil
+    <i data-lucide="shield-check" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+    Votre nouvelle police d'assurance pension extra-légale
   </h2>
-  <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+  <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
     <div>
-      <dt class="text-xs uppercase tracking-widest font-semibold text-muted">Nom complet</dt>
+      <dt class="text-xs uppercase tracking-widest font-semibold text-muted">Assuré</dt>
       <dd class="mt-0.5 font-semibold text-primary">{{ client.prenom }} {{ client.nom }}</dd>
     </div>
     <div>
       <dt class="text-xs uppercase tracking-widest font-semibold text-muted">Numéro national</dt>
-      <dd class="mt-0.5 font-semibold text-primary">{{ client.niss or '—' }}</dd>
+      <dd class="mt-0.5 font-semibold text-primary font-mono">{{ client.niss or '—' }}</dd>
     </div>
     <div>
-      <dt class="text-xs uppercase tracking-widest font-semibold text-muted">Adresse</dt>
-      <dd class="mt-0.5 text-primary">
-        {{ client.adresse or '—' }}{% if client.code_postal or client.ville %}, {{ client.code_postal }} {{ client.ville }}{% endif %}
+      <dt class="text-xs uppercase tracking-widest font-semibold text-muted">Numéro de contrat UpTwoU</dt>
+      <dd class="mt-0.5 font-semibold text-primary font-mono tracking-wide">
+        {{ uptwou_refs | join(' · ') if uptwou_refs else '—' }}
       </dd>
     </div>
     <div>
       <dt class="text-xs uppercase tracking-widest font-semibold text-muted">Profil d'investissement</dt>
       <dd class="mt-0.5">
         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-              style="background:hsl(172 75% 22% / 0.1);color:hsl(172 75% 20%);">
+              style="background:hsla(172,75%,22%,0.1);color:hsl(172,75%,20%);">
           {{ client.profil_risque | capitalize if client.profil_risque else '—' }}
         </span>
       </dd>
@@ -41,79 +41,94 @@
   </dl>
 </div>
 
-<!-- Contracts & transfer forms -->
+<!-- Réserves à transférer -->
 {% if contrats %}
-<div class="rounded-2xl p-6 mb-6" style="background:white;border:1px solid var(--border);">
-  <h2 class="font-semibold text-primary mb-4 flex items-center gap-2">
-    <i data-lucide="send" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
-    Contrats à transférer ({{ contrats | length }})
-  </h2>
+<div class="rounded-2xl p-6 mb-5" style="background:white;border:1px solid var(--border);">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-semibold text-primary flex items-center gap-2">
+      <i data-lucide="send" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      Réserves qui seront transférées dans votre contrat
+    </h2>
+    {% if total_reserves %}
+    <span class="text-sm font-bold text-primary">
+      {{ "{:,.2f}".format(total_reserves).replace(",", " ").replace(".", ",") }} €
+    </span>
+    {% endif %}
+  </div>
 
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-2 mb-5">
     {% for c in contrats %}
-    <div class="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.15);">
+    {% set ts = ts_map.get(c.id) %}
+    <div class="rounded-xl px-4 py-3 flex items-center justify-between gap-4"
+         style="background:hsla(172,75%,22%,0.04);border:1px solid hsla(172,75%,22%,0.15);">
       <div class="flex-1 min-w-0">
-        <p class="font-semibold text-primary">{{ c.assureur or 'Assureur inconnu' }}</p>
+        <p class="font-semibold text-primary text-sm">{{ c.assureur or 'Assureur inconnu' }}</p>
         <p class="text-xs text-muted mt-0.5">
-          Contrat n° {{ c.numero or '—' }} ·
-          <span class="font-medium">{{ c.reserve or '—' }} €</span>
-          {% if c.date_valeur %}· au {{ c.date_valeur }}{% endif %}
+          n° {{ c.numero or '—' }}
+          {% if c.date_valeur %} · au {{ c.date_valeur }}{% endif %}
         </p>
-        <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-xs font-semibold"
-              style="background:hsl(142 76% 36% / 0.1);color:hsl(142 60% 28%);">
-          <i data-lucide="moon" style="width:0.625rem;height:0.625rem;"></i>
-          Dormant
-        </span>
       </div>
-      <a href="{{ url_for('client_transfert_pdf', contrat_id=c.id) }}"
-         class="btn btn-primary text-sm flex-shrink-0"
-         style="height:2.25rem;padding:0 1rem;">
-        <i data-lucide="download" style="width:0.875rem;height:0.875rem;"></i>
-        Annexe 1 PDF
-      </a>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <span class="text-sm font-bold text-primary">{{ c.reserve or '—' }} €</span>
+        {% if ts %}
+          {% if ts.statut_signature == 'signe' %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+                style="background:hsla(142,76%,36%,0.12);color:hsl(142,60%,28%);">
+            <i data-lucide="check-circle" style="width:0.65rem;height:0.65rem;"></i>
+            Signé
+          </span>
+          {% elif ts.statut_signature == 'en_attente' %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold"
+                style="background:hsla(220,90%,56%,0.1);color:hsl(220,70%,40%);">
+            <i data-lucide="clock" style="width:0.65rem;height:0.65rem;"></i>
+            En attente
+          </span>
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
-</div>
 
-<!-- Instructions -->
-<div class="rounded-2xl p-6 mb-6" style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
-  <h3 class="font-semibold mb-3 flex items-center gap-2" style="color:hsl(35 90% 28%);">
-    <i data-lucide="info" style="width:1.125rem;height:1.125rem;"></i>
-    Marche à suivre
-  </h3>
-  <ol class="flex flex-col gap-2 text-sm" style="color:hsl(35 90% 32%);">
-    <li class="flex items-start gap-2.5">
-      <span class="font-bold flex-shrink-0">1.</span>
-      <span>Téléchargez l'<strong>Annexe 1</strong> pour chaque contrat dormant (bouton ci-dessus).</span>
-    </li>
-    <li class="flex items-start gap-2.5">
-      <span class="font-bold flex-shrink-0">2.</span>
-      <span>Imprimez chaque formulaire, <strong>lisez-le attentivement</strong> et signez-le.</span>
-    </li>
-    <li class="flex items-start gap-2.5">
-      <span class="font-bold flex-shrink-0">3.</span>
-      <span>Envoyez-le par courrier ou e-mail directement à l'assureur cédant (coordonnées sur le formulaire).</span>
-    </li>
-    <li class="flex items-start gap-2.5">
-      <span class="font-bold flex-shrink-0">4.</span>
-      <span>Transmettez une copie à votre conseiller UpTwoU pour suivi.</span>
-    </li>
-  </ol>
+  <!-- État de signature (signe ou en_attente uniquement) -->
+  {% if batch_state == 'signe' %}
+  <div class="flex items-center gap-3 rounded-xl p-4"
+       style="background:hsla(142,76%,36%,0.08);border:1px solid hsla(142,76%,36%,0.25);">
+    <i data-lucide="check-circle" style="width:1.25rem;height:1.25rem;color:hsl(142,60%,30%);flex-shrink:0;"></i>
+    <div>
+      <p class="text-sm font-semibold" style="color:hsl(142,60%,28%);">Tous les documents sont signés</p>
+      <p class="text-xs mt-0.5" style="color:hsl(142,50%,35%);">Vos demandes de transfert sont prêtes à être envoyées.</p>
+    </div>
+  </div>
+  {% elif batch_state == 'en_attente' and signing_url %}
+  <a href="{{ signing_url }}" target="_blank" rel="noopener"
+     class="flex items-center gap-3 rounded-xl p-4 transition-opacity hover:opacity-90"
+     style="background:hsla(220,90%,56%,0.08);border:1px solid hsla(220,70%,56%,0.3);text-decoration:none;">
+    <i data-lucide="pen-line" style="width:1.25rem;height:1.25rem;color:hsl(220,70%,40%);flex-shrink:0;"></i>
+    <div>
+      <p class="text-sm font-semibold" style="color:hsl(220,60%,35%);">Signature en cours — cliquez pour continuer</p>
+      <p class="text-xs mt-0.5" style="color:hsl(220,50%,45%);">Vous serez redirigé vers la plateforme de signature.</p>
+    </div>
+    <i data-lucide="external-link" style="width:0.875rem;height:0.875rem;color:hsl(220,60%,50%);margin-left:auto;flex-shrink:0;"></i>
+  </a>
+  {% endif %}
 </div>
 
 {% else %}
 <div class="rounded-2xl p-6 mb-6 text-center" style="background:white;border:1px solid var(--border);">
-  <i data-lucide="inbox" style="width:2rem;height:2rem;color:hsl(172 30% 65%);margin:0 auto 0.75rem;"></i>
-  <p class="text-sm text-muted">Aucun contrat dormant détecté. Votre dossier sera examiné par votre conseiller.</p>
+  <i data-lucide="inbox" style="width:2rem;height:2rem;color:hsl(172,30%,65%);margin:0 auto 0.75rem;"></i>
+  <p class="text-sm text-muted">Aucun contrat dormant à transférer.</p>
 </div>
 {% endif %}
 
-<!-- Go to dashboard -->
-<div class="flex justify-end">
-  <a href="{{ url_for('client_dashboard') }}" class="btn btn-primary">
-    Accéder à mon tableau de bord
-    <i data-lucide="layout-dashboard" style="width:1rem;height:1rem;"></i>
+<div class="flex items-center justify-between">
+  <a href="{{ url_for('onboarding_transfert') }}" class="btn btn-ghost text-sm flex items-center gap-2">
+    <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+    Retour
+  </a>
+  <a href="{{ url_for('client_dashboard') }}" class="btn btn-primary flex items-center gap-2">
+    <i data-lucide="send" style="width:1rem;height:1rem;"></i>
+    Envoyer mes demandes de transferts de réserves et accéder à mon espace client
   </a>
 </div>
 {% endblock %}

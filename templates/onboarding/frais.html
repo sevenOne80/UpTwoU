@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="mb-8">
-  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 3 sur 4</p>
+  <p class="text-xs uppercase tracking-widest font-semibold text-accent mb-1">Étape 4 sur 6</p>
   <h1 class="font-display text-2xl md:text-3xl font-semibold text-primary">Structure de frais</h1>
   <p class="mt-2 text-muted text-sm leading-relaxed">Veuillez lire et accepter notre structure de frais avant de continuer.</p>
 </div>
@@ -18,7 +18,7 @@
   <div class="flex flex-col sm:flex-row gap-4 mb-6">
     <div class="flex-1 rounded-xl p-5 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
       <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-1">Frais annuels totaux sur réserve</p>
-      <p class="font-display text-4xl font-bold text-primary">1,90 %</p>
+      <p class="font-display text-4xl font-bold text-primary">1,95 %</p>
       <p class="text-xs text-muted mt-1">prélevés annuellement sur l'encours</p>
     </div>
   </div>
@@ -37,7 +37,7 @@
       </tr>
       <tr style="background:hsl(172 75% 22% / 0.02);">
         <td class="py-3 px-4 text-muted" style="border:1px solid hsl(172 75% 22% / 0.1);border-top:none;">Frais de gestion annuels</td>
-        <td class="py-3 px-4 text-right font-semibold text-primary" style="border:1px solid hsl(172 75% 22% / 0.1);border-top:none;border-left:none;">1,90 % /an</td>
+        <td class="py-3 px-4 text-right font-semibold text-primary" style="border:1px solid hsl(172 75% 22% / 0.1);border-top:none;border-left:none;">1,95 % /an</td>
       </tr>
       <tr>
         <td class="py-3 px-4 text-muted rounded-bl-lg" style="border:1px solid hsl(172 75% 22% / 0.1);border-top:none;">Frais de transfert sortant (out)</td>
@@ -49,7 +49,6 @@
   <div class="mt-5 rounded-xl p-4" style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
     <p class="text-xs text-muted leading-relaxed">
       <strong style="color:hsl(35 90% 30%);">Note :</strong> Ces frais s'appliquent quel que soit le profil de gestion choisi.
-      Les performances passées ne préjugent pas des performances futures.
     </p>
   </div>
 </div>
@@ -65,7 +64,7 @@
   </label>
 
   <div class="flex items-center justify-between">
-    <a href="{{ url_for('onboarding_profil') }}" class="btn btn-ghost text-sm">
+    <a href="{{ url_for('onboarding_contrat') }}" class="btn btn-ghost text-sm">
       <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
       Retour
     </a>

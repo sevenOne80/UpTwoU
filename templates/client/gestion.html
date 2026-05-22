@@ -1,244 +1,313 @@
 {% extends "client/_base.html" %}
-{% block title %}Gestion & fonds{% endblock %}
+{% block title %}Gestion &amp; fonds{% endblock %}
 
 {% block content %}
 
 <div class="dashboard-header">
   <div>
     <h1>Gestion &amp; fonds</h1>
-    <p>Comprendre comment vos réserves sont gérées en Branche 23.</p>
+    <p>Évolution projetée de vos réserves et détail de votre profil de gestion.</p>
   </div>
 </div>
 
-<!-- ── Pourquoi la gestion dédiée ───────────────────────────────────────── -->
+<!-- ── Graphique évolution ───────────────────────────────────────────────── -->
 <div class="dashboard-card mb-6">
   <div class="flex items-center gap-3 mb-5">
     <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
          style="background:hsl(172 75% 22% / 0.1);">
-      <i data-lucide="lightbulb" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
+      <i data-lucide="trending-up" style="width:1.125rem;height:1.125rem;color:var(--primary);"></i>
     </div>
-    <h2 class="font-display text-lg font-semibold text-primary">
-      Pourquoi la gestion dédiée est particulièrement adaptée aux réserves extra-légales
-    </h2>
-  </div>
-
-  <div class="grid md:grid-cols-2 gap-4">
-
-    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
-      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
-           style="background:hsl(172 75% 22% / 0.1);">
-        <i data-lucide="calendar-range" style="width:1rem;height:1rem;color:var(--primary);"></i>
-      </div>
-      <div>
-        <p class="text-sm font-semibold text-primary mb-1">Horizon de placement long</p>
-        <p class="text-xs text-muted leading-relaxed">
-          Vos réserves restent investies jusqu'à la pension. Cet horizon de 10 à 30 ans permet d'accéder à des classes d'actifs plus dynamiques, avec une capacité d'absorption des cycles de marché que l'épargne classique n'offre pas.
-        </p>
-      </div>
-    </div>
-
-    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
-      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
-           style="background:hsl(172 75% 22% / 0.1);">
-        <i data-lucide="activity" style="width:1rem;height:1rem;color:var(--primary);"></i>
-      </div>
-      <div>
-        <p class="text-sm font-semibold text-primary mb-1">Gestion active</p>
-        <p class="text-xs text-muted leading-relaxed">
-          Contrairement à une gestion passive indicielle, nos fonds sont activement pilotés : les gestionnaires adaptent en permanence les allocations en fonction des conditions de marché, des opportunités et du profil de risque de chaque investisseur.
-        </p>
-      </div>
-    </div>
-
-    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
-      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
-           style="background:hsl(172 75% 22% / 0.1);">
-        <i data-lucide="key" style="width:1rem;height:1rem;color:var(--primary);"></i>
-      </div>
-      <div>
-        <p class="text-sm font-semibold text-primary mb-1">Accès normalement réservé aux grandes fortunes</p>
-        <p class="text-xs text-muted leading-relaxed">
-          Ce type de gestion dédiée est habituellement accessible à partir de 250 000 € de capitaux investis. En regroupant les réserves de pension de ses clients, UpTwoU vous donne accès à ces conditions — quelle que soit la taille de votre portefeuille individuel.
-        </p>
-      </div>
-    </div>
-
-    <div class="rounded-xl p-4 flex items-start gap-3" style="background:hsl(172 75% 22% / 0.04);border:1px solid hsl(172 75% 22% / 0.12);">
-      <div class="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0 mt-0.5"
-           style="background:hsl(172 75% 22% / 0.1);">
-        <i data-lucide="shield" style="width:1rem;height:1rem;color:var(--primary);"></i>
-      </div>
-      <div>
-        <p class="text-sm font-semibold text-primary mb-1">Gestion professionnelle &amp; diversifiée</p>
-        <p class="text-xs text-muted leading-relaxed">
-          Vos réserves sont investies dans des fonds diversifiés, sélectionnés et surveillés par des gestionnaires professionnels. La construction de portefeuille, le rééquilibrage et la gestion du risque sont assurés en continu — sans que vous ayez à intervenir.
-        </p>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ── Gestionnaire : Wealtheon ─────────────────────────────────────────── -->
-<div class="dashboard-card mb-6">
-  <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
-    <div class="flex items-center gap-4">
-      <div class="h-14 w-14 rounded-2xl grid place-items-center flex-shrink-0"
-           style="background:linear-gradient(135deg,hsl(172 75% 18%),hsl(172 75% 28%));">
-        <i data-lucide="building" style="width:1.5rem;height:1.5rem;color:white;"></i>
-      </div>
-      <div>
-        <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-0.5">Gestionnaire de fonds</p>
-        <h2 class="font-display text-xl font-semibold text-primary">
-          <a href="https://www.wealtheon.eu/fr" target="_blank" rel="noopener" class="hover:underline">Wealtheon</a>
-        </h2>
-      </div>
-    </div>
-    <span class="rounded-full px-3 py-1 text-xs font-semibold"
-          style="background:hsl(142 76% 36% / 0.1);color:hsl(142 76% 28%);border:1px solid hsl(142 76% 36% / 0.25);">
-      Gestionnaire actif
-    </span>
-  </div>
-
-  <p class="text-sm text-muted leading-relaxed mb-4">
-    <a href="https://www.wealtheon.eu/fr" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:var(--primary);">Wealtheon</a> est le gestionnaire de fonds sélectionné par UpTwoU pour la gestion des réserves transférées en Branche 23. Spécialisé dans la gestion de fonds à long terme, <a href="https://www.wealtheon.eu/fr" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:var(--primary);">Wealtheon</a> propose une gamme de fonds alignés sur les quatre profils de risque disponibles.
-  </p>
-
-  <div class="grid sm:grid-cols-3 gap-3">
-    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
-      <p class="text-xs text-muted mb-1">Approche</p>
-      <p class="text-sm font-semibold text-primary">Gestion active</p>
-    </div>
-    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
-      <p class="text-xs text-muted mb-1">Univers</p>
-      <p class="text-sm font-semibold text-primary">Actions &amp; obligations</p>
-    </div>
-    <div class="rounded-xl p-3 text-center" style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.12);">
-      <p class="text-xs text-muted mb-1">Reporting</p>
-      <p class="text-sm font-semibold text-primary">Mensuel</p>
+    <div>
+      <p class="font-semibold text-primary">Évolution de la réserve</p>
+      <p class="text-xs text-muted mt-0.5">Projection basée sur votre profil
+        {% if client.profil_risque %}<strong class="capitalize">{{ client.profil_risque }}</strong>{% endif %}
+        — les performances passées ne préjugent pas des performances futures.
+      </p>
     </div>
   </div>
 
-  <div class="mt-4 flex items-start gap-2 rounded-xl p-3"
-       style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
-    <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
-    <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
-      Les performances passées ne préjugent pas des performances futures. Tout investissement en Branche 23 comporte un risque de perte en capital.
-    </p>
+  {% set actifs = client.contrats_actifs %}
+  {% if actifs %}
+  <div style="position:relative;height:320px;">
+    <canvas id="reserveChart"></canvas>
   </div>
-</div>
 
-<!-- ── Les 4 profils ─────────────────────────────────────────────────────── -->
-<div class="dashboard-card mb-6">
-  <h2 class="font-display text-lg font-semibold text-primary mb-5">Les 4 profils de gestion</h2>
-
-  <div class="grid md:grid-cols-2 gap-4">
-
-    {% set profils = [
-      ('prudent',   'Prudent',   'shield',         'hsl(142 76% 36%)', 'hsl(142 76% 36% / 0.1)', 'hsl(142 76% 36% / 0.2)',
-       'Obligations, fonds monétaires et actifs défensifs. Priorité à la préservation du capital avec une croissance modeste.',
-       [('Actions', '0 – 15 %'), ('Obligations', '60 – 80 %'), ('Monétaire & divers', '10 – 30 %')]),
-
-      ('equilibre', 'Équilibré', 'scale',           'hsl(172 75% 28%)', 'hsl(172 75% 22% / 0.08)', 'hsl(172 75% 22% / 0.2)',
-       'Mix équilibré entre obligations et actions. Rendement régulier avec une volatilité maîtrisée.',
-       [('Actions', '30 – 50 %'), ('Obligations', '40 – 60 %'), ('Divers', '5 – 15 %')]),
-
-      ('dynamique', 'Dynamique', 'trending-up',     'hsl(220 70% 45%)', 'hsl(220 70% 45% / 0.08)', 'hsl(220 70% 45% / 0.2)',
-       'Exposition majoritaire aux marchés actions mondiaux. Objectif de croissance du capital sur le long terme.',
-       [('Actions', '60 – 80 %'), ('Obligations', '15 – 30 %'), ('Divers', '5 – 15 %')]),
-
-      ('conviction','Conviction', 'zap',            'hsl(35 95% 45%)', 'hsl(35 95% 55% / 0.08)', 'hsl(35 95% 55% / 0.3)',
-       "Concentrations d'actions à conviction élevée (8 – 11 % par position). Portefeuille concentré, volatilité élevée, potentiel de rendement maximal.",
-       [('Actions (concentrées)', '80 – 100 %'), ('Liquidités', '0 – 20 %')]),
-    ] %}
-
-    {% for slug, nom, icon, color, bg, border, desc, alloc in profils %}
-    <div class="rounded-2xl p-5 {% if client.profil_risque == slug %}ring-2{% endif %}"
-         style="background:{{ bg }};border:1px solid {{ border }};{% if client.profil_risque == slug %}outline:2px solid {{ color }};outline-offset:2px;{% endif %}">
-
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-3">
-          <div class="h-9 w-9 rounded-xl grid place-items-center"
-               style="background:{{ color }};opacity:{{ '1' if client.profil_risque == slug else '0.8' }};">
-            <i data-lucide="{{ icon }}" style="width:1rem;height:1rem;color:white;"></i>
-          </div>
-          <p class="font-semibold text-primary">{{ nom }}</p>
-        </div>
-        {% if client.profil_risque == slug %}
-        <span class="rounded-full px-2 py-0.5 text-xs font-semibold"
-              style="background:{{ color }};color:white;">
-          Mon profil
-        </span>
-        {% endif %}
-      </div>
-
-      <p class="text-xs text-muted leading-relaxed mb-3">{{ desc }}</p>
-
-      <div class="flex flex-col gap-1">
-        {% for asset, pct in alloc %}
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-muted">{{ asset }}</span>
-          <span class="font-semibold" style="color:{{ color }};">{{ pct }}</span>
-        </div>
-        {% endfor %}
-      </div>
-
+  <!-- Legend -->
+  <div class="flex flex-wrap gap-4 mt-4 text-xs text-muted">
+    <div class="flex items-center gap-1.5">
+      <span style="display:inline-block;width:24px;height:3px;background:var(--primary);border-radius:2px;"></span>
+      Projection de croissance
     </div>
-    {% endfor %}
-
-  </div>
-
-  {% if not client.profil_risque %}
-  <div class="mt-4 flex items-center justify-between rounded-xl p-4"
-       style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
-    <p class="text-sm text-muted">Vous n'avez pas encore défini votre profil de gestion.</p>
-    <a href="{{ url_for('client_profil') }}" class="btn btn-primary text-sm"
-       style="height:2.25rem;padding:0 1rem;">
-      Choisir mon profil
-      <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
-    </a>
+    <div class="flex items-center gap-1.5">
+      <span style="display:inline-block;width:3px;height:14px;background:hsl(142 76% 36%);border-radius:2px;"></span>
+      Injection de réserve
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span style="display:inline-block;width:3px;height:14px;background:hsl(35 95% 45%);border-radius:2px;"></span>
+      Date terme / pension
+    </div>
   </div>
   {% else %}
-  <div class="mt-4 flex items-center justify-between rounded-xl p-4"
-       style="background:hsl(172 75% 22% / 0.05);border:1px solid hsl(172 75% 22% / 0.15);">
-    <p class="text-sm text-muted">
-      Votre profil actuel : <strong class="text-primary capitalize">{{ client.profil_risque }}</strong>.
-      Vous pouvez le modifier à tout moment.
-    </p>
-    <a href="{{ url_for('client_profil') }}" class="btn btn-ghost text-sm"
-       style="height:2.25rem;padding:0 1rem;">
-      Modifier
-    </a>
+  <div class="text-center py-10">
+    <div class="mx-auto h-14 w-14 rounded-2xl grid place-items-center mb-3"
+         style="background:hsl(172 75% 22% / 0.06);">
+      <i data-lucide="bar-chart-2" style="width:1.5rem;height:1.5rem;color:var(--primary);opacity:0.4;"></i>
+    </div>
+    <p class="text-sm font-semibold text-primary mb-1">Aucune réserve active</p>
+    <p class="text-xs text-muted max-w-xs mx-auto">Le graphique s'affichera une fois vos réserves transférées chez UpTwoU.</p>
   </div>
   {% endif %}
 </div>
 
-<!-- ── Frais ─────────────────────────────────────────────────────────────── -->
-<div class="dashboard-card">
-  <h2 class="font-display text-lg font-semibold text-primary mb-4">Structure de frais</h2>
+<!-- ── Profil de gestion choisi ─────────────────────────────────────────── -->
+{% set profils = [
+  ('prudent',   'Prudent',   'shield',       'hsl(142 76% 36%)', 'hsl(142 76% 36% / 0.08)', 'hsl(142 76% 36% / 0.2)',
+   'Priorité à la préservation du capital. Votre portefeuille est majoritairement constitué d\'obligations de qualité et d\'actifs monétaires, avec une exposition actions limitée pour capter une croissance modeste tout en contenant la volatilité.',
+   [('Actions', '0 – 15 %', 80), ('Obligations', '60 – 80 %', 80), ('Monétaire &amp; divers', '10 – 30 %', 30)],
+   '3,5 %', 'Faible'),
+  ('equilibre', 'Équilibré', 'scale',        'hsl(172 75% 28%)', 'hsl(172 75% 22% / 0.06)', 'hsl(172 75% 22% / 0.2)',
+   'Un équilibre entre croissance et stabilité. La moitié de votre portefeuille est investie en actions diversifiées mondiales, l\'autre moitié en obligations. Ce profil vise un rendement régulier avec une volatilité maîtrisée sur le long terme.',
+   [('Actions', '30 – 50 %', 50), ('Obligations', '40 – 60 %', 60), ('Divers', '5 – 15 %', 15)],
+   '5,0 %', 'Modérée'),
+  ('dynamique', 'Dynamique', 'trending-up',  'hsl(220 70% 45%)', 'hsl(220 70% 45% / 0.06)', 'hsl(220 70% 45% / 0.2)',
+   'Votre portefeuille est majoritairement exposé aux marchés actions mondiaux. L\'objectif est la croissance du capital sur le long terme, en acceptant une volatilité plus marquée en contrepartie d\'un potentiel de rendement supérieur.',
+   [('Actions', '60 – 80 %', 80), ('Obligations', '15 – 30 %', 30), ('Divers', '5 – 15 %', 15)],
+   '7,0 %', 'Élevée'),
+  ('conviction','Conviction', 'zap',         'hsl(35 95% 45%)', 'hsl(35 95% 55% / 0.06)', 'hsl(35 95% 55% / 0.3)',
+   'Portefeuille concentré sur 8 à 11 positions actions à forte conviction (8–11 % par ligne). Maximum de diversification au sein des meilleures idées du gestionnaire. Volatilité élevée, potentiel de rendement maximal sur horizon long.',
+   [('Actions (concentrées)', '80 – 100 %', 100), ('Liquidités', '0 – 20 %', 20)],
+   '9,0 %', 'Très élevée'),
+] %}
 
-  <div class="grid sm:grid-cols-3 gap-4">
-    <div class="rounded-xl p-4 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
-      <i data-lucide="arrow-right-left" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);margin:0 auto 0.5rem;display:block;"></i>
-      <p class="text-xs text-muted mb-1">Frais de transfert (in/out)</p>
-      <p class="font-display text-2xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
+{% set found_profil = [] %}
+{% for p in profils if p[0] == client.profil_risque %}{% set _ = found_profil.append(p) %}{% endfor %}
+
+{% if found_profil %}
+{% set p = found_profil[0] %}
+<div class="dashboard-card mb-6">
+  <div class="flex items-center gap-3 mb-5">
+    <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+         style="background:{{ p[3] }};">
+      <i data-lucide="{{ p[2] }}" style="width:1.125rem;height:1.125rem;color:white;"></i>
     </div>
-    <div class="rounded-xl p-4 text-center" style="background:hsl(172 75% 22% / 0.06);border:1px solid hsl(172 75% 22% / 0.15);">
-      <i data-lucide="refresh-cw" style="width:1.25rem;height:1.25rem;color:var(--primary);margin:0 auto 0.5rem;display:block;"></i>
-      <p class="text-xs text-muted mb-1">Frais de gestion annuels</p>
-      <p class="font-display text-2xl font-bold text-primary">1,90 %</p>
-      <p class="text-xs text-muted mt-0.5">sur l'encours</p>
+    <div class="flex-1">
+      <div class="flex items-center gap-2">
+        <p class="font-semibold text-primary">Profil {{ p[1] }}</p>
+        <span class="rounded-full px-2 py-0.5 text-xs font-semibold"
+              style="background:{{ p[3] }};color:white;">Mon profil</span>
+      </div>
+      <p class="text-xs text-muted mt-0.5">Géré par <a href="https://www.wealtheon.eu/fr" target="_blank" rel="noopener" class="font-semibold hover:underline" style="color:var(--primary);">Wealtheon</a> · Gestion active · Branche 23</p>
     </div>
-    <div class="rounded-xl p-4 text-center" style="background:hsl(142 76% 36% / 0.06);border:1px solid hsl(142 76% 36% / 0.2);">
-      <i data-lucide="badge-check" style="width:1.25rem;height:1.25rem;color:hsl(142 76% 36%);margin:0 auto 0.5rem;display:block;"></i>
-      <p class="text-xs text-muted mb-1">Frais de performance</p>
-      <p class="font-display text-2xl font-bold" style="color:hsl(142 76% 28%);">0 %</p>
+    <a href="{{ url_for('client_profil') }}" class="btn btn-ghost text-xs"
+       style="height:2rem;padding:0 0.875rem;">Modifier</a>
+  </div>
+
+  <p class="text-sm text-muted leading-relaxed mb-5">{{ p[6] }}</p>
+
+  <!-- Allocation -->
+  <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Allocation cible</p>
+  <div class="flex flex-col gap-2 mb-5">
+    {% for asset, pct, bar_max in p[7] %}
+    <div>
+      <div class="flex items-center justify-between text-xs mb-1">
+        <span class="text-muted">{{ asset }}</span>
+        <span class="font-semibold" style="color:{{ p[3] }};">{{ pct }}</span>
+      </div>
+      <div class="h-1.5 rounded-full" style="background:hsl(172 75% 22% / 0.08);">
+        <div class="h-1.5 rounded-full" style="width:{{ bar_max }}%;background:{{ p[3] }};opacity:0.7;"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Key metrics -->
+  <div class="grid sm:grid-cols-3 gap-3 mb-5">
+    <div class="rounded-xl p-3 text-center" style="background:{{ p[4] }};border:1px solid {{ p[5] }};">
+      <p class="text-xs text-muted mb-1">Rendement attendu*</p>
+      <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">{{ p[8] }}</p>
+      <p class="text-xs text-muted">/ an</p>
+    </div>
+    <div class="rounded-xl p-3 text-center" style="background:{{ p[4] }};border:1px solid {{ p[5] }};">
+      <p class="text-xs text-muted mb-1">Volatilité</p>
+      <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">{{ p[9] }}</p>
+    </div>
+    <div class="rounded-xl p-3 text-center" style="background:{{ p[4] }};border:1px solid {{ p[5] }};">
+      <p class="text-xs text-muted mb-1">Frais de gestion</p>
+      <p class="font-display text-xl font-bold" style="color:{{ p[3] }};">1,95 %</p>
+      <p class="text-xs text-muted">/ an sur l'encours</p>
     </div>
   </div>
 
-  <p class="text-xs text-muted mt-4 text-center">
-    Ces frais s'appliquent quel que soit le profil choisi. Les performances passées ne préjugent pas des performances futures.
-  </p>
+  <div class="flex items-start gap-2 rounded-xl p-3"
+       style="background:hsl(35 95% 55% / 0.07);border:1px solid hsl(35 95% 55% / 0.25);">
+    <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:hsl(35 90% 40%);"></i>
+    <p class="text-xs leading-relaxed" style="color:hsl(35 90% 30%);">
+      * Rendement indicatif utilisé uniquement pour la projection. Les performances passées ne préjugent pas des performances futures. Tout investissement en Branche 23 comporte un risque de perte en capital.
+    </p>
+  </div>
 </div>
 
+{% else %}
+<div class="dashboard-card mb-6 text-center py-10">
+  <div class="mx-auto h-14 w-14 rounded-2xl grid place-items-center mb-3"
+       style="background:hsl(35 95% 55% / 0.08);">
+    <i data-lucide="sliders-horizontal" style="width:1.5rem;height:1.5rem;color:var(--accent);"></i>
+  </div>
+  <p class="font-semibold text-primary mb-1">Profil de gestion non défini</p>
+  <p class="text-xs text-muted mb-4">Définissez votre profil pour voir le détail de votre gestion et activer la projection.</p>
+  <a href="{{ url_for('client_profil') }}" class="btn btn-primary inline-flex items-center gap-2">
+    Choisir mon profil
+    <i data-lucide="arrow-right" style="width:0.875rem;height:0.875rem;"></i>
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const raw = {{ chart_data | safe }};
+  if (!raw.dates || raw.dates.length === 0) return;
+
+  const canvas = document.getElementById('reserveChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, 300);
+  grad.addColorStop(0, 'hsl(172 75% 22% / 0.20)');
+  grad.addColorStop(1, 'hsl(172 75% 22% / 0.00)');
+
+  // Format currency
+  const fmt = v => new Intl.NumberFormat('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+
+  // Find pixel x for a date string (used for annotation lines)
+  function dateIndex(iso) {
+    return raw.dates.findIndex(d => d >= iso);
+  }
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: raw.dates,
+      datasets: [{
+        label: 'Réserve projetée',
+        data: raw.values,
+        borderColor: 'hsl(172 75% 22%)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        fill: true,
+        backgroundColor: grad,
+        tension: 0.35,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'white',
+          titleColor: 'hsl(172 75% 15%)',
+          bodyColor: '#555',
+          borderColor: 'hsl(172 75% 22% / 0.2)',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            title: items => {
+              const d = new Date(items[0].label);
+              return d.toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' });
+            },
+            label: item => ' ' + fmt(item.parsed.y),
+          }
+        },
+      },
+      scales: {
+        x: {
+          type: 'category',
+          ticks: {
+            maxTicksLimit: 8,
+            maxRotation: 0,
+            callback: function(val, idx) {
+              const d = new Date(this.getLabelForValue(val));
+              return d.toLocaleDateString('fr-BE', { month: 'short', year: '2-digit' });
+            },
+            color: '#888',
+            font: { size: 11 },
+          },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          ticks: {
+            callback: v => fmt(v),
+            color: '#888',
+            font: { size: 11 },
+            maxTicksLimit: 6,
+          },
+          grid: { color: 'hsl(172 75% 22% / 0.07)' },
+          border: { display: false },
+        }
+      }
+    },
+    plugins: [{
+      id: 'verticalLines',
+      afterDraw(chart) {
+        const { ctx, scales: { x, y } } = chart;
+        const top = y.top, bottom = y.bottom;
+
+        // Injection lines
+        raw.injections.forEach(inj => {
+          const idx = dateIndex(inj.date);
+          if (idx < 0) return;
+          const xPos = x.getPixelForIndex(idx);
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = 'hsl(142 76% 36%)';
+          ctx.lineWidth = 1.5;
+          ctx.moveTo(xPos, top);
+          ctx.lineTo(xPos, bottom);
+          ctx.stroke();
+
+          // Label
+          ctx.font = '10px Plus Jakarta Sans, sans-serif';
+          ctx.fillStyle = 'hsl(142 76% 28%)';
+          ctx.textAlign = 'left';
+          const label = inj.label.length > 12 ? inj.label.slice(0, 12) + '…' : inj.label;
+          ctx.fillText(label, xPos + 4, top + 14);
+          ctx.restore();
+        });
+
+        // Date terme / pension date line
+        const endIso = raw.date_terme || raw.pension_date;
+        if (endIso) {
+          const idx = dateIndex(endIso);
+          if (idx >= 0) {
+            const xPos = x.getPixelForIndex(idx);
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([]);
+            ctx.strokeStyle = 'hsl(35 95% 45%)';
+            ctx.lineWidth = 2;
+            ctx.moveTo(xPos, top);
+            ctx.lineTo(xPos, bottom);
+            ctx.stroke();
+
+            ctx.font = 'bold 10px Plus Jakarta Sans, sans-serif';
+            ctx.fillStyle = 'hsl(35 90% 35%)';
+            ctx.textAlign = 'right';
+            ctx.fillText(raw.date_terme ? 'Date terme' : 'Pension', xPos - 4, top + 14);
+            ctx.restore();
+          }
+        }
+      }
+    }]
+  });
+})();
+</script>
 {% endblock %}

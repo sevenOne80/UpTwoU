@@ -1,0 +1,133 @@
+{% extends "client/_base.html" %}
+{% block title %}Résultat de l'analyse{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1>Résultat de l'analyse</h1>
+      <p>Vérifiez les données extraites avant de mettre à jour votre dossier.</p>
+    </div>
+    <a href="{{ url_for('client_analyser') }}" class="btn btn-ghost text-sm">
+      <i data-lucide="refresh-cw" style="width:1rem;height:1rem;"></i>
+      Nouvelle analyse
+    </a>
+  </div>
+</div>
+
+<!-- Éligibilité -->
+<div class="dashboard-card mb-5 flex items-start gap-4">
+  {% if r.eligible %}
+  <div class="h-12 w-12 rounded-2xl grid place-items-center flex-shrink-0"
+       style="background:hsl(142 76% 36% / 0.1);">
+    <i data-lucide="check-circle" style="width:1.5rem;height:1.5rem;color:hsl(142 76% 36%);"></i>
+  </div>
+  <div>
+    <p class="font-semibold text-primary">{{ r.titre or 'Transfert possible' }}</p>
+    {% if r.resume %}
+    <p class="text-sm text-muted mt-1 leading-relaxed">{{ r.resume }}</p>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="h-12 w-12 rounded-2xl grid place-items-center flex-shrink-0"
+       style="background:hsl(0 84% 45% / 0.1);">
+    <i data-lucide="x-circle" style="width:1.5rem;height:1.5rem;color:hsl(0 84% 45%);"></i>
+  </div>
+  <div>
+    <p class="font-semibold text-primary">{{ r.titre or 'Transfert non recommandé' }}</p>
+    {% if r.raisons_refus %}
+    <ul class="mt-1 flex flex-col gap-0.5">
+      {% for reason in r.raisons_refus %}
+      <li class="text-sm text-muted leading-relaxed">— {{ reason }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Contrats trouvés -->
+{% if r.contrats %}
+<div class="dashboard-card mb-5">
+  <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-4">
+    {{ r.contrats | length }} contrat{{ 's' if r.contrats | length > 1 }} détecté{{ 's' if r.contrats | length > 1 }}
+  </p>
+  <div class="flex flex-col">
+    {% for c in r.contrats %}
+    <div class="flex items-start justify-between gap-4 flex-wrap py-3 result-row">
+      <div class="flex items-start gap-3">
+        <div class="h-10 w-10 rounded-xl grid place-items-center flex-shrink-0"
+             style="background:hsl(172 75% 22% / 0.08);">
+          <i data-lucide="building-2" style="width:1rem;height:1rem;color:var(--primary);"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-primary text-sm">{{ c.assureur or '—' }}</p>
+          {% if c.numero %}
+          <p class="text-xs text-muted mt-0.5">Réf. : <span class="font-mono">{{ c.numero }}</span></p>
+          {% endif %}
+          {% if c.organisateur %}
+          <p class="text-xs text-muted mt-0.5">
+            <i data-lucide="briefcase" style="width:0.65rem;height:0.65rem;display:inline;vertical-align:middle;margin-right:2px;"></i>
+            {{ c.organisateur }}
+          </p>
+          {% endif %}
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            {% if c.type_branche %}
+            <span class="badge badge-blue">{{ c.type_branche }}</span>
+            {% endif %}
+            {% if c.statut %}
+            <span class="badge badge-{{ 'green' if c.statut == 'dormant' else 'blue' }}">{{ c.statut | capitalize }}</span>
+            {% endif %}
+            {% if c.reserve %}
+            <span class="badge" style="background:hsl(172 75% 22% / 0.1);color:var(--primary);border:1px solid hsl(172 75% 22% / 0.2);">
+              {{ c.reserve }} €
+            </span>
+            {% endif %}
+            {% if c.date_valeur %}
+            <span class="badge" style="background:hsl(0 0% 95%);color:#555;border:1px solid #ddd;">au {{ c.date_valeur }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Détails supplémentaires -->
+{% if r.details %}
+<div class="dashboard-card mb-5">
+  <p class="text-xs uppercase tracking-widest font-semibold text-muted mb-3">Informations complémentaires</p>
+  <ul class="flex flex-col gap-1.5">
+    {% for d in r.details %}
+    <li class="flex items-start gap-2 text-sm text-muted">
+      <i data-lucide="info" style="width:0.875rem;height:0.875rem;flex-shrink:0;margin-top:2px;color:var(--primary);"></i>
+      {{ d }}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- Actions -->
+<div class="flex flex-wrap items-center gap-3">
+  <form method="POST" action="{{ url_for('client_maj_analyse') }}">
+    {{ form.hidden_tag() }}
+    <button type="submit" class="btn btn-primary" style="height:2.75rem;padding:0 1.75rem;">
+      <i data-lucide="save" style="width:1rem;height:1rem;margin-right:0.5rem;"></i>
+      Mettre à jour mon dossier
+    </button>
+  </form>
+  <a href="{{ url_for('client_analyser') }}" class="btn btn-ghost" style="height:2.75rem;padding:0 1.25rem;">
+    Annuler
+  </a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .result-row + .result-row { border-top: 1px solid var(--border); }
+</style>
+{% endblock %}

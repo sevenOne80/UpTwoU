@@ -90,8 +90,10 @@
   {% set steps = [
     (1, 'Identité', 'onboarding_kyc'),
     (2, 'Profil', 'onboarding_profil'),
-    (3, 'Frais', 'onboarding_frais'),
-    (4, 'Synthèse', 'onboarding_synthese'),
+    (3, 'Contrat', 'onboarding_contrat'),
+    (4, 'Frais', 'onboarding_frais'),
+    (5, 'Transfert', 'onboarding_transfert'),
+    (6, 'Synthèse', 'onboarding_synthese'),
   ] %}
   <div class="flex items-center mb-10 px-2">
     {% for num, label, _ in steps %}
@@ -122,6 +124,15 @@
   {% endwith %}
 
   {% block content %}{% endblock %}
+
+  {% if prev_url %}
+  <div class="mt-6">
+    <a href="{{ prev_url }}" class="btn btn-ghost text-sm flex items-center gap-2" style="width:fit-content;">
+      <i data-lucide="arrow-left" style="width:1rem;height:1rem;"></i>
+      Retour
+    </a>
+  </div>
+  {% endif %}
 
 </main>
 
